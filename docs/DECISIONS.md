@@ -25,10 +25,17 @@ This file records meaningful project decisions. Add a new entry when the project
 - Decision: Maintain project memory in Markdown files under `docs/`, with `AGENTS.md` as the operating guide for AI sessions.
 - Consequence: Memory is Git-native, easy to diff, and portable across Windows 11 and Debian Linux.
 
+### 2026-06-24: Implement Maildir-Lite to Maildir++ Converter as Python Standard-Library Utility
+
+- Status: accepted
+- Context: The owner needs a safe migration path from Betterbird/Thunderbird maildir-lite storage on Fedora to canonical Maildir++ storage for Evolution on antiX.
+- Decision: Implement `src/betterbird_maildirlite_to_maildirpp.py` as a Python 3 standard-library-only utility with dry-run default, copy mode, resume support, logs, duplicate auditing, and verification support.
+- Consequence: The repository now has one approved implementation artifact while broader project type and packaging remain undecided. The converter should be validated on antiX before production use.
+
 ## Pending Decisions
 
-- Project type
-- Programming language and runtime
+- Broader project type beyond the mail migration utility
+- Packaging/runtime policy beyond Python 3 standard library
 - Framework or no-framework direction
 - Git hosting provider: GitHub or GitLab
 - First implementation milestone

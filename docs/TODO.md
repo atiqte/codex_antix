@@ -4,7 +4,10 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Decide project type and first implementation objective.
+- [ ] Run `src/betterbird_maildirlite_to_maildirpp.py --dry-run` on antiX against a staged Betterbird sample profile.
+- [ ] Review converter logs: `conversion.jsonl`, `folder-map.tsv`, `summary.tsv`, `duplicates.tsv`, `errors.tsv`, and `skipped.tsv`.
+- [ ] Run a small antiX copy test and verify byte/hash preservation before full migration.
+- [ ] Decide broader project type beyond the approved mail migration utility.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
 ## Later
@@ -20,3 +23,5 @@
 - [x] Document future Codex session rules.
 - [x] Document language-neutral Git workflow.
 - [x] Record approved end-of-session commit and push workflow.
+- [x] Implement Python standard-library Betterbird maildir-lite to canonical Maildir++ converter.
+- [x] Add portable unit tests for converter folder mapping and syntax validation.

@@ -1,24 +1,24 @@
 # Project State
 
-Last updated: 2026-06-23
+Last updated: 2026-06-24
 
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
-- Project type: undecided
-- Primary purpose today: planning/setup repository with durable project memory
+- Project type: local mail migration utility plus planning/setup repository
+- Primary purpose today: durable project memory and a safe Betterbird maildir-lite to Maildir++ conversion script
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
 ## Current Phase
 
-Planning/setup.
+Planning/setup with one approved utility implementation.
 
-No application features should be built yet. The repository is being prepared so future work sessions can quickly understand current state, decisions, tasks, and workflow.
+The owner approved implementation of a Python standard-library converter for Betterbird/Thunderbird maildir-lite to canonical Maildir++ migration. Other application direction remains undecided.
 
 ## Current Objective
 
-Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work.
+Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, plus maintain the approved mail migration utility.
 
 ## What Exists Now
 
@@ -28,12 +28,13 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/` project memory folder.
 - `src/` placeholder folder for future implementation work.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
+- `src/betterbird_maildirlite_to_maildirpp.py`, a dry-run-first Python converter for staged Betterbird maildir-lite profiles.
+- `tests/test_betterbird_maildirlite_to_maildirpp.py`, standard-library tests for folder mapping and portable validation.
 
 ## What Is Intentionally Undecided
 
-- Application type
-- Programming language
-- Runtime
+- Broader application type beyond the approved mail migration utility
+- Runtime or packaging beyond Python 3 standard library
 - Framework
 - Package manager
 - Database or storage layer
@@ -46,6 +47,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 - The repository is in setup-only mode.
 - Do not install Python, Node, npm packages, pip packages, Docker, devcontainers, or other dependencies without explicit approval.
+- The current converter must remain Python 3 standard-library-only unless the owner approves a dependency change.
 - Do not delete files without explicit approval.
 - End each working session by committing changes with a clear self-explanatory message and pushing to the configured remote.
 - Do not perform non-routine remote operations without explicit approval.
@@ -65,7 +67,17 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/IDEAS.md`
   - `docs/WORKFLOW.md`
   - `docs/CHANGELOG.md`
-  - `.gitignore`
+- `.gitignore`
+- `src/betterbird_maildirlite_to_maildirpp.py`
+- `tests/test_betterbird_maildirlite_to_maildirpp.py`
+
+## Current Implementation Notes
+
+- The converter is designed to run on antiX after the Fedora Betterbird profile is copied to `/mail/import-staging/betterbird-maildir`.
+- Default mode is `--dry-run`; `--copy` refuses unmarked or unsafe sources and writes through Maildir `tmp` before atomic rename.
+- Duplicates are kept, but duplicate `Message-ID` and content hashes are logged.
+- Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
+- Next validation must be run on antiX against a staged sample profile.
 
 ## Open Questions
 
@@ -79,9 +91,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 1. Review the setup and memory files.
 2. Commit and push the setup using the approved end-of-session workflow.
-3. Decide the project type and first implementation objective.
-4. Record major choices in `docs/DECISIONS.md`.
-5. Convert the first objective into concrete tasks in `docs/TODO.md`.
+3. Run the converter dry-run on antiX against a staged Betterbird sample profile.
+4. Review conversion logs before any full copy.
+5. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

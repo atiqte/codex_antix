@@ -1,0 +1,469 @@
+antiX VM XFS Maildir Data Disk Setup Guide
+==========================================
+Correct XFS formatting and mounting procedure for a second VMware VMDK dedicated to  Maildir, Logseq, search indexes, and backups.
+Generated: 2026-06-14 16:32 UTC
+
+Purpose and target layout
+-------------------------
+This guide documents the complete procedure for preparing a second VMware virtual disk as an XFS data partition mounted at /mail inside an antiX Linux Runit VM. The intended use is email with Maildir/file-per-message storage, Logseq graph storage, search indexes, and backup staging.
+
+Target VM folder on Windows host:
+
+├── VM/
+│   └── antiX/
+│       ├── antiX_Debian13_64-bit_maildata-flat.vmdk
+│       ├── antiX_Debian13_64-bit_maildata.vmdk
+│       ├── antiX_Debian13_64-bit-flat.vmdk
+│       ├── antiX_Debian13_64-bit.vmdk
+│       ├── antiX_Debian13_64-bit.nvram
+│       ├── antiX_Debian13_64-bit.vmx
+│       ├── antiX_Debian13_64-bit.vmxf
+│       └── vmware.log
+
+Logical design inside antiX:
+
+/dev/sda   = main antiX system disk
+/dev/sda1  = root filesystem mounted at /
+/dev/sdb   = second VMware VMDK dedicated to mail/data
+/dev/sdb1  = XFS filesystem labeled MAILDATA mounted at /mail
+
+The second disk must be used for /mail only. Do not store the live Betterbird profile on SMB, OneDrive, Google Drive, VMware Shared Folders, or a Windows-hosted network path. Keep the live profile on the XFS VMDK.
+
+Critical safety warning
+-----------------------
+The commands in this guide intentionally create a new partition table and filesystem on /dev/sdb. They destroy existing content on /dev/sdb. They must never be run against /dev/sda or /dev/sda1.
+
+Before running destructive commands, confirm that:
+
+1. /dev/sda is the 50G antiX system disk.
+2. /dev/sda1 is ext4 and mounted at /.
+3. /dev/sdb is the blank second disk.
+4. /dev/sdb has no existing partition, filesystem, or mounted data.
+
+If the disk names differ on another VM, adapt carefully. The method is correct; the disk name must be verified every time.
+
+Step 1 — Identify disks
+-----------------------
+Run:
+
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MODEL
+
+Expected before formatting:
+
+NAME    SIZE TYPE FSTYPE LABEL       UUID                                 MODEL
+sda      50G disk                                                         VMware Virtual S
+└─sda1   50G part ext4   rootantiX26 fe979039-bedf-4c1f-84b7-5128f0fd4b22
+sdb     205G disk                                                         VMware Virtual S
+sr0    1024M rom                                                          VMware Virtual SATA CDRW Drive
+
+Interpretation:
+
+/dev/sda  = OS disk. Do not touch.
+/dev/sda1 = root partition. Do not touch.
+/dev/sdb  = new 205G mail/data disk. This is the target.
+/dev/sr0  = virtual optical drive. Ignore.
+
+Step 2 — Install required tools
+-------------------------------
+Run:
+
+sudo nala install xfsprogs parted util-linux
+
+If the output says the packages are already installed, that is fine. Required tools:
+
+xfsprogs   = mkfs.xfs, xfs_info, XFS utilities
+parted     = GPT partition creation
+util-linux = lsblk, blkid, mount, findmnt, wipefs, partprobe-related utilities
+
+Step 3 — Verify the second disk is empty
+----------------------------------------
+Run:
+
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+sudo fdisk -l /dev/sdb
+sudo wipefs -n /dev/sdb
+
+Expected safe condition:
+
+1. /dev/sdb appears as a 205G disk.
+2. No /dev/sdb1 exists yet.
+3. fdisk shows disk size but no partition table details.
+4. wipefs -n prints nothing.
+
+Important: wipefs -n is a dry-run inspection. It does not erase data.
+
+Step 4 — Create a GPT partition table and one XFS partition
+-----------------------------------------------------------
+Run:
+
+sudo parted -s /dev/sdb -- mklabel gpt
+sudo parted -s -a optimal /dev/sdb -- mkpart MAILDATA xfs 1MiB 100%
+sudo partprobe /dev/sdb
+sudo udevadm settle
+
+Explanation:
+
+mklabel gpt                  = creates a modern GPT partition table.
+-a optimal                   = asks parted to align the partition optimally.
+mkpart MAILDATA xfs 1MiB 100% = creates one partition from 1 MiB to the end of disk.
+partprobe + udevadm settle   = asks Linux to re-read the partition table cleanly.
+
+Step 5 — Confirm /dev/sdb1 exists
+---------------------------------
+Run:
+
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+
+Expected result:
+
+sdb     205G disk
+└─sdb1  205G part
+
+At this point /dev/sdb1 exists but is not formatted yet.
+
+Step 6 — Format /dev/sdb1 as XFS
+--------------------------------
+Run:
+
+sudo mkfs.xfs -f -L MAILDATA /dev/sdb1
+
+Expected output includes XFS metadata similar to:
+
+meta-data=/dev/sdb1              isize=512    agcount=4
+crc=1        finobt=1     sparse=1
+reflink=1    bigtime=1
+naming   =version 2              ftype=1
+log      =internal log
+
+Explanation:
+
+-f              = force format the target partition.
+-L MAILDATA     = assigns the filesystem label MAILDATA.
+/dev/sdb1       = target partition. This must be the new second-disk partition, not the OS disk.
+
+The XFS output showing crc=1, finobt=1, ftype=1, reflink=1, and bigtime=1 indicates a modern XFS filesystem. No reformat is needed if your output matches this pattern.
+
+Step 7 — Confirm the new XFS UUID
+---------------------------------
+Run:
+
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+sudo blkid /dev/sdb1
+sudo blkid -s UUID -o value /dev/sdb1
+
+Example actual result from this VM:
+
+/dev/sdb1: LABEL="MAILDATA" UUID="4241803d-55c2-4dfb-8a70-b44e01b56bb3" BLOCK_SIZE="512" TYPE="xfs" PARTLABEL="MAILDATA" PARTUUID="539c8f62-c208-47c5-9a61-a6e1abf2f7b0"
+
+Clean UUID:
+
+4241803d-55c2-4dfb-8a70-b44e01b56bb3
+
+The UUID is used in /etc/fstab because UUID mounting is safer than mounting by /dev/sdb1. Device names can change; UUIDs are stable.
+
+Step 8 — Create the /mail mount point
+-------------------------------------
+Run:
+
+sudo mkdir -p /mail
+
+At this moment /mail is only an empty directory on the root filesystem. After mounting, it becomes the entry point to the XFS data partition.
+
+Step 9 — Back up and edit /etc/fstab
+------------------------------------
+Back up fstab first:
+
+sudo cp /etc/fstab /etc/fstab.bak.$(date +%F-%H%M)
+
+Open fstab:
+
+sudo nano /etc/fstab
+
+Add this line at the bottom:
+
+UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0
+
+Use your real UUID if different.
+
+Explanation of mount options:
+
+rw          = mount read/write.
+noatime     = do not update access time on every file read; reduces metadata writes.
+nodiratime  = do not update directory access time; slightly reduces metadata writes.
+nodiscard   = do not run online discard/TRIM on every delete; better for latency.
+inode64     = allow inode placement above 32-bit block boundaries; suitable for modern XFS.
+0 0         = do not use traditional fsck pass ordering for this XFS mount.
+
+Do not use 0 2 for this XFS partition. Use 0 0.
+
+Step 10 — Test fstab and mount /mail
+------------------------------------
+Run:
+
+sudo mount -a
+findmnt /mail
+
+Expected output:
+
+TARGET SOURCE    FSTYPE OPTIONS
+/mail  /dev/sdb1 xfs    rw,noatime,nodiratime,attr2,inode64,logbufs=8,logbsize=32k,noquota
+
+This is correct. findmnt shows /dev/sdb1 because Linux resolves the UUID to the actual device. That does not mean fstab is wrong.
+
+Verify capacity:
+
+df -hT /mail
+
+Expected output:
+
+Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/sdb1      xfs   205G  4.0G  201G   2% /mail
+
+The 4.0G used space on a new XFS filesystem is normal. It is filesystem metadata, allocation structures, and internal log reservation. It is not user data.
+
+Check mount line:
+
+mount | grep ' /mail '
+
+Check XFS details:
+
+xfs_info /mail
+
+Step 11 — Verify fstab line
+---------------------------
+Run:
+
+grep -nE 'mail|MAILDATA|sdb1' /etc/fstab
+
+Expected output from this VM:
+
+4:UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0
+
+This is correct because it uses UUID, not /dev/sdb1.
+
+Step 12 — Set ownership and private permissions
+-----------------------------------------------
+Check current ownership:
+
+ls -ld /mail
+
+Before ownership correction, it may show:
+
+drwxr-xr-x 2 root root 6 Jun 14 21:11 /mail
+
+Change ownership to your normal user:
+
+sudo chown -R "$USER:$USER" /mail
+chmod 700 /mail
+
+Verify:
+
+ls -ld /mail
+
+Expected:
+
+drwx------ 2 atiq atiq 6 Jun 14 21:11 /mail
+
+Explanation:
+
+Betterbird profile data, Maildir files, Logseq graphs, and indexes are user data. /mail should not be world-readable. Permission 700 means only the owner can read/write/enter the directory.
+
+Step 13 — Write test
+--------------------
+Run:
+
+touch /mail/.write-test
+ls -lah /mail/.write-test
+rm /mail/.write-test
+ls -lah /mail/.write-test
+
+Expected result:
+
+1. touch succeeds without sudo.
+2. ls shows /mail/.write-test owned by atiq:atiq.
+3. rm deletes it.
+4. final ls says: No such file or directory.
+
+This confirms that your normal user can write to the XFS data disk.
+
+Step 14 — Confirm block discard/TRIM support
+--------------------------------------------
+Run:
+
+cat /sys/block/sdb/queue/discard_max_bytes
+
+Result from this VM:
+
+0
+
+Interpretation:
+
+0 means VMware is not exposing discard/TRIM support for this virtual disk path. This is not an XFS failure. It only means fstrim will not reclaim deleted space back to the Windows host for this disk.
+
+Because discard_max_bytes is 0, do not create a weekly fstrim job for this disk now. It is not useful unless VMware later exposes discard support. Keeping nodiscard in /etc/fstab is still the correct choice.
+
+Check fstrim path only for future reference:
+
+command -v fstrim
+
+Result from this VM:
+
+/sbin/fstrim
+
+Step 15 — Mandatory reboot test
+-------------------------------
+Run:
+
+sudo reboot
+
+After reboot, run:
+
+findmnt /mail
+df -hT /mail
+ls -ld /mail
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+touch /mail/.after-reboot-test
+ls -lah /mail/.after-reboot-test
+rm /mail/.after-reboot-test
+
+Expected result:
+
+/mail is mounted automatically.
+/mail is XFS.
+/mail uses /dev/sdb1 as resolved source.
+/mail remains owned by atiq:atiq.
+/mail remains drwx------.
+Normal user can create and delete /mail/.after-reboot-test.
+
+Do not configure Betterbird before this reboot test passes.
+
+Step 16 — Create production directory layout
+--------------------------------------------
+After the reboot test passes, create the directory layout.
+
+Recommended cleaner layout:
+
+mkdir -p /mail
+mkdir -p /mail/Logseq/graphs
+mkdir -p /mail/Logseq/backups
+mkdir -p /mail/SearchIndex/recoll
+mkdir -p /mail/SearchIndex/notmuch
+mkdir -p /mail/Backups
+
+Alternative minimal layout requested by user:
+
+mkdir -p /mail
+chmod -R 700 /mail
+
+
+Set private permissions:
+
+chmod -R 700 /mail
+chmod -R 700 /mail/Logseq
+chmod -R 700 /mail/SearchIndex
+chmod -R 700 /mail/Backups
+
+If you choose the minimal directory:
+
+chmod -R 700 /mail
+
+Step 17 — Install tree and verify layout
+----------------------------------------
+Install tree:
+
+sudo nala install tree
+
+Show the layout:
+
+tree -a -L 3 /mail
+
+
+
+Step 18 — Install search, backup, and SMB tools
+-----------------------------------------------
+Run:
+
+sudo nala install recoll recollgui notmuch ripgrep fd-find rsync borgbackup restic cifs-utils smbclient
+
+What these packages are for:
+
+recoll       = GUI full-text search indexer; useful for .eml, text, PDFs, documents.
+recollgui    = graphical Recoll interface.
+notmuch      = powerful mail indexer/search tool; useful for Maildir-style workflows.
+ripgrep      = very fast text search from terminal.
+fd-find      = fast file finder.
+rsync        = simple reliable mirror/copy backup tool.
+borgbackup   = deduplicated, compressed, optionally encrypted backup system.
+restic       = modern deduplicated backup tool, good for external/cloud destinations.
+cifs-utils   = Linux client support for mounting Windows SMB shares.
+smbclient    = command-line SMB client for testing/accessing Windows shares.
+
+If you want a lighter first-stage install, use:
+
+sudo nala install recoll recollgui notmuch ripgrep fd-find rsync cifs-utils smbclient
+
+Then install BorgBackup and Restic later:
+
+sudo nala install borgbackup restic
+
+
+
+Step 19 — Final verification checklist
+--------------------------------------
+Run this final diagnostic group:
+
+grep -nE 'mail|MAILDATA|sdb1' /etc/fstab
+findmnt /mail
+df -hT /mail
+ls -ld /mail
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+xfs_info /mail
+cat /sys/block/sdb/queue/discard_max_bytes
+
+Correct final state for this VM:
+
+/etc/fstab contains UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail xfs rw,noatime,nodiratime,nodiscard,inode64 0 0
+/mail mounted automatically
+/mail type xfs
+/mail source /dev/sdb1
+/mail owner atiq:atiq
+/mail permission drwx------
+/dev/sdb1 label MAILDATA
+/dev/sdb1 UUID 4241803d-55c2-4dfb-8a70-b44e01b56bb3
+discard_max_bytes = 0, so no useful fstrim at present
+
+If all checks pass, the XFS Maildir data disk is ready.
+
+Troubleshooting
+---------------
+Problem: sudo mount -a shows an error.
+Action: Check /etc/fstab for wrong UUID, wrong filesystem type, missing spaces, or hidden quotes. Run sudo blkid /dev/sdb1 and compare UUID.
+
+Problem: /mail is still owned by root after reboot.
+Action: Run sudo chown -R "$USER:$USER" /mail and chmod 700 /mail while /mail is mounted. Then verify with findmnt /mail and ls -ld /mail.
+
+Problem: touch /mail/test fails.
+Action: Confirm /mail is mounted and owned by your user. Run findmnt /mail and ls -ld /mail.
+
+Problem: fstrim does not work.
+Action: If cat /sys/block/sdb/queue/discard_max_bytes returns 0, TRIM is not exposed by VMware for this disk path. Ignore it. Do not use the discard mount option.
+
+Problem: Millions of emails are slow.
+Action: Do not place all messages in one folder. Use year/month archive folders, keep Betterbird closed during bulk copy/backups, and use Recoll or Notmuch as external search support.
+
+Final verdict
+-------------
+The completed setup is correct, efficient, and robust for an antiX Runit VM with a second VMware virtual disk dedicated to large mail and knowledge-management data.
+
+Best final design:
+
+OS disk: /dev/sda1, ext4, mounted at /
+Data disk: /dev/sdb1, XFS, mounted at /mail
+Mount options: rw,noatime,nodiratime,nodiscard,inode64 0 0
+Owner: atiq:atiq
+Permissions: 700
+Logseq graphs: /mail/Logseq/graphs
+Search indexes: /mail/SearchIndex
+Backups: external target preferred; /mail/Backups only as staging
+
+The only limitation observed is discard/TRIM support showing 0. That is a VMware virtual disk path limitation, not a mistake in the XFS setup.
