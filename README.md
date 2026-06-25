@@ -1,15 +1,15 @@
 # antiX VM Laptop
 
-This repository is currently in the planning/setup phase. Its immediate purpose is to hold project memory, workflow notes, and future implementation work in a form that is easy for humans and AI coding sessions to resume.
+This repository is currently in the planning/setup phase. Its immediate purpose is to hold project memory, workflow notes, and the approved local Betterbird mail migration utilities in a form that is easy for humans and AI coding sessions to resume.
 
-No application type, programming language, framework, runtime, package manager, or deployment target has been chosen yet.
+No broader application type, framework, package manager, or deployment target has been chosen yet. The approved implementation work is limited to Python 3 standard-library mail migration utilities.
 
 ## Current Status
 
 - Git repository initialized.
 - Project memory documents live in `docs/`.
 - `AGENTS.md` defines rules for future Codex sessions.
-- Application implementation has not started.
+- Approved mail migration utilities live in `src/`.
 - Windows 11 and Debian Linux portability is a project requirement.
 
 ## Start Here
@@ -35,10 +35,11 @@ Before doing project work, read these files:
 │   ├── PROJECT_STATE.md
 │   ├── TODO.md
 │   └── WORKFLOW.md
-└── src/
+├── src/
+└── tests/
 ```
 
-`src/` is reserved for future implementation work. It should remain language-neutral until the project type is decided.
+`src/` currently contains the approved Betterbird profile transport and maildir-lite conversion utilities. Broader application work should remain undecided until the project type is explicitly chosen.
 
 ## Development Policy
 

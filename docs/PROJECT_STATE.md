@@ -1,24 +1,24 @@
 # Project State
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
-- Project type: local mail migration utility plus planning/setup repository
-- Primary purpose today: durable project memory and a safe Betterbird maildir-lite to Maildir++ conversion script
+- Project type: local mail migration utilities plus planning/setup repository
+- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, and a safe Betterbird maildir-lite to Maildir++ conversion script
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
 ## Current Phase
 
-Planning/setup with one approved utility implementation.
+Planning/setup with approved local mail migration utility implementations.
 
-The owner approved implementation of a Python standard-library converter for Betterbird/Thunderbird maildir-lite to canonical Maildir++ migration. Other application direction remains undecided.
+The owner approved Python standard-library utilities for transporting a full Betterbird profile tree from Fedora to antiX staging and converting Betterbird/Thunderbird maildir-lite to canonical Maildir++. Other application direction remains undecided.
 
 ## Current Objective
 
-Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, plus maintain the approved mail migration utility.
+Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, plus maintain the approved mail migration utilities.
 
 ## What Exists Now
 
@@ -28,7 +28,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/` project memory folder.
 - `src/` placeholder folder for future implementation work.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
+- `src/betterbird_profile_transport.py`, a Python standard-library tool to pack, split, verify, unpack, and verify a whole Betterbird profile tree for transfer.
 - `src/betterbird_maildirlite_to_maildirpp.py`, a dry-run-first Python converter for staged Betterbird maildir-lite profiles.
+- `tests/test_betterbird_profile_transport.py`, standard-library tests for split archive transport safety.
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`, standard-library tests for folder mapping and portable validation.
 
 ## What Is Intentionally Undecided
@@ -47,7 +49,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 - The repository is in setup-only mode.
 - Do not install Python, Node, npm packages, pip packages, Docker, devcontainers, or other dependencies without explicit approval.
-- The current converter must remain Python 3 standard-library-only unless the owner approves a dependency change.
+- The current transport and converter utilities must remain Python 3 standard-library-only unless the owner approves a dependency change.
 - Do not delete files without explicit approval.
 - End each working session by committing changes with a clear self-explanatory message and pushing to the configured remote.
 - Do not perform non-routine remote operations without explicit approval.
@@ -68,16 +70,21 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/WORKFLOW.md`
   - `docs/CHANGELOG.md`
 - `.gitignore`
+- `src/betterbird_profile_transport.py`
 - `src/betterbird_maildirlite_to_maildirpp.py`
+- `tests/test_betterbird_profile_transport.py`
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`
 
 ## Current Implementation Notes
 
-- The converter is designed to run on antiX after the Fedora Betterbird profile is copied to `/mail/import-staging/betterbird-maildir`.
+- The transport utility is designed to run `pack` on Fedora against `~/Betterbird-Email`, write split `betterbird-profile.tar.gz.partNNNN` files with `manifest.json` and `inventory.jsonl`, then run `verify-archive`, `unpack`, and `verify-tree` on antiX.
+- The transport utility defaults to whole-profile scope, Python stdlib gzip compression level 6, and 1900 MiB part files.
+- The transport utility refuses active-looking Betterbird lock markers, output directories inside the source tree, non-empty restore destinations, unsafe archive paths, unsupported special files, and symlinks unless explicitly overridden.
+- The converter is designed to run on antiX after the Fedora Betterbird profile is restored to `/mail/import-staging/betterbird-maildir`.
 - Default mode is `--dry-run`; `--copy` refuses unmarked or unsafe sources and writes through Maildir `tmp` before atomic rename.
 - Duplicates are kept, but duplicate `Message-ID` and content hashes are logged.
-- Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next validation must be run on antiX against a staged sample profile.
+- Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
+- Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
 
 ## Open Questions
 
@@ -90,10 +97,13 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 ## Next Actions
 
 1. Review the setup and memory files.
-2. Commit and push the setup using the approved end-of-session workflow.
-3. Run the converter dry-run on antiX against a staged Betterbird sample profile.
-4. Review conversion logs before any full copy.
-5. Decide broader project type and future packaging only if needed.
+2. Pack a representative Fedora Betterbird profile sample with `src/betterbird_profile_transport.py pack`.
+3. Verify transferred parts on antiX with `verify-archive`.
+4. Restore into `/mail/import-staging/betterbird-maildir` with `unpack`.
+5. Verify the restored profile with `verify-tree`.
+6. Run the converter dry-run on antiX against the staged Betterbird profile.
+7. Review conversion logs before any full copy.
+8. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 
