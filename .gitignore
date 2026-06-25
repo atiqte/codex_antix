@@ -44,6 +44,9 @@ temp/
 *.tmp
 *.bak
 
+# Local reference material
+existing_DIY-Guide/
+
 # Local secrets and credentials
 *.pem
 *.key
