@@ -26,6 +26,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `README.md` with project overview and start instructions.
 - `AGENTS.md` with future Codex operating rules.
 - `docs/` project memory folder.
+- `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for the full Fedora-to-antiX transport and conversion flow.
+- `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
 - `src/` placeholder folder for future implementation work.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
 - `src/betterbird_profile_transport.py`, a Python standard-library tool to pack, split, verify, unpack, and verify a whole Betterbird profile tree for transfer.
@@ -69,6 +71,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/IDEAS.md`
   - `docs/WORKFLOW.md`
   - `docs/CHANGELOG.md`
+  - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`
+  - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`
 - `.gitignore`
 - `src/betterbird_profile_transport.py`
 - `src/betterbird_maildirlite_to_maildirpp.py`
@@ -80,6 +84,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The transport utility is designed to run `pack` on Fedora against `~/Betterbird-Email`, write split `betterbird-profile.tar.gz.partNNNN` files with `manifest.json` and `inventory.jsonl`, then run `verify-archive`, `unpack`, and `verify-tree` on antiX.
 - The transport utility defaults to whole-profile scope, Python stdlib gzip compression level 6, and 1900 MiB part files.
 - The transport utility refuses active-looking Betterbird lock markers, output directories inside the source tree, non-empty restore destinations, unsafe archive paths, unsupported special files, and symlinks unless explicitly overridden.
+- The DIY guide in `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html` and `.txt` is the operator-facing runbook for the safe pack, transfer, verify, unpack, verify-tree, and conversion sequence.
+- In all transport commands, `--manifest` points to `manifest.json`.
+- `inventory.jsonl` stays beside `manifest.json` and is read automatically by the transport script.
 - The converter is designed to run on antiX after the Fedora Betterbird profile is restored to `/mail/import-staging/betterbird-maildir`.
 - Default mode is `--dry-run`; `--copy` refuses unmarked or unsafe sources and writes through Maildir `tmp` before atomic rename.
 - Duplicates are kept, but duplicate `Message-ID` and content hashes are logged.

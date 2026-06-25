@@ -33,3 +33,4 @@
 - [x] Add portable unit tests for converter folder mapping and syntax validation.
 - [x] Implement Python standard-library Betterbird profile transport utility with split archive verification.
 - [x] Add portable unit tests for profile transport pack, verify, unpack, and safety failures.
+- [x] Create Betterbird profile transport DIY guide in HTML and plain text formats.

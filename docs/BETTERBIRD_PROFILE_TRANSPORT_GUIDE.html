@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Betterbird Profile Transport DIY Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #17212f;
+      --muted: #526071;
+      --line: #d8dee8;
+      --code-bg: #101827;
+      --code-ink: #edf3ff;
+      --accent: #1769aa;
+      --accent-ink: #ffffff;
+      --ok: #13734b;
+      --warn: #9a5b00;
+      --danger: #a63232;
+      --note-bg: #eef6ff;
+      --warn-bg: #fff7e6;
+      --danger-bg: #fff0f0;
+      --ok-bg: #ebf8f1;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.2;
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 1180px;
+      margin: 0 auto 8px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      max-width: 1180px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    nav {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    nav h2 {
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    nav a {
+      display: block;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfe;
+    }
+
+    .callout {
+      border-left: 5px solid var(--accent);
+      background: var(--note-bg);
+      padding: 14px 16px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+
+    .callout.warning {
+      border-left-color: var(--warn);
+      background: var(--warn-bg);
+    }
+
+    .callout.danger {
+      border-left-color: var(--danger);
+      background: var(--danger-bg);
+    }
+
+    .callout.ok {
+      border-left-color: var(--ok);
+      background: var(--ok-bg);
+    }
+
+    .command {
+      border: 1px solid #293449;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 14px 0;
+      background: var(--code-bg);
+    }
+
+    .command-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #172237;
+      color: #dce8ff;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    button.copy {
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      padding: 7px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button.copy:focus {
+      outline: 3px solid #9ecbff;
+      outline-offset: 2px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow-x: auto;
+      color: var(--code-ink);
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    code {
+      font-family: Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    p code, li code {
+      color: #102f55;
+      background: #edf2f8;
+      border: 1px solid #d7e0ec;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf2f8;
+    }
+
+    .checklist li {
+      margin-bottom: 8px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+
+    .step h3 {
+      margin-bottom: 8px;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px 32px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        position: static;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Betterbird Profile Transport DIY Guide</h1>
+    <p class="subtitle">Safe Fedora-to-antiX workflow for packing a whole Betterbird profile, transferring verified split archive parts, restoring to staging, and running the Maildir++ converter.</p>
+  </header>
+
+  <main>
+    <nav aria-label="Table of contents">
+      <h2>Contents</h2>
+      <a href="#goal">Goal</a>
+      <a href="#files">Files Created</a>
+      <a href="#manifest">Manifest vs Inventory</a>
+      <a href="#prerequisites">Prerequisites</a>
+      <a href="#safety">Safety Rules</a>
+      <a href="#fedora">Fedora Pack Steps</a>
+      <a href="#transfer">Transfer Checklist</a>
+      <a href="#antix">antiX Restore Steps</a>
+      <a href="#conversion">Maildir++ Conversion</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#quickref">Quick Reference</a>
+    </nav>
+
+    <div>
+      <section id="goal">
+        <h2>1. Goal</h2>
+        <p>
+          Use <code>src/betterbird_profile_transport.py</code> to move the whole Fedora Betterbird profile root
+          <code>~/Betterbird-Email</code> to antiX staging at <code>/mail/import-staging/betterbird-maildir</code>
+          without changing message files. The transport script creates a streaming <code>.tar.gz</code> archive and
+          splits it into verified part files. It does not zip the profile, it does not compact Betterbird folders,
+          and it does not create one giant 60 GB archive file.
+        </p>
+        <div class="grid">
+          <div class="box">
+            <h3>Default transport choices</h3>
+            <ul>
+              <li>Source scope: whole profile root contents.</li>
+              <li>Compression: Python standard-library <code>gzip</code>, level 6.</li>
+              <li>Part size: <code>1900 MiB</code>.</li>
+              <li>Restore target: <code>/mail/import-staging/betterbird-maildir</code>.</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h3>Why 1900 MiB parts</h3>
+            <p>
+              A 59-60 GB profile may produce roughly 32 parts before compression. The 1900 MiB default stays below
+              common 2 GB tool limits and well below the FAT32 4 GB file limit, while avoiding hundreds of tiny files.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="files">
+        <h2>2. Files Created by Pack</h2>
+        <p>The export folder must remain together as one set. Transfer every file in it.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>manifest.json</code></td>
+              <td>Control file. Contains part names, sizes, hashes, whole archive hash, inventory metadata, source stats, timestamps, and restore defaults.</td>
+            </tr>
+            <tr>
+              <td><code>inventory.jsonl</code></td>
+              <td>Per-entry inventory. Contains path, type, size, mode, mtime, and SHA256 for regular files. The script reads it automatically through the manifest.</td>
+            </tr>
+            <tr>
+              <td><code>betterbird-profile.tar.gz.part0001</code>, <code>part0002</code>, ...</td>
+              <td>Split archive stream. These are the transferable data files. The script verifies each part and the full reconstructed stream hash.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="manifest">
+        <h2>3. Manifest vs Inventory</h2>
+        <div class="callout danger">
+          <strong>Important:</strong> every command option named <code>--manifest</code> must point to
+          <code>manifest.json</code>. Do not use <code>inventory.jsonl</code> as the control file.
+        </div>
+        <p>
+          <code>manifest.json</code> is the top-level control file. It tells the script where the part files are and
+          how to verify <code>inventory.jsonl</code>. The inventory file must stay beside the manifest, but you do not
+          pass it directly on the command line.
+        </p>
+        <div class="command">
+          <div class="command-title">
+            <span>Correct verify-tree form</span>
+            <button class="copy" data-copy-target="cmd-correct-manifest">Copy</button>
+          </div>
+<pre id="cmd-correct-manifest"><code>python3 src/betterbird_profile_transport.py verify-tree \
+  --manifest "$TRANSFER/manifest.json" \
+  --dest /mail/import-staging/betterbird-maildir</code></pre>
+        </div>
+        <div class="callout warning">
+          Wrong file: <code>$TRANSFER/inventory.jsonl</code>. That file is not a manifest and will be rejected if used as the control file.
+        </div>
+      </section>
+
+      <section id="prerequisites">
+        <h2>4. Prerequisites</h2>
+        <ul class="checklist">
+          <li>Betterbird is fully closed on Fedora before packing.</li>
+          <li>Python 3 is available on Fedora and antiX.</li>
+          <li>This repository is available on both machines, or at least the two scripts under <code>src/</code> are available on both machines.</li>
+          <li>The export location has enough free space for the compressed split archive parts.</li>
+          <li>The antiX staging disk has enough free space for the restored profile and later Maildir++ conversion output.</li>
+          <li>The transfer method preserves ordinary file bytes for <code>manifest.json</code>, <code>inventory.jsonl</code>, and all part files.</li>
+        </ul>
+        <div class="command">
+          <div class="command-title">
+            <span>Check Python and repository on Fedora or antiX</span>
+            <button class="copy" data-copy-target="cmd-check-python">Copy</button>
+          </div>
+<pre id="cmd-check-python"><code>cd "$HOME/antiX_VM_Laptop"
+python3 --version
+test -f src/betterbird_profile_transport.py
+test -f src/betterbird_maildirlite_to_maildirpp.py</code></pre>
+        </div>
+      </section>
+
+      <section id="safety">
+        <h2>5. Safety Rules</h2>
+        <ul class="checklist">
+          <li>Do not compact Betterbird folders for this transport. The goal is an intact profile copy, not mail cleanup.</li>
+          <li>Do not extract or normalize the mail tree on Windows. Store the split part files on Windows if needed, but restore the profile on Linux.</li>
+          <li>Keep <code>manifest.json</code>, <code>inventory.jsonl</code>, and every <code>betterbird-profile.tar.gz.partNNNN</code> file together.</li>
+          <li>Use a fresh export directory outside <code>~/Betterbird-Email</code>. The script refuses output inside the source tree.</li>
+          <li>Use an empty antiX destination. The script refuses a non-empty restore destination unless <code>--allow-non-empty-dest</code> is used after manual review.</li>
+          <li>Do not use <code>--allow-active-profile</code>, <code>--allow-symlinks</code>, or <code>--allow-non-empty-dest</code> for normal migration.</li>
+        </ul>
+      </section>
+
+      <section id="fedora">
+        <h2>6. Fedora Pack Steps</h2>
+        <div class="step">
+          <h3>Step 6.1 - Set variables</h3>
+          <p>Use a fresh timestamped export folder outside the Betterbird profile.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Set Fedora paths</span>
+              <button class="copy" data-copy-target="cmd-fedora-vars">Copy</button>
+            </div>
+<pre id="cmd-fedora-vars"><code>export REPO="$HOME/antiX_VM_Laptop"
+export SOURCE="$HOME/Betterbird-Email"
+export EXPORT="$HOME/betterbird-profile-export-$(date +%Y%m%d-%H%M%S)"</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 6.2 - Confirm Betterbird is closed</h3>
+          <p>Close Betterbird normally from the UI first. Then check for running processes and lock markers.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Check process and lock markers</span>
+              <button class="copy" data-copy-target="cmd-fedora-locks">Copy</button>
+            </div>
+<pre id="cmd-fedora-locks"><code>pgrep -a betterbird || echo "No Betterbird process found"
+find "$SOURCE" -maxdepth 1 \( -name ".parentlock" -o -name "parent.lock" -o -name "lock" \) -print</code></pre>
+          </div>
+          <div class="callout warning">
+            If any lock marker prints, do not pack yet. Reopen and close Betterbird cleanly, or restart Fedora and check again.
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 6.3 - Check source and free space</h3>
+          <div class="command">
+            <div class="command-title">
+              <span>Check profile size and disk space</span>
+              <button class="copy" data-copy-target="cmd-fedora-space">Copy</button>
+            </div>
+<pre id="cmd-fedora-space"><code>test -d "$SOURCE"
+du -sh "$SOURCE"
+df -h "$HOME"</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 6.4 - Create the split archive export</h3>
+          <p>This command creates <code>manifest.json</code>, <code>inventory.jsonl</code>, and split part files.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Pack the whole Betterbird profile</span>
+              <button class="copy" data-copy-target="cmd-pack">Copy</button>
+            </div>
+<pre id="cmd-pack"><code>cd "$REPO"
+python3 src/betterbird_profile_transport.py pack \
+  --source "$SOURCE" \
+  --out "$EXPORT"</code></pre>
+          </div>
+          <div class="callout ok">
+            A successful run prints <code>mode=pack</code>, the manifest path, part count, archive bytes, and source file stats.
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 6.5 - Confirm expected export files</h3>
+          <div class="command">
+            <div class="command-title">
+              <span>List export folder</span>
+              <button class="copy" data-copy-target="cmd-list-export">Copy</button>
+            </div>
+<pre id="cmd-list-export"><code>ls -lh "$EXPORT"
+test -f "$EXPORT/manifest.json"
+test -f "$EXPORT/inventory.jsonl"
+ls "$EXPORT"/betterbird-profile.tar.gz.part*</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="transfer">
+        <h2>7. Transfer Checklist</h2>
+        <p>Transfer the entire export folder to the antiX machine. You may use an external disk, shared folder, network copy, or another byte-preserving method.</p>
+        <div class="callout warning">
+          If Windows is involved, use it only as storage for the export files. Do not extract the profile on Windows.
+        </div>
+        <ul class="checklist">
+          <li>Transfer <code>manifest.json</code>.</li>
+          <li>Transfer <code>inventory.jsonl</code>.</li>
+          <li>Transfer every <code>betterbird-profile.tar.gz.partNNNN</code> file.</li>
+          <li>Keep the filenames unchanged.</li>
+          <li>Keep all files in one folder on antiX.</li>
+        </ul>
+      </section>
+
+      <section id="antix">
+        <h2>8. antiX Restore Steps</h2>
+        <div class="step">
+          <h3>Step 8.1 - Set antiX paths</h3>
+          <p>Set <code>TRANSFER</code> to the folder containing the copied export files.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Set antiX paths</span>
+              <button class="copy" data-copy-target="cmd-antix-vars">Copy</button>
+            </div>
+<pre id="cmd-antix-vars"><code>export REPO="$HOME/antiX_VM_Laptop"
+export TRANSFER="/path/to/betterbird-profile-export"
+export DEST="/mail/import-staging/betterbird-maildir"</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 8.2 - Verify archive parts before extraction</h3>
+          <p>This checks each part hash and the full reconstructed archive stream hash without making a huge combined archive.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Verify split archive</span>
+              <button class="copy" data-copy-target="cmd-verify-archive">Copy</button>
+            </div>
+<pre id="cmd-verify-archive"><code>cd "$REPO"
+python3 src/betterbird_profile_transport.py verify-archive \
+  --manifest "$TRANSFER/manifest.json"</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 8.3 - Prepare an empty staging destination</h3>
+          <p>The destination must be empty or absent. The script will create it if needed.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Inspect staging destination</span>
+              <button class="copy" data-copy-target="cmd-check-dest">Copy</button>
+            </div>
+<pre id="cmd-check-dest"><code>if [ -e "$DEST" ]; then
+  find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
+else
+  echo "Destination does not exist yet; the script can create it."
+fi</code></pre>
+          </div>
+          <div class="callout danger">
+            If this command prints any file or folder under <code>$DEST</code>, do not run unpack until you have chosen a fresh empty destination or manually reviewed the old contents.
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 8.4 - Unpack to antiX staging</h3>
+          <p>This streams the split archive directly into the destination and rejects unsafe archive paths.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Unpack profile to staging</span>
+              <button class="copy" data-copy-target="cmd-unpack">Copy</button>
+            </div>
+<pre id="cmd-unpack"><code>cd "$REPO"
+python3 src/betterbird_profile_transport.py unpack \
+  --manifest "$TRANSFER/manifest.json" \
+  --dest "$DEST"</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 8.5 - Verify restored tree against inventory</h3>
+          <p>This compares restored files against the inventory by path count, type, size, and SHA256 for regular files.</p>
+          <div class="command">
+            <div class="command-title">
+              <span>Verify restored profile tree</span>
+              <button class="copy" data-copy-target="cmd-verify-tree">Copy</button>
+            </div>
+<pre id="cmd-verify-tree"><code>cd "$REPO"
+python3 src/betterbird_profile_transport.py verify-tree \
+  --manifest "$TRANSFER/manifest.json" \
+  --dest "$DEST"</code></pre>
+          </div>
+          <div class="callout ok">
+            Only continue to conversion after this command prints <code>status=ok</code>.
+          </div>
+        </div>
+      </section>
+
+      <section id="conversion">
+        <h2>9. Maildir++ Conversion After Restore</h2>
+        <p>After <code>verify-tree</code> passes, run the existing converter against the staged profile.</p>
+        <div class="step">
+          <h3>Step 9.1 - Dry run first</h3>
+          <div class="command">
+            <div class="command-title">
+              <span>Converter dry run</span>
+              <button class="copy" data-copy-target="cmd-convert-dry-run">Copy</button>
+            </div>
+<pre id="cmd-convert-dry-run"><code>cd "$REPO"
+python3 src/betterbird_maildirlite_to_maildirpp.py \
+  --source "$DEST" \
+  --target /mail/Mailstore/evolution-import \
+  --dry-run</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 9.2 - Review conversion logs</h3>
+          <p>Review the log directory printed by the dry run. Important files include:</p>
+          <ul>
+            <li><code>conversion.jsonl</code></li>
+            <li><code>folder-map.tsv</code></li>
+            <li><code>summary.tsv</code></li>
+            <li><code>duplicates.tsv</code></li>
+            <li><code>errors.tsv</code></li>
+            <li><code>skipped.tsv</code></li>
+          </ul>
+        </div>
+
+        <div class="step">
+          <h3>Step 9.3 - Copy with resume support</h3>
+          <div class="command">
+            <div class="command-title">
+              <span>Converter copy mode</span>
+              <button class="copy" data-copy-target="cmd-convert-copy">Copy</button>
+            </div>
+<pre id="cmd-convert-copy"><code>cd "$REPO"
+python3 src/betterbird_maildirlite_to_maildirpp.py \
+  --source "$DEST" \
+  --target /mail/Mailstore/evolution-import \
+  --copy \
+  --resume</code></pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>Step 9.4 - Verify copied Maildir++ output</h3>
+          <div class="command">
+            <div class="command-title">
+              <span>Converter verify mode</span>
+              <button class="copy" data-copy-target="cmd-convert-verify">Copy</button>
+            </div>
+<pre id="cmd-convert-verify"><code>cd "$REPO"
+python3 src/betterbird_maildirlite_to_maildirpp.py \
+  --source "$DEST" \
+  --target /mail/Mailstore/evolution-import \
+  --verify \
+  --verify-hash</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>10. Troubleshooting</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Symptom</th>
+              <th>Meaning</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Active profile or lock marker error</td>
+              <td>Betterbird may still be open or did not close cleanly.</td>
+              <td>Close Betterbird, check <code>pgrep -a betterbird</code>, restart Fedora if needed, then pack again.</td>
+            </tr>
+            <tr>
+              <td>Missing archive part</td>
+              <td>Not every <code>partNNNN</code> file reached antiX.</td>
+              <td>Compare file counts and names with the Fedora export folder, then transfer the missing part.</td>
+            </tr>
+            <tr>
+              <td>SHA256 mismatch</td>
+              <td>A part, inventory, or restored file changed during copy or storage.</td>
+              <td>Re-transfer the affected files. If the mismatch remains, repack from Fedora after confirming the source is stable.</td>
+            </tr>
+            <tr>
+              <td>Non-empty destination refusal</td>
+              <td>The staging directory already contains files.</td>
+              <td>Choose a fresh destination or manually clear the staging directory outside the script after confirming it is safe.</td>
+            </tr>
+            <tr>
+              <td><code>inventory.jsonl</code> used as the control file</td>
+              <td>The wrong file was passed.</td>
+              <td>
+                Use <code>--manifest "$TRANSFER/manifest.json"</code>.
+                Keep <code>inventory.jsonl</code> beside it.
+              </td>
+            </tr>
+            <tr>
+              <td>Symlink refusal</td>
+              <td>The source tree contains symlinks and the default safe mode refuses them.</td>
+              <td>Review whether those symlinks are expected. Do not use <code>--allow-symlinks</code> unless you understand their targets.</td>
+            </tr>
+            <tr>
+              <td>Interrupted pack, transfer, or unpack</td>
+              <td>The export or restore may be incomplete.</td>
+              <td>For pack, use a new export directory and run again. For transfer, rerun <code>verify-archive</code>. For unpack, use a fresh empty destination and run again.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="quickref">
+        <h2>11. Quick Reference</h2>
+        <div class="command">
+          <div class="command-title">
+            <span>Fedora pack</span>
+            <button class="copy" data-copy-target="cmd-quick-pack">Copy</button>
+          </div>
+<pre id="cmd-quick-pack"><code>cd "$HOME/antiX_VM_Laptop"
+python3 src/betterbird_profile_transport.py pack \
+  --source ~/Betterbird-Email \
+  --out "$HOME/betterbird-profile-export-$(date +%Y%m%d-%H%M%S)"</code></pre>
+        </div>
+        <div class="command">
+          <div class="command-title">
+            <span>antiX verify, unpack, verify tree</span>
+            <button class="copy" data-copy-target="cmd-quick-restore">Copy</button>
+          </div>
+<pre id="cmd-quick-restore"><code>cd "$HOME/antiX_VM_Laptop"
+export TRANSFER="/path/to/betterbird-profile-export"
+export DEST="/mail/import-staging/betterbird-maildir"
+python3 src/betterbird_profile_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
+python3 src/betterbird_profile_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+python3 src/betterbird_profile_transport.py verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"</code></pre>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>Generated for the antiX_VM_Laptop repository. This file is self-contained and can be opened offline in a browser.</p>
+  </footer>
+
+  <script>
+    (function () {
+      function copyText(text, button) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            setStatus(button, "Copied");
+          }).catch(function () {
+            fallbackCopy(text, button);
+          });
+        } else {
+          fallbackCopy(text, button);
+        }
+      }
+
+      function fallbackCopy(text, button) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.left = "-9999px";
+        document.body.appendChild(area);
+        area.select();
+        try {
+          document.execCommand("copy");
+          setStatus(button, "Copied");
+        } catch (err) {
+          setStatus(button, "Select text");
+        }
+        document.body.removeChild(area);
+      }
+
+      function setStatus(button, text) {
+        var original = button.getAttribute("data-original") || button.textContent;
+        button.setAttribute("data-original", original);
+        button.textContent = text;
+        window.setTimeout(function () {
+          button.textContent = original;
+        }, 1600);
+      }
+
+      document.querySelectorAll("button.copy").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var target = document.getElementById(button.getAttribute("data-copy-target"));
+          if (!target) {
+            setStatus(button, "Missing");
+            return;
+          }
+          copyText(target.innerText.trim(), button);
+        });
+      });
+    }());
+  </script>
+</body>
+</html>

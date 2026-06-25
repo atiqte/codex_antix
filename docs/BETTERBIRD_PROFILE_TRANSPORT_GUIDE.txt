@@ -1,0 +1,519 @@
+Betterbird Profile Transport DIY Guide
+======================================
+
+Purpose
+-------
+
+This guide explains how to safely move the whole Fedora Betterbird profile
+root from:
+
+  ~/Betterbird-Email
+
+to antiX staging at:
+
+  /mail/import-staging/betterbird-maildir
+
+The transport uses:
+
+  src/betterbird_profile_transport.py
+
+It creates a streaming tar.gz archive split into verified part files. It does
+not zip the profile, does not compact Betterbird folders, and does not create
+one huge 60 GB archive file.
+
+After the restored tree passes verification, run:
+
+  src/betterbird_maildirlite_to_maildirpp.py
+
+to convert the staged Betterbird maildir-lite tree to canonical Maildir++.
+
+
+Default Transport Choices
+-------------------------
+
+- Archive scope: whole Betterbird profile root contents.
+- Compression: Python standard-library gzip, level 6.
+- Part size: 1900 MiB.
+- Restore target: /mail/import-staging/betterbird-maildir.
+
+Why 1900 MiB:
+
+A 59-60 GB profile may produce roughly 32 parts before compression. The 1900
+MiB default stays below common 2 GB tool limits and well below the FAT32 4 GB
+file limit, while avoiding hundreds of tiny files.
+
+
+Files Created by the pack Command
+---------------------------------
+
+The export folder contains:
+
+  manifest.json
+    Top-level control file. This is the file passed to --manifest.
+    It records part names, part sizes, part hashes, whole archive hash,
+    inventory metadata, source stats, timestamps, and restore defaults.
+
+  inventory.jsonl
+    Per-entry inventory. It records path, type, size, mode, mtime, and SHA256
+    for regular files. The script reads this automatically through
+    manifest.json.
+
+  betterbird-profile.tar.gz.part0001
+  betterbird-profile.tar.gz.part0002
+  ...
+    Split archive stream files. These are the large transferable data parts.
+
+Transfer all of these files together. Do not rename them.
+
+
+Critical Rule: Manifest vs Inventory
+------------------------------------
+
+Every option named --manifest must point to:
+
+  manifest.json
+
+Do not use inventory.jsonl as the control file.
+
+Correct:
+
+COPY COMMAND:
+
+  python3 src/betterbird_profile_transport.py verify-tree \
+    --manifest "$TRANSFER/manifest.json" \
+    --dest /mail/import-staging/betterbird-maildir
+
+Wrong file:
+
+  $TRANSFER/inventory.jsonl
+
+That file is not a manifest and will be rejected if used as the control file.
+
+Why:
+
+manifest.json is the top-level control file. It tells the script where the
+part files are and how to verify inventory.jsonl. The inventory file must stay
+beside the manifest, but you do not pass it directly on the command line.
+
+
+Prerequisites
+-------------
+
+Before starting:
+
+- Betterbird is fully closed on Fedora.
+- Python 3 is available on Fedora and antiX.
+- This repository is available on both machines, or at least both scripts
+  under src/ are available on both machines.
+- The Fedora export location has enough free space for the compressed split
+  archive parts.
+- The antiX staging disk has enough free space for the restored profile and
+  later Maildir++ conversion output.
+- The transfer method preserves ordinary file bytes for manifest.json,
+  inventory.jsonl, and all part files.
+
+COPY COMMAND:
+
+  cd "$HOME/antiX_VM_Laptop"
+  python3 --version
+  test -f src/betterbird_profile_transport.py
+  test -f src/betterbird_maildirlite_to_maildirpp.py
+
+
+Safety Rules
+------------
+
+- Do not compact Betterbird folders for this transport.
+- Do not extract or normalize the mail tree on Windows.
+- Windows can store the split archive parts if needed, but restore the profile
+  on Linux.
+- Keep manifest.json, inventory.jsonl, and every
+  betterbird-profile.tar.gz.partNNNN file together.
+- Use a fresh export directory outside ~/Betterbird-Email.
+- Use an empty antiX destination.
+- Do not use --allow-active-profile for normal migration.
+- Do not use --allow-symlinks for normal migration.
+- Do not use --allow-non-empty-dest for normal migration.
+
+
+Fedora Pack Steps
+=================
+
+Step 1 - Set Fedora Paths
+-------------------------
+
+Use a fresh timestamped export folder outside the Betterbird profile.
+
+COPY COMMAND:
+
+  export REPO="$HOME/antiX_VM_Laptop"
+  export SOURCE="$HOME/Betterbird-Email"
+  export EXPORT="$HOME/betterbird-profile-export-$(date +%Y%m%d-%H%M%S)"
+
+
+Step 2 - Confirm Betterbird Is Closed
+-------------------------------------
+
+Close Betterbird normally from the UI first. Then check for running processes
+and lock markers.
+
+COPY COMMAND:
+
+  pgrep -a betterbird || echo "No Betterbird process found"
+  find "$SOURCE" -maxdepth 1 \( -name ".parentlock" -o -name "parent.lock" -o -name "lock" \) -print
+
+If any Betterbird process or lock marker appears, do not pack yet. Reopen and
+close Betterbird cleanly, or restart Fedora and check again.
+
+
+Step 3 - Check Source and Free Space
+------------------------------------
+
+COPY COMMAND:
+
+  test -d "$SOURCE"
+  du -sh "$SOURCE"
+  df -h "$HOME"
+
+
+Step 4 - Pack the Whole Betterbird Profile
+------------------------------------------
+
+This creates manifest.json, inventory.jsonl, and split part files.
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_profile_transport.py pack \
+    --source "$SOURCE" \
+    --out "$EXPORT"
+
+A successful run prints:
+
+  mode=pack
+  source=...
+  out=...
+  manifest=...
+  parts=...
+  archive_bytes=...
+  regular_files=...
+  regular_file_bytes=...
+
+
+Step 5 - Confirm Expected Export Files
+--------------------------------------
+
+COPY COMMAND:
+
+  ls -lh "$EXPORT"
+  test -f "$EXPORT/manifest.json"
+  test -f "$EXPORT/inventory.jsonl"
+  ls "$EXPORT"/betterbird-profile.tar.gz.part*
+
+
+Transfer Checklist
+==================
+
+Transfer the entire export folder to the antiX machine. You may use an external
+disk, shared folder, network copy, or another byte-preserving method.
+
+Transfer all of these:
+
+- manifest.json
+- inventory.jsonl
+- every betterbird-profile.tar.gz.partNNNN file
+
+Rules:
+
+- Keep filenames unchanged.
+- Keep all files in one folder on antiX.
+- If Windows is involved, use it only as storage for the export files.
+- Do not extract the profile on Windows.
+
+
+antiX Restore Steps
+===================
+
+Step 1 - Set antiX Paths
+------------------------
+
+Set TRANSFER to the folder containing the copied export files.
+
+COPY COMMAND:
+
+  export REPO="$HOME/antiX_VM_Laptop"
+  export TRANSFER="/path/to/betterbird-profile-export"
+  export DEST="/mail/import-staging/betterbird-maildir"
+
+
+Step 2 - Verify Archive Parts Before Extraction
+-----------------------------------------------
+
+This checks each part hash and the full reconstructed archive stream hash
+without making a huge combined archive.
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_profile_transport.py verify-archive \
+    --manifest "$TRANSFER/manifest.json"
+
+Expected success output includes:
+
+  mode=verify-archive
+  status=ok
+
+
+Step 3 - Inspect the Staging Destination
+----------------------------------------
+
+The destination must be empty or absent. The script can create it if it does
+not exist.
+
+COPY COMMAND:
+
+  if [ -e "$DEST" ]; then
+    find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
+  else
+    echo "Destination does not exist yet; the script can create it."
+  fi
+
+If this prints any file or folder under $DEST, do not run unpack until you have
+chosen a fresh empty destination or manually reviewed the old contents.
+
+
+Step 4 - Unpack to antiX Staging
+--------------------------------
+
+This streams the split archive directly into the destination and rejects unsafe
+archive paths.
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_profile_transport.py unpack \
+    --manifest "$TRANSFER/manifest.json" \
+    --dest "$DEST"
+
+Expected success output includes:
+
+  mode=unpack
+  status=ok
+
+
+Step 5 - Verify the Restored Tree Against Inventory
+---------------------------------------------------
+
+This compares restored files against inventory.jsonl by path count, type, size,
+and SHA256 for regular files. Remember: the command still receives
+manifest.json.
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_profile_transport.py verify-tree \
+    --manifest "$TRANSFER/manifest.json" \
+    --dest "$DEST"
+
+Expected success output includes:
+
+  mode=verify-tree
+  status=ok
+
+Only continue to conversion after verify-tree passes.
+
+
+Maildir++ Conversion After Restore
+==================================
+
+After verify-tree passes, run the existing converter against the staged
+profile.
+
+
+Step 1 - Dry Run First
+----------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_maildirlite_to_maildirpp.py \
+    --source "$DEST" \
+    --target /mail/Mailstore/evolution-import \
+    --dry-run
+
+
+Step 2 - Review Conversion Logs
+-------------------------------
+
+Review the log directory printed by the dry run.
+
+Important files:
+
+- conversion.jsonl
+- folder-map.tsv
+- summary.tsv
+- duplicates.tsv
+- errors.tsv
+- skipped.tsv
+
+Do not proceed to copy mode until the dry-run logs make sense.
+
+
+Step 3 - Copy with Resume Support
+---------------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_maildirlite_to_maildirpp.py \
+    --source "$DEST" \
+    --target /mail/Mailstore/evolution-import \
+    --copy \
+    --resume
+
+
+Step 4 - Verify Copied Maildir++ Output
+---------------------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/betterbird_maildirlite_to_maildirpp.py \
+    --source "$DEST" \
+    --target /mail/Mailstore/evolution-import \
+    --verify \
+    --verify-hash
+
+
+Troubleshooting
+===============
+
+Active profile or lock marker error
+-----------------------------------
+
+Meaning:
+
+  Betterbird may still be open or did not close cleanly.
+
+Action:
+
+  Close Betterbird, check pgrep -a betterbird, restart Fedora if needed, then
+  pack again.
+
+
+Missing archive part
+--------------------
+
+Meaning:
+
+  Not every partNNNN file reached antiX.
+
+Action:
+
+  Compare file counts and names with the Fedora export folder, then transfer
+  the missing part.
+
+
+SHA256 mismatch
+---------------
+
+Meaning:
+
+  A part, inventory, or restored file changed during copy or storage.
+
+Action:
+
+  Re-transfer the affected files. If the mismatch remains, repack from Fedora
+  after confirming the source is stable.
+
+
+Non-empty destination refusal
+-----------------------------
+
+Meaning:
+
+  The staging directory already contains files.
+
+Action:
+
+  Choose a fresh destination or manually clear the staging directory outside
+  the script after confirming it is safe.
+
+
+manifest.json vs inventory.jsonl mistake
+----------------------------------------
+
+Meaning:
+
+  The wrong file was passed to --manifest.
+
+Action:
+
+  Use:
+
+    --manifest "$TRANSFER/manifest.json"
+
+  Keep inventory.jsonl beside manifest.json, but do not pass inventory.jsonl
+  directly.
+
+
+Symlink refusal
+---------------
+
+Meaning:
+
+  The source tree contains symlinks and the default safe mode refuses them.
+
+Action:
+
+  Review whether those symlinks are expected. Do not use --allow-symlinks
+  unless you understand their targets.
+
+
+Interrupted pack, transfer, or unpack
+-------------------------------------
+
+Meaning:
+
+  The export or restore may be incomplete.
+
+Action:
+
+  For pack, use a new export directory and run again.
+  For transfer, rerun verify-archive.
+  For unpack, use a fresh empty destination and run again.
+
+
+Quick Reference
+===============
+
+Fedora pack:
+
+COPY COMMAND:
+
+  cd "$HOME/antiX_VM_Laptop"
+  python3 src/betterbird_profile_transport.py pack \
+    --source ~/Betterbird-Email \
+    --out "$HOME/betterbird-profile-export-$(date +%Y%m%d-%H%M%S)"
+
+
+antiX verify, unpack, verify tree:
+
+COPY COMMAND:
+
+  cd "$HOME/antiX_VM_Laptop"
+  export TRANSFER="/path/to/betterbird-profile-export"
+  export DEST="/mail/import-staging/betterbird-maildir"
+  python3 src/betterbird_profile_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
+  python3 src/betterbird_profile_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+  python3 src/betterbird_profile_transport.py verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+
+
+Final Rule
+==========
+
+For transport commands, --manifest always means:
+
+  manifest.json
+
+inventory.jsonl is required, but it is read automatically from the manifest.
