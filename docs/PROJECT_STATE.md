@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-06-25
+Last updated: 2026-06-26
 
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, and a safe Betterbird maildir-lite to Maildir++ conversion script
+- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, a safe Betterbird maildir-lite to Maildir++ conversion script, and validated Evolution Flatpak setup documentation for antiX
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -28,6 +28,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/` project memory folder.
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for the full Fedora-to-antiX transport and conversion flow.
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
+- `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for installing and preparing Evolution Flatpak 3.60.2 on antiX runit/IceWM.
+- `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `src/` placeholder folder for future implementation work.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
 - `src/betterbird_profile_transport.py`, a Python standard-library tool to pack, split, verify, unpack, and verify a whole Betterbird profile tree for transfer.
@@ -73,6 +75,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/CHANGELOG.md`
   - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`
   - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`
+  - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`
+  - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`
 - `.gitignore`
 - `src/betterbird_profile_transport.py`
 - `src/betterbird_maildirlite_to_maildirpp.py`
@@ -90,6 +94,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The converter is designed to run on antiX after the Fedora Betterbird profile is restored to `/mail/import-staging/betterbird-maildir`.
 - Default mode is `--dry-run`; `--copy` refuses unmarked or unsafe sources and writes through Maildir `tmp` before atomic rename.
 - Duplicates are kept, but duplicate `Message-ID` and content hashes are logged.
+- Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
+- The verified Evolution test account uses `BackendName=maildir` and reads a Maildir++ test tree at `/mail/Mailstore/evolution/test-maildir`. Selecting `MH-format mail directories` is a known wrong path because it can show folder names while hiding Maildir `cur`/`new` messages.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
 
@@ -110,7 +116,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 5. Verify the restored profile with `verify-tree`.
 6. Run the converter dry-run on antiX against the staged Betterbird profile.
 7. Review conversion logs before any full copy.
-8. Decide broader project type and future packaging only if needed.
+8. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
+9. Add the validated production Maildir++ tree to Evolution using `Maildir-format mail directories`.
+10. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

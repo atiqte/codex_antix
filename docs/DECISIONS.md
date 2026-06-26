@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-26: Use Evolution Flatpak as First Validated Evolution Path on antiX
+
+- Status: accepted
+- Context: The owner wanted the latest Evolution for an antiX 26 runit VM with zzzFM/IceWM. Debian/antiX apt offered Evolution 3.56.x, while upstream/Flathub offered Evolution 3.60.2. A source build was feasible but required a large dependency set and careful Evolution Data Server matching on a 2 CPU, 3.2 GiB RAM VM.
+- Decision: Use the user-level Flathub `org.gnome.Evolution` package as the preferred first Evolution path. Grant `/mail` access and symlink `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir` so large app data and cache live on the `/mail` XFS disk.
+- Consequence: Evolution Flatpak is the documented GUI path for initial migration validation. Source-built Evolution remains a fallback, not the default next step. Production mail should still be added only after the Betterbird archive is converted and validated as canonical Maildir++.
+
 ### 2026-06-23: Commit and Push After Each Working Session
 
 - Status: accepted

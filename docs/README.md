@@ -15,6 +15,8 @@ Betterbird mail migration utilities.
 
 - `BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`: offline browser guide with copy buttons for the Fedora-to-antiX profile transport and post-restore conversion flow.
 - `BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`: terminal-friendly plain text version of the same guide.
+- `EVOLUTION_FLATPAK_ANTIX_GUIDE.html`: offline browser guide with copy buttons for installing and validating Evolution Flatpak 3.60.2 on antiX runit/IceWM.
+- `EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the Evolution Flatpak guide.
 
 For transport commands, `--manifest` always points to `manifest.json`.
 `inventory.jsonl` must stay beside it and is read automatically by the

@@ -13,6 +13,8 @@
 - [ ] Run `src/betterbird_maildirlite_to_maildirpp.py --dry-run` on antiX against a staged Betterbird sample profile.
 - [ ] Review converter logs: `conversion.jsonl`, `folder-map.tsv`, `summary.tsv`, `duplicates.tsv`, `errors.tsv`, and `skipped.tsv`.
 - [ ] Run a small antiX copy test and verify byte/hash preservation before full migration.
+- [ ] Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` after staging and dry-run checks pass.
+- [ ] Add the validated production Maildir++ tree to Evolution with `Maildir-format mail directories`.
 - [ ] Decide broader project type beyond the approved mail migration utility.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
@@ -34,3 +36,5 @@
 - [x] Implement Python standard-library Betterbird profile transport utility with split archive verification.
 - [x] Add portable unit tests for profile transport pack, verify, unpack, and safety failures.
 - [x] Create Betterbird profile transport DIY guide in HTML and plain text formats.
+- [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
+- [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.

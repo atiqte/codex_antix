@@ -1,0 +1,879 @@
+Evolution Flatpak antiX DIY Guide
+=================================
+
+Purpose
+-------
+
+This guide explains how to install and prepare the Flatpak version of
+Evolution on an antiX 26 runit VM using zzzFM/IceWM on a Windows 11 host.
+
+The verified target is:
+
+  Evolution 3.60.2 from Flathub
+
+The setup keeps Evolution's large Flatpak application data, cache, and local
+mail workflow physically on:
+
+  /mail
+
+The goal is a safe daily GUI mail client for the Betterbird-to-Maildir++
+migration workflow. Evolution is used for reading, composing, sending, and
+organizing mail. notmuch/Astroid can be tested later as a sidecar search layer.
+
+
+What This Guide Does
+--------------------
+
+- Installs Flatpak support on antiX runit without installing systemd.
+- Adds Flathub as a user-level remote.
+- Installs Evolution from Flathub.
+- Grants Evolution access to /mail.
+- Moves Flatpak app data from ~/.var/app/org.gnome.Evolution to /mail by using
+  a symlink.
+- Starts gnome-keyring for IceWM sessions.
+- Creates a small Maildir++ test tree.
+- Confirms Evolution can read text and HTML test messages from /mail.
+- Documents known pitfalls and fixes.
+
+
+What This Guide Does Not Do
+---------------------------
+
+- It does not migrate the full Betterbird archive.
+- It does not configure production SMTP or IMAP credentials.
+- It does not configure mbsync.
+- It does not configure notmuch or Astroid.
+- It does not point Evolution at the original Betterbird profile.
+
+Important:
+
+Do not point Evolution at the original Betterbird profile. Evolution must use a
+validated Maildir++ target, not a live or restored Betterbird profile tree.
+
+
+Final Layout
+------------
+
+Expected important paths after the setup:
+
+  ~/.var/app/org.gnome.Evolution
+    Symlink to /mail/AppData/flatpak-evolution/appdir.
+
+  /mail/AppData/flatpak-evolution/appdir
+    Physical location of Flatpak Evolution app data, config, cache, WebKit
+    cache, local Evolution metadata, and source definitions.
+
+  /mail/Mailstore/evolution/test-maildir
+    Small disposable Maildir++ test tree.
+
+  /mail/Mailstore/evolution/local-maildir
+    Future production Maildir++ target for converted Betterbird mail.
+
+  /mail/SearchIndex/notmuch
+    Future optional notmuch sidecar index location.
+
+  /mail/Backups/evolution-flatpak
+    Local backup staging for Evolution Flatpak setup.
+
+
+Why Flatpak Was Chosen First
+----------------------------
+
+Debian/antiX apt had Evolution 3.56.x, while the desired upstream version was
+Evolution 3.60.x.
+
+Building Evolution from source was possible, but on this VM it required a large
+developer dependency set and a careful custom stack:
+
+  evolution-data-server 3.60.x
+  evolution 3.60.x
+  optional evolution-ews 3.60.x
+
+For a 2 CPU, 3.2 GiB RAM VM, Flatpak was a better first production test:
+
+- Evolution 3.60.2 was available from Flathub.
+- No local compile was required.
+- No custom /opt Evolution stack was needed.
+- The install was isolated to user Flatpak storage.
+- The verified runtime cost was acceptable: about 1.7 GiB for Flatpak app and
+  runtime data.
+
+Source-built Evolution remains a fallback if Flatpak fails a future production
+requirement.
+
+
+Operator Pattern: Run Commands Through a Batch Script
+-----------------------------------------------------
+
+For long command batches, create a reusable script:
+
+COPY COMMAND:
+
+  mkdir -p ~/codex-runs
+  cd ~/codex-runs
+  nano codex-batch.sh
+
+Paste this template:
+
+COPY COMMAND:
+
+  #!/usr/bin/env bash
+  set -Eeuo pipefail
+
+  echo "== started: $(date -Is) =="
+  echo "== host: $(hostname) =="
+  echo
+
+  # Paste the command batch below this line.
+
+  echo
+  echo "== finished: $(date -Is) =="
+
+Save in nano:
+
+  Ctrl+O
+  Enter
+  Ctrl+X
+
+Make it executable:
+
+COPY COMMAND:
+
+  chmod +x ~/codex-runs/codex-batch.sh
+
+Before running a changed script, check syntax:
+
+COPY COMMAND:
+
+  bash -n ~/codex-runs/codex-batch.sh
+
+Run and save a timestamped log:
+
+COPY COMMAND:
+
+  ~/codex-runs/codex-batch.sh 2>&1 | tee ~/codex-runs/codex-batch-$(date +%Y%m%d-%H%M%S).log
+
+
+Phase 1 - Preflight Checks
+==========================
+
+Run this before installing Flatpak support.
+
+COPY COMMAND:
+
+  echo "== flatpak availability =="
+  flatpak --version || true
+  apt-cache policy flatpak xdg-desktop-portal xdg-desktop-portal-gtk bubblewrap ostree gnome-keyring seahorse
+
+  echo "== session/dbus/keyring basics =="
+  echo "XDG_SESSION_TYPE=$XDG_SESSION_TYPE"
+  echo "XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP"
+  echo "DESKTOP_SESSION=$DESKTOP_SESSION"
+  echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:+set}"
+  pgrep -a dbus || true
+  pgrep -a gnome-keyring || true
+
+  echo "== disk =="
+  df -hT / /mail
+  df -ih / /mail
+
+Expected findings on the verified VM:
+
+- flatpak may not exist yet.
+- bubblewrap may already exist.
+- DBUS_SESSION_BUS_ADDRESS should be set.
+- /mail should be mounted and have enough free space.
+- gnome-keyring may not be running yet.
+
+
+Phase 2 - Simulate Flatpak Support Install
+==========================================
+
+Always simulate first on antiX because it is a no-systemd system.
+
+COPY COMMAND:
+
+  echo "== simulate flatpak support install =="
+  sudo apt -s install flatpak xdg-desktop-portal xdg-desktop-portal-gtk gnome-keyring seahorse
+
+  echo "== check for removals/errors =="
+  sudo apt -s install flatpak xdg-desktop-portal xdg-desktop-portal-gtk gnome-keyring seahorse \
+    2>&1 | grep -E '^(Remv|Error|Unsatisfied|The following packages will be REMOVED|The following packages have unmet dependencies|Inst systemd|Inst libsystemd|Inst evolution)' || true
+
+Proceed only if:
+
+- Removing: 0
+- No dependency errors
+- No systemd package is selected
+- No Evolution apt package is selected
+
+On the verified VM, the install selected antiX elogind/nosystemd-compatible
+packages where needed.
+
+
+Phase 3 - Install Flatpak Support
+=================================
+
+COPY COMMAND:
+
+  sudo apt install flatpak xdg-desktop-portal xdg-desktop-portal-gtk gnome-keyring seahorse
+
+Verify:
+
+COPY COMMAND:
+
+  echo "== flatpak installed =="
+  flatpak --version
+  flatpak remotes || true
+
+  echo "== keyring/portal tools =="
+  command -v gnome-keyring-daemon || true
+  command -v seahorse || true
+  ls -l /usr/libexec/xdg-desktop-portal* 2>/dev/null || true
+
+  echo "== session processes =="
+  pgrep -fa dbus || true
+  pgrep -fa gnome-keyring || true
+  pgrep -fa xdg-desktop-portal || true
+
+  echo "== disk =="
+  df -hT / /mail
+
+Note:
+
+The portal binaries usually live under /usr/libexec, not necessarily in PATH.
+
+
+Phase 4 - Start Keyring for IceWM Session
+=========================================
+
+In IceWM, gnome-keyring may not start automatically. Start it before launching
+Evolution.
+
+COPY COMMAND:
+
+  gnome-keyring-daemon --start --components=secrets,pkcs11,ssh
+  pgrep -fa gnome-keyring || true
+
+If you see this once:
+
+  couldn't access control socket: /run/user/1000/keyring/control
+
+that is not fatal. It means no previous keyring control socket existed. The
+daemon should then start and print SSH_AUTH_SOCK.
+
+
+Phase 5 - Add Flathub as User Remote
+====================================
+
+Use a user-level remote. Do not use the system-level remote on this setup.
+
+The system-level command failed on the verified VM with:
+
+  error: Flatpak system operation ConfigureRemote not allowed for user
+
+Correct command:
+
+COPY COMMAND:
+
+  flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+Verify:
+
+COPY COMMAND:
+
+  flatpak --user remotes --show-details
+
+This warning is acceptable until the desktop session is restarted:
+
+  directories ... are not in the search path set by XDG_DATA_DIRS
+
+It affects menu discovery, not command-line launching.
+
+
+Phase 6 - Inspect Evolution on Flathub
+======================================
+
+COPY COMMAND:
+
+  flatpak --user remote-info --log flathub org.gnome.Evolution | sed -n '1,220p'
+
+Expected verified metadata:
+
+- Application ID: org.gnome.Evolution
+- Branch: stable
+- Version after install: 3.60.2
+- Runtime: org.gnome.Platform/x86_64/50
+
+
+Phase 7 - Install Evolution Flatpak
+===================================
+
+COPY COMMAND:
+
+  flatpak --user install flathub org.gnome.Evolution
+
+Review the prompt. It should install:
+
+- org.gnome.Evolution
+- org.gnome.Platform runtime
+- Mesa/GL runtime extensions
+- codec and locale extensions
+
+Verify:
+
+COPY COMMAND:
+
+  echo "== installed flatpaks =="
+  flatpak --user list --app
+  flatpak --user list --runtime | sed -n '1,160p'
+
+  echo "== Evolution info =="
+  flatpak --user info org.gnome.Evolution
+
+  echo "== disk after Evolution Flatpak =="
+  df -hT / /mail
+  du -sh ~/.local/share/flatpak ~/.var/app/org.gnome.Evolution 2>/dev/null || true
+
+Expected verified result:
+
+  Evolution 3.60.2
+
+Do not launch Evolution yet.
+
+
+Phase 8 - Create /mail Layout and Grant Access
+==============================================
+
+COPY COMMAND:
+
+  echo "== create /mail Flatpak Evolution layout =="
+  mkdir -p /mail/AppData/flatpak-evolution
+  mkdir -p /mail/Mailstore/evolution/local-maildir
+  mkdir -p /mail/Mailstore/evolution/test-maildir
+  mkdir -p /mail/SearchIndex/notmuch
+  mkdir -p /mail/Backups/evolution-flatpak
+
+  echo "== grant Evolution access to /mail =="
+  flatpak --user override org.gnome.Evolution --filesystem=/mail:create
+
+  echo "== show Evolution permissions =="
+  flatpak --user info --show-permissions org.gnome.Evolution
+
+  echo "== directory check =="
+  find /mail -maxdepth 3 -type d | sort | sed -n '1,120p'
+  df -hT / /mail
+
+Expected permission:
+
+  filesystems=...;/mail:create;...
+
+
+Phase 9 - Do Not Use XDG Environment Overrides
+==============================================
+
+This was tested and did not work as intended.
+
+The command below is not the final solution:
+
+  flatpak --user override org.gnome.Evolution \
+    --env=XDG_DATA_HOME=/mail/AppData/flatpak-evolution/data \
+    --env=XDG_CONFIG_HOME=/mail/AppData/flatpak-evolution/config \
+    --env=XDG_CACHE_HOME=/mail/AppData/flatpak-evolution/cache
+
+Inside the sandbox, Flatpak still reset paths to:
+
+  /home/atiq/.var/app/org.gnome.Evolution/data
+  /home/atiq/.var/app/org.gnome.Evolution/config
+  /home/atiq/.var/app/org.gnome.Evolution/cache
+
+Use the symlink method in the next phase instead.
+
+
+Phase 10 - Move Flatpak App Data to /mail by Symlink
+====================================================
+
+This keeps Flatpak happy while placing real bytes on /mail.
+
+COPY COMMAND:
+
+  set -eu
+
+  echo "== stop Evolution Flatpak cleanly =="
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  sleep 3
+
+  echo "== stop leftover Evolution child processes if any =="
+  pkill -u "$USER" -f '^/app/libexec/evolution' 2>/dev/null || true
+  pkill -u "$USER" -f '^/app/libexec/evolution-data-server' 2>/dev/null || true
+  pkill -u "$USER" -f 'bwrap .*evolution' 2>/dev/null || true
+  sleep 3
+
+  echo "== remaining Evolution processes =="
+  pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true
+
+  echo "== remove ineffective XDG overrides =="
+  flatpak --user override org.gnome.Evolution --unset-env=XDG_DATA_HOME 2>/dev/null || true
+  flatpak --user override org.gnome.Evolution --unset-env=XDG_CONFIG_HOME 2>/dev/null || true
+  flatpak --user override org.gnome.Evolution --unset-env=XDG_CACHE_HOME 2>/dev/null || true
+
+  echo "== move Flatpak app data to /mail and symlink =="
+  APPID=org.gnome.Evolution
+  SRC="$HOME/.var/app/$APPID"
+  DST="/mail/AppData/flatpak-evolution/appdir"
+
+  mkdir -p "$HOME/.var/app"
+  mkdir -p /mail/AppData/flatpak-evolution
+
+  if [ -L "$SRC" ]; then
+    echo "Already symlinked: $SRC -> $(readlink -f "$SRC")"
+  elif [ -e "$DST" ]; then
+    echo "ERROR: destination already exists: $DST"
+    exit 1
+  elif [ -e "$SRC" ]; then
+    mv "$SRC" "$DST"
+    ln -s "$DST" "$SRC"
+  else
+    mkdir -p "$DST"
+    ln -s "$DST" "$SRC"
+  fi
+
+  echo "== verify symlink =="
+  ls -ld "$SRC" "$DST"
+  readlink -f "$SRC"
+
+  echo "== verify Flatpak app data write goes through symlink to /mail =="
+  flatpak --user run --command=sh org.gnome.Evolution -lc '
+  echo "XDG_DATA_HOME=$XDG_DATA_HOME"
+  echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME"
+  echo "XDG_CACHE_HOME=$XDG_CACHE_HOME"
+  mkdir -p "$XDG_CACHE_HOME/evolution-test"
+  echo ok > "$XDG_CACHE_HOME/evolution-test/write-check"
+  cat "$XDG_CACHE_HOME/evolution-test/write-check"
+  '
+
+  echo "== host-side location check =="
+  ls -l /mail/AppData/flatpak-evolution/appdir/cache/evolution-test/write-check
+  du -shL "$HOME/.var/app/org.gnome.Evolution" /mail/AppData/flatpak-evolution/appdir
+  df -hT / /mail
+
+Expected symlink:
+
+  ~/.var/app/org.gnome.Evolution -> /mail/AppData/flatpak-evolution/appdir
+
+
+Phase 11 - First GUI Launch
+===========================
+
+COPY COMMAND:
+
+  echo "== verify Evolution Flatpak permissions =="
+  flatpak --user info --show-permissions org.gnome.Evolution
+
+  echo "== ensure keyring daemon is running =="
+  gnome-keyring-daemon --start --components=secrets,pkcs11,ssh || true
+  pgrep -fa gnome-keyring || true
+
+  echo "== launch Evolution GUI =="
+  flatpak --user run org.gnome.Evolution
+
+Expected result:
+
+- First-run wizard appears.
+- Normal window appears.
+- No crash.
+- No blank window.
+- No theme or icon issue.
+
+Do not configure production mail yet.
+
+
+Phase 12 - Stop Evolution and Confirm Clean State
+=================================================
+
+COPY COMMAND:
+
+  echo "== stop Evolution Flatpak =="
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  sleep 3
+
+  echo "== remaining Evolution processes =="
+  pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true
+
+  echo "== confirm symlink and sizes =="
+  ls -ld ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir
+  readlink -f ~/.var/app/org.gnome.Evolution || true
+  du -shL ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir 2>/dev/null || true
+
+  echo "== confirm no direct production mail touched =="
+  find /mail/Mailstore/evolution -maxdepth 3 -type d | sort
+  df -hT / /mail
+
+
+Phase 13 - Create a Maildir++ Test Tree
+=======================================
+
+This test proves Evolution can read Maildir++ under /mail before any production
+mail is used.
+
+COPY COMMAND:
+
+set -eu
+
+TESTROOT="/mail/Mailstore/evolution/test-maildir"
+
+echo "== create clean test Maildir++ folders =="
+mkdir -p "$TESTROOT/cur" "$TESTROOT/new" "$TESTROOT/tmp"
+mkdir -p "$TESTROOT/.Archive/cur" "$TESTROOT/.Archive/new" "$TESTROOT/.Archive/tmp"
+mkdir -p "$TESTROOT/.Sent/cur" "$TESTROOT/.Sent/new" "$TESTROOT/.Sent/tmp"
+
+echo "== write sample messages =="
+cat > "$TESTROOT/new/1700000000.M1P1.antix,S=612,W=612" <<'EOF'
+From: Test Sender <sender@example.test>
+To: Atiq <atiq@example.test>
+Subject: Evolution Maildir test message
+Date: Fri, 26 Jun 2026 15:15:00 +0600
+Message-ID: <evolution-maildir-test-1@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+This is a local Maildir test message.
+
+If Evolution can see this, the Flatpak can read /mail correctly.
+EOF
+
+cat > "$TESTROOT/.Archive/new/1700000001.M1P1.antix,S=692,W=692" <<'EOF'
+From: Archive Sender <archive@example.test>
+To: Atiq <atiq@example.test>
+Subject: Evolution Archive subfolder test
+Date: Fri, 26 Jun 2026 15:16:00 +0600
+Message-ID: <evolution-maildir-test-archive-1@example.test>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html><body><h1>Archive folder test</h1><p>This tests simple HTML rendering from a Maildir++ subfolder.</p></body></html>
+EOF
+
+echo "== permissions and structure =="
+find "$TESTROOT" -maxdepth 3 -type d | sort
+find "$TESTROOT" -type f | sort
+du -sh "$TESTROOT"
+
+Add additional cur/ messages:
+
+COPY COMMAND:
+
+set -eu
+
+echo "== stop Evolution =="
+flatpak kill org.gnome.Evolution 2>/dev/null || true
+sleep 2
+
+TESTROOT="/mail/Mailstore/evolution/test-maildir"
+
+echo "== create properly flagged Maildir test messages in cur/ =="
+mkdir -p "$TESTROOT/cur" "$TESTROOT/new" "$TESTROOT/tmp"
+mkdir -p "$TESTROOT/.Archive/cur" "$TESTROOT/.Archive/new" "$TESTROOT/.Archive/tmp"
+
+TMP1="$TESTROOT/tmp/msg-inbox"
+TMP2="$TESTROOT/.Archive/tmp/msg-archive"
+
+cat > "$TMP1" <<'EOF'
+From: Test Sender <sender@example.test>
+To: Atiq <atiq@example.test>
+Subject: Evolution Maildir cur test message
+Date: Fri, 26 Jun 2026 15:30:00 +0600
+Message-ID: <evolution-maildir-cur-test-1@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+This message is in cur with a Maildir :2, flag suffix.
+EOF
+
+cat > "$TMP2" <<'EOF'
+From: Archive Sender <archive@example.test>
+To: Atiq <atiq@example.test>
+Subject: Evolution Archive cur HTML test
+Date: Fri, 26 Jun 2026 15:31:00 +0600
+Message-ID: <evolution-maildir-archive-cur-test-1@example.test>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html><body><h1>Archive folder test</h1><p>This message is in Archive/cur with a Maildir flag suffix.</p></body></html>
+EOF
+
+S1=$(wc -c < "$TMP1")
+S2=$(wc -c < "$TMP2")
+
+mv "$TMP1" "$TESTROOT/cur/$(date +%s).M${RANDOM}P$$.antix,S=${S1}:2,"
+mv "$TMP2" "$TESTROOT/.Archive/cur/$(date +%s).M${RANDOM}P$$.antix,S=${S2}:2,"
+
+echo "== test tree files =="
+find "$TESTROOT" -type f | sort
+du -sh "$TESTROOT"
+
+
+Phase 14 - Configure Evolution Test Account
+===========================================
+
+Launch Evolution:
+
+COPY COMMAND:
+
+  gnome-keyring-daemon --start --components=secrets,pkcs11,ssh || true
+  flatpak --user run org.gnome.Evolution
+
+In the Evolution GUI:
+
+1. Start the account wizard.
+2. Use any test identity values if required.
+3. For receiving type, choose exactly:
+
+   Maildir-format mail directories
+
+4. Do not choose:
+
+   MH-format mail directories
+
+5. Use this path:
+
+   /mail/Mailstore/evolution/test-maildir
+
+6. Do not configure production SMTP yet.
+
+Expected result:
+
+- Inbox/root folder shows two text test messages.
+- Archive folder shows two HTML test messages.
+
+
+Phase 15 - Verify Account Backend
+=================================
+
+COPY COMMAND:
+
+  echo "== stop Evolution =="
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  sleep 2
+
+  echo "== verify final test account backend =="
+  grep -RInE 'DisplayName=atiq@tagindustries.com.sg|BackendName=maildir|BackendName=mh|Path=/mail/Mailstore/evolution/test-maildir' \
+    ~/.var/app/org.gnome.Evolution/config/evolution/sources \
+    2>/dev/null || true
+
+  echo "== data location sizes =="
+  du -shL ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir 2>/dev/null || true
+  du -sh /mail/Mailstore/evolution/test-maildir
+  df -hT / /mail
+
+Correct result:
+
+  BackendName=maildir
+  Path=/mail/Mailstore/evolution/test-maildir
+
+Wrong result:
+
+  BackendName=mh
+
+If BackendName is mh, remove the account in Evolution Preferences and recreate
+it using Maildir-format mail directories.
+
+
+Bogofilter Warning
+==================
+
+You may see warnings like:
+
+  Can't open file 'wordlist.db'
+  Remember to register some spam and ham messages before you use bogofilter
+
+This is not a migration blocker. It means junk filtering tried to use
+bogofilter before a spam/ham database existed.
+
+Recommended during migration:
+
+1. Open Evolution.
+2. Go to Edit -> Preferences.
+3. Open Mail Preferences.
+4. Open Junk settings.
+5. Disable automatic junk checking/filtering until intentionally configured.
+
+
+Update Evolution Flatpak
+========================
+
+Before updating:
+
+COPY COMMAND:
+
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  mkdir -p /mail/Backups/evolution-flatpak
+  tar -C /mail/AppData/flatpak-evolution -czf /mail/Backups/evolution-flatpak/appdir-before-flatpak-update-$(date +%Y%m%d-%H%M%S).tar.gz appdir
+
+Update:
+
+COPY COMMAND:
+
+  flatpak --user update org.gnome.Evolution
+  flatpak --user info org.gnome.Evolution
+
+If the update fails, do not change mail data. Capture the log and investigate.
+
+
+Rollback
+========
+
+Flatpak can show previous commits:
+
+COPY COMMAND:
+
+  flatpak --user remote-info --log flathub org.gnome.Evolution | sed -n '1,160p'
+
+Rollback requires choosing a previous commit and using Flatpak's update commit
+mechanism. Do this only deliberately, after backing up:
+
+  /mail/AppData/flatpak-evolution/appdir
+  /mail/Mailstore/evolution
+
+
+Transfer to Another Machine
+===========================
+
+To reproduce the setup on a new antiX machine:
+
+1. Install Flatpak support packages.
+2. Add user-level Flathub.
+3. Install org.gnome.Evolution.
+4. Recreate /mail mount and directory layout.
+5. Restore:
+
+   /mail/AppData/flatpak-evolution/appdir
+   /mail/Mailstore/evolution
+   /mail/SearchIndex/notmuch, if used later
+
+6. Recreate symlink:
+
+COPY COMMAND:
+
+  mkdir -p "$HOME/.var/app"
+  rm -rf "$HOME/.var/app/org.gnome.Evolution"
+  ln -s /mail/AppData/flatpak-evolution/appdir "$HOME/.var/app/org.gnome.Evolution"
+
+7. Grant /mail access again:
+
+COPY COMMAND:
+
+  flatpak --user override org.gnome.Evolution --filesystem=/mail:create
+
+8. Start keyring and launch Evolution.
+
+
+Backup Checklist
+================
+
+Back up these paths:
+
+  /mail/AppData/flatpak-evolution/appdir
+  /mail/Mailstore/evolution
+  /mail/SearchIndex/notmuch
+  /mail/Backups/evolution-flatpak
+  ~/.mbsyncrc, after mbsync is configured
+  ~/.notmuch-config, after notmuch is configured
+
+Flatpak app/runtime data under ~/.local/share/flatpak can be reinstalled from
+Flathub and does not need to be the primary backup source.
+
+
+Troubleshooting
+===============
+
+Problem: system Flathub remote fails.
+
+Symptom:
+
+  error: Flatpak system operation ConfigureRemote not allowed for user
+
+Fix:
+
+COPY COMMAND:
+
+  flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+
+Problem: Evolution does not appear in the IceWM menu.
+
+Cause:
+
+Flatpak export paths may not be in XDG_DATA_DIRS until session restart.
+
+Fix:
+
+Launch from terminal:
+
+COPY COMMAND:
+
+  flatpak --user run org.gnome.Evolution
+
+Then restart the desktop session later if menu integration matters.
+
+
+Problem: Evolution sees folder names but no Maildir messages.
+
+Likely cause:
+
+The account was created as MH-format mail directories instead of Maildir-format
+mail directories.
+
+Fix:
+
+Remove the wrong account and recreate it with:
+
+  Maildir-format mail directories
+
+Verify:
+
+COPY COMMAND:
+
+  grep -RInE 'BackendName=maildir|BackendName=mh|Path=/mail/Mailstore/evolution/test-maildir' \
+    ~/.var/app/org.gnome.Evolution/config/evolution/sources \
+    2>/dev/null || true
+
+
+Problem: app data still appears under ~/.var/app/org.gnome.Evolution.
+
+Explanation:
+
+That is expected if ~/.var/app/org.gnome.Evolution is a symlink to /mail.
+
+Verify:
+
+COPY COMMAND:
+
+  ls -ld ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir
+  readlink -f ~/.var/app/org.gnome.Evolution
+  du -shL ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir
+
+
+Problem: bogofilter errors appear.
+
+Fix:
+
+Disable automatic junk filtering until bogofilter is intentionally trained.
+
+
+Next Migration Step
+===================
+
+After this guide is complete, the next production migration step is not more
+Evolution setup.
+
+The next step is:
+
+1. Verify Betterbird source/staging.
+2. Convert the Betterbird maildir-lite archive to canonical Maildir++ under:
+
+   /mail/Mailstore/evolution/local-maildir
+
+3. Validate counts, headers, HTML, attachments, non-English subjects, duplicate
+   Message-ID values, and folder hierarchy.
+4. Only then add the validated production Maildir++ account to Evolution.

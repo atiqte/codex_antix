@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evolution Flatpak antiX DIY Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #17212f;
+      --muted: #526071;
+      --line: #d8dee8;
+      --code-bg: #101827;
+      --code-ink: #edf3ff;
+      --accent: #1769aa;
+      --accent-ink: #ffffff;
+      --ok: #13734b;
+      --warn: #9a5b00;
+      --danger: #a63232;
+      --note-bg: #eef6ff;
+      --warn-bg: #fff7e6;
+      --danger-bg: #fff0f0;
+      --ok-bg: #ebf8f1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    h1, h2, h3 { line-height: 1.2; margin-top: 0; }
+
+    h1 {
+      max-width: 1180px;
+      margin: 0 auto 8px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      max-width: 1180px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    nav {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    nav h2 { font-size: 15px; margin-bottom: 10px; }
+
+    nav a {
+      display: block;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfe;
+    }
+
+    .callout {
+      border-left: 5px solid var(--accent);
+      background: var(--note-bg);
+      padding: 14px 16px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+
+    .callout.warning { border-left-color: var(--warn); background: var(--warn-bg); }
+    .callout.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+    .callout.ok { border-left-color: var(--ok); background: var(--ok-bg); }
+
+    .command {
+      border: 1px solid #293449;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 14px 0;
+      background: var(--code-bg);
+    }
+
+    .command-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #172237;
+      color: #dce8ff;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    button.copy {
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      padding: 7px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button.copy:focus {
+      outline: 3px solid #9ecbff;
+      outline-offset: 2px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow-x: auto;
+      color: var(--code-ink);
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    code { font-family: Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    p code, li code {
+      color: #102f55;
+      background: #edf2f8;
+      border: 1px solid #d7e0ec;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #edf2f8; }
+
+    .checklist li { margin-bottom: 8px; }
+
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; padding: 16px; }
+      nav { position: static; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Evolution Flatpak antiX DIY Guide</h1>
+    <p class="subtitle">Offline step-by-step setup for Evolution 3.60.2 on antiX 26 runit with zzzFM/IceWM, using /mail for durable mail data.</p>
+  </header>
+
+  <main>
+    <nav aria-label="Table of contents">
+      <h2>Contents</h2>
+      <a href="#purpose">Purpose</a>
+      <a href="#layout">Final Layout</a>
+      <a href="#why-flatpak">Why Flatpak</a>
+      <a href="#operator">Batch Script Pattern</a>
+      <a href="#preflight">Preflight</a>
+      <a href="#install-support">Install Support</a>
+      <a href="#flathub">Flathub</a>
+      <a href="#install-evolution">Install Evolution</a>
+      <a href="#mail-access">/mail Access</a>
+      <a href="#symlink">Move App Data</a>
+      <a href="#first-launch">First Launch</a>
+      <a href="#maildir-test">Maildir++ Test</a>
+      <a href="#account">Evolution Account</a>
+      <a href="#maintenance">Maintenance</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#next">Next Step</a>
+    </nav>
+
+    <div>
+      <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This guide documents the confirmed working setup for installing Evolution from Flathub on an antiX 26 runit VM using zzzFM/IceWM on a Windows 11 host.</p>
+        <div class="grid">
+          <div class="box">
+            <h3>Verified target</h3>
+            <p><code>org.gnome.Evolution</code> from Flathub, version <code>3.60.2</code>.</p>
+          </div>
+          <div class="box">
+            <h3>Primary storage</h3>
+            <p>Mail, Evolution app data, cache, and migration targets live under <code>/mail</code>.</p>
+          </div>
+        </div>
+        <div class="callout danger">
+          <strong>Do not point Evolution at the original Betterbird profile.</strong>
+          Evolution must use a validated Maildir++ target, not a Betterbird profile tree.
+        </div>
+      </section>
+
+      <section id="layout">
+        <h2>Final Layout</h2>
+        <table>
+          <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>~/.var/app/org.gnome.Evolution</code></td><td>Symlink to <code>/mail/AppData/flatpak-evolution/appdir</code>.</td></tr>
+            <tr><td><code>/mail/AppData/flatpak-evolution/appdir</code></td><td>Physical Flatpak Evolution app data, config, cache, WebKit cache, and source metadata.</td></tr>
+            <tr><td><code>/mail/Mailstore/evolution/test-maildir</code></td><td>Disposable Maildir++ test tree.</td></tr>
+            <tr><td><code>/mail/Mailstore/evolution/local-maildir</code></td><td>Future production Maildir++ target for converted Betterbird mail.</td></tr>
+            <tr><td><code>/mail/SearchIndex/notmuch</code></td><td>Future optional notmuch index.</td></tr>
+            <tr><td><code>/mail/Backups/evolution-flatpak</code></td><td>Local backup staging for Evolution Flatpak data.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="why-flatpak">
+        <h2>Why Flatpak</h2>
+        <p>Debian/antiX apt offered Evolution 3.56.x, while the desired upstream version was 3.60.x. Building from source was possible but required a large developer dependency set and careful matching of Evolution Data Server. Flatpak provided Evolution 3.60.2 with lower operational risk on a 2 CPU, 3.2 GiB RAM VM.</p>
+        <div class="callout ok">
+          <strong>Decision:</strong> Use Flatpak Evolution as the preferred first Evolution path. Keep source-build as fallback.
+        </div>
+      </section>
+
+      <section id="operator">
+        <h2>Batch Script Pattern</h2>
+        <p>For long command batches, use a reusable script and save a timestamped log.</p>
+        <div class="command"><div class="command-title"><span>Create script folder</span><button class="copy">Copy command</button></div><pre><code>mkdir -p ~/codex-runs
+cd ~/codex-runs
+nano codex-batch.sh</code></pre></div>
+        <div class="command"><div class="command-title"><span>Reusable script template</span><button class="copy">Copy command</button></div><pre><code>#!/usr/bin/env bash
+set -Eeuo pipefail
+
+echo "== started: $(date -Is) =="
+echo "== host: $(hostname) =="
+echo
+
+# Paste the command batch below this line.
+
+echo
+echo "== finished: $(date -Is) =="</code></pre></div>
+        <div class="command"><div class="command-title"><span>Make executable and run with log</span><button class="copy">Copy command</button></div><pre><code>chmod +x ~/codex-runs/codex-batch.sh
+bash -n ~/codex-runs/codex-batch.sh
+~/codex-runs/codex-batch.sh 2&gt;&amp;1 | tee ~/codex-runs/codex-batch-$(date +%Y%m%d-%H%M%S).log</code></pre></div>
+      </section>
+
+      <section id="preflight">
+        <h2>Phase 1 - Preflight</h2>
+        <div class="command"><div class="command-title"><span>Inspect Flatpak, DBus, keyring, and disk</span><button class="copy">Copy command</button></div><pre><code>echo "== flatpak availability =="
+flatpak --version || true
+apt-cache policy flatpak xdg-desktop-portal xdg-desktop-portal-gtk bubblewrap ostree gnome-keyring seahorse
+
+echo "== session/dbus/keyring basics =="
+echo "XDG_SESSION_TYPE=$XDG_SESSION_TYPE"
+echo "XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP"
+echo "DESKTOP_SESSION=$DESKTOP_SESSION"
+echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:+set}"
+pgrep -a dbus || true
+pgrep -a gnome-keyring || true
+
+echo "== disk =="
+df -hT / /mail
+df -ih / /mail</code></pre></div>
+      </section>
+
+      <section id="install-support">
+        <h2>Phase 2 - Install Flatpak Support</h2>
+        <p>Simulate first. Proceed only if there are no removals or systemd conflicts.</p>
+        <div class="command"><div class="command-title"><span>Simulate support install</span><button class="copy">Copy command</button></div><pre><code>echo "== simulate flatpak support install =="
+sudo apt -s install flatpak xdg-desktop-portal xdg-desktop-portal-gtk gnome-keyring seahorse
+
+echo "== check for removals/errors =="
+sudo apt -s install flatpak xdg-desktop-portal xdg-desktop-portal-gtk gnome-keyring seahorse \
+  2&gt;&amp;1 | grep -E '^(Remv|Error|Unsatisfied|The following packages will be REMOVED|The following packages have unmet dependencies|Inst systemd|Inst libsystemd|Inst evolution)' || true</code></pre></div>
+        <div class="command"><div class="command-title"><span>Install support packages</span><button class="copy">Copy command</button></div><pre><code>sudo apt install flatpak xdg-desktop-portal xdg-desktop-portal-gtk gnome-keyring seahorse</code></pre></div>
+        <div class="command"><div class="command-title"><span>Verify support packages</span><button class="copy">Copy command</button></div><pre><code>echo "== flatpak installed =="
+flatpak --version
+flatpak remotes || true
+
+echo "== keyring/portal tools =="
+command -v gnome-keyring-daemon || true
+command -v seahorse || true
+ls -l /usr/libexec/xdg-desktop-portal* 2&gt;/dev/null || true
+
+echo "== session processes =="
+pgrep -fa dbus || true
+pgrep -fa gnome-keyring || true
+pgrep -fa xdg-desktop-portal || true
+
+echo "== disk =="
+df -hT / /mail</code></pre></div>
+      </section>
+
+      <section id="flathub">
+        <h2>Phase 3 - Flathub User Remote</h2>
+        <div class="callout warning">
+          <strong>Use user-level Flathub.</strong> The system-level remote failed on this antiX setup with <code>ConfigureRemote not allowed for user</code>.
+        </div>
+        <div class="command"><div class="command-title"><span>Add Flathub for current user</span><button class="copy">Copy command</button></div><pre><code>flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak --user remotes --show-details</code></pre></div>
+        <div class="command"><div class="command-title"><span>Inspect Evolution metadata</span><button class="copy">Copy command</button></div><pre><code>flatpak --user remote-info --log flathub org.gnome.Evolution | sed -n '1,220p'</code></pre></div>
+      </section>
+
+      <section id="install-evolution">
+        <h2>Phase 4 - Install Evolution</h2>
+        <div class="command"><div class="command-title"><span>Install Evolution Flatpak</span><button class="copy">Copy command</button></div><pre><code>flatpak --user install flathub org.gnome.Evolution</code></pre></div>
+        <div class="command"><div class="command-title"><span>Verify Evolution install</span><button class="copy">Copy command</button></div><pre><code>echo "== installed flatpaks =="
+flatpak --user list --app
+flatpak --user list --runtime | sed -n '1,160p'
+
+echo "== Evolution info =="
+flatpak --user info org.gnome.Evolution
+
+echo "== disk after Evolution Flatpak =="
+df -hT / /mail
+du -sh ~/.local/share/flatpak ~/.var/app/org.gnome.Evolution 2&gt;/dev/null || true</code></pre></div>
+        <p>Expected result: <code>Evolution 3.60.2</code>.</p>
+      </section>
+
+      <section id="mail-access">
+        <h2>Phase 5 - /mail Access</h2>
+        <div class="command"><div class="command-title"><span>Create layout and grant /mail access</span><button class="copy">Copy command</button></div><pre><code>echo "== create /mail Flatpak Evolution layout =="
+mkdir -p /mail/AppData/flatpak-evolution
+mkdir -p /mail/Mailstore/evolution/local-maildir
+mkdir -p /mail/Mailstore/evolution/test-maildir
+mkdir -p /mail/SearchIndex/notmuch
+mkdir -p /mail/Backups/evolution-flatpak
+
+echo "== grant Evolution access to /mail =="
+flatpak --user override org.gnome.Evolution --filesystem=/mail:create
+
+echo "== show Evolution permissions =="
+flatpak --user info --show-permissions org.gnome.Evolution
+
+echo "== directory check =="
+find /mail -maxdepth 3 -type d | sort | sed -n '1,120p'
+df -hT / /mail</code></pre></div>
+      </section>
+
+      <section id="symlink">
+        <h2>Phase 6 - Move App Data to /mail</h2>
+        <div class="callout warning">
+          Direct <code>XDG_DATA_HOME</code>, <code>XDG_CONFIG_HOME</code>, and <code>XDG_CACHE_HOME</code> Flatpak overrides were tested and did not take effect inside the sandbox. Use the symlink method.
+        </div>
+        <div class="command"><div class="command-title"><span>Move app data and symlink it</span><button class="copy">Copy command</button></div><pre><code>set -eu
+
+echo "== stop Evolution Flatpak cleanly =="
+flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+sleep 3
+
+echo "== stop leftover Evolution child processes if any =="
+pkill -u "$USER" -f '^/app/libexec/evolution' 2&gt;/dev/null || true
+pkill -u "$USER" -f '^/app/libexec/evolution-data-server' 2&gt;/dev/null || true
+pkill -u "$USER" -f 'bwrap .*evolution' 2&gt;/dev/null || true
+sleep 3
+
+echo "== remaining Evolution processes =="
+pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true
+
+echo "== remove ineffective XDG overrides =="
+flatpak --user override org.gnome.Evolution --unset-env=XDG_DATA_HOME 2&gt;/dev/null || true
+flatpak --user override org.gnome.Evolution --unset-env=XDG_CONFIG_HOME 2&gt;/dev/null || true
+flatpak --user override org.gnome.Evolution --unset-env=XDG_CACHE_HOME 2&gt;/dev/null || true
+
+echo "== move Flatpak app data to /mail and symlink =="
+APPID=org.gnome.Evolution
+SRC="$HOME/.var/app/$APPID"
+DST="/mail/AppData/flatpak-evolution/appdir"
+
+mkdir -p "$HOME/.var/app"
+mkdir -p /mail/AppData/flatpak-evolution
+
+if [ -L "$SRC" ]; then
+  echo "Already symlinked: $SRC -&gt; $(readlink -f "$SRC")"
+elif [ -e "$DST" ]; then
+  echo "ERROR: destination already exists: $DST"
+  exit 1
+elif [ -e "$SRC" ]; then
+  mv "$SRC" "$DST"
+  ln -s "$DST" "$SRC"
+else
+  mkdir -p "$DST"
+  ln -s "$DST" "$SRC"
+fi
+
+echo "== verify symlink =="
+ls -ld "$SRC" "$DST"
+readlink -f "$SRC"
+
+echo "== verify Flatpak app data write goes through symlink to /mail =="
+flatpak --user run --command=sh org.gnome.Evolution -lc '
+echo "XDG_DATA_HOME=$XDG_DATA_HOME"
+echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME"
+echo "XDG_CACHE_HOME=$XDG_CACHE_HOME"
+mkdir -p "$XDG_CACHE_HOME/evolution-test"
+echo ok &gt; "$XDG_CACHE_HOME/evolution-test/write-check"
+cat "$XDG_CACHE_HOME/evolution-test/write-check"
+'
+
+echo "== host-side location check =="
+ls -l /mail/AppData/flatpak-evolution/appdir/cache/evolution-test/write-check
+du -shL "$HOME/.var/app/org.gnome.Evolution" /mail/AppData/flatpak-evolution/appdir
+df -hT / /mail</code></pre></div>
+      </section>
+
+      <section id="first-launch">
+        <h2>Phase 7 - First Launch</h2>
+        <div class="command"><div class="command-title"><span>Start keyring and launch Evolution</span><button class="copy">Copy command</button></div><pre><code>echo "== verify Evolution Flatpak permissions =="
+flatpak --user info --show-permissions org.gnome.Evolution
+
+echo "== ensure keyring daemon is running =="
+gnome-keyring-daemon --start --components=secrets,pkcs11,ssh || true
+pgrep -fa gnome-keyring || true
+
+echo "== launch Evolution GUI =="
+flatpak --user run org.gnome.Evolution</code></pre></div>
+        <p>Expected result: first-run wizard, normal window, no crash, no blank window, no theme/icon issue.</p>
+        <div class="command"><div class="command-title"><span>Stop and confirm clean state</span><button class="copy">Copy command</button></div><pre><code>echo "== stop Evolution Flatpak =="
+flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+sleep 3
+
+echo "== remaining Evolution processes =="
+pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true
+
+echo "== confirm symlink and sizes =="
+ls -ld ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir
+readlink -f ~/.var/app/org.gnome.Evolution || true
+du -shL ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir 2&gt;/dev/null || true
+
+echo "== confirm no direct production mail touched =="
+find /mail/Mailstore/evolution -maxdepth 3 -type d | sort
+df -hT / /mail</code></pre></div>
+      </section>
+
+      <section id="maildir-test">
+        <h2>Phase 8 - Maildir++ Test Tree</h2>
+        <div class="command"><div class="command-title"><span>Create test Maildir++ with sample messages</span><button class="copy">Copy command</button></div><pre><code>set -eu
+
+TESTROOT="/mail/Mailstore/evolution/test-maildir"
+
+echo "== create clean test Maildir++ folders =="
+mkdir -p "$TESTROOT/cur" "$TESTROOT/new" "$TESTROOT/tmp"
+mkdir -p "$TESTROOT/.Archive/cur" "$TESTROOT/.Archive/new" "$TESTROOT/.Archive/tmp"
+mkdir -p "$TESTROOT/.Sent/cur" "$TESTROOT/.Sent/new" "$TESTROOT/.Sent/tmp"
+
+echo "== write sample messages =="
+cat &gt; "$TESTROOT/new/1700000000.M1P1.antix,S=612,W=612" &lt;&lt;'EOF'
+From: Test Sender &lt;sender@example.test&gt;
+To: Atiq &lt;atiq@example.test&gt;
+Subject: Evolution Maildir test message
+Date: Fri, 26 Jun 2026 15:15:00 +0600
+Message-ID: &lt;evolution-maildir-test-1@example.test&gt;
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+This is a local Maildir test message.
+
+If Evolution can see this, the Flatpak can read /mail correctly.
+EOF
+
+cat &gt; "$TESTROOT/.Archive/new/1700000001.M1P1.antix,S=692,W=692" &lt;&lt;'EOF'
+From: Archive Sender &lt;archive@example.test&gt;
+To: Atiq &lt;atiq@example.test&gt;
+Subject: Evolution Archive subfolder test
+Date: Fri, 26 Jun 2026 15:16:00 +0600
+Message-ID: &lt;evolution-maildir-test-archive-1@example.test&gt;
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;Archive folder test&lt;/h1&gt;&lt;p&gt;This tests simple HTML rendering from a Maildir++ subfolder.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+EOF
+
+echo "== permissions and structure =="
+find "$TESTROOT" -maxdepth 3 -type d | sort
+find "$TESTROOT" -type f | sort
+du -sh "$TESTROOT"</code></pre></div>
+        <div class="command"><div class="command-title"><span>Add cur/ test messages</span><button class="copy">Copy command</button></div><pre><code>set -eu
+
+echo "== stop Evolution =="
+flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+sleep 2
+
+TESTROOT="/mail/Mailstore/evolution/test-maildir"
+
+echo "== create properly flagged Maildir test messages in cur/ =="
+mkdir -p "$TESTROOT/cur" "$TESTROOT/new" "$TESTROOT/tmp"
+mkdir -p "$TESTROOT/.Archive/cur" "$TESTROOT/.Archive/new" "$TESTROOT/.Archive/tmp"
+
+TMP1="$TESTROOT/tmp/msg-inbox"
+TMP2="$TESTROOT/.Archive/tmp/msg-archive"
+
+cat &gt; "$TMP1" &lt;&lt;'EOF'
+From: Test Sender &lt;sender@example.test&gt;
+To: Atiq &lt;atiq@example.test&gt;
+Subject: Evolution Maildir cur test message
+Date: Fri, 26 Jun 2026 15:30:00 +0600
+Message-ID: &lt;evolution-maildir-cur-test-1@example.test&gt;
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+This message is in cur with a Maildir :2, flag suffix.
+EOF
+
+cat &gt; "$TMP2" &lt;&lt;'EOF'
+From: Archive Sender &lt;archive@example.test&gt;
+To: Atiq &lt;atiq@example.test&gt;
+Subject: Evolution Archive cur HTML test
+Date: Fri, 26 Jun 2026 15:31:00 +0600
+Message-ID: &lt;evolution-maildir-archive-cur-test-1@example.test&gt;
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;Archive folder test&lt;/h1&gt;&lt;p&gt;This message is in Archive/cur with a Maildir flag suffix.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
+EOF
+
+S1=$(wc -c &lt; "$TMP1")
+S2=$(wc -c &lt; "$TMP2")
+
+mv "$TMP1" "$TESTROOT/cur/$(date +%s).M${RANDOM}P$$.antix,S=${S1}:2,"
+mv "$TMP2" "$TESTROOT/.Archive/cur/$(date +%s).M${RANDOM}P$$.antix,S=${S2}:2,"
+
+echo "== test tree files =="
+find "$TESTROOT" -type f | sort
+du -sh "$TESTROOT"</code></pre></div>
+      </section>
+
+      <section id="account">
+        <h2>Phase 9 - Configure Evolution Account</h2>
+        <p>Launch Evolution and create a local Maildir account pointing at <code>/mail/Mailstore/evolution/test-maildir</code>.</p>
+        <div class="command"><div class="command-title"><span>Launch Evolution</span><button class="copy">Copy command</button></div><pre><code>gnome-keyring-daemon --start --components=secrets,pkcs11,ssh || true
+flatpak --user run org.gnome.Evolution</code></pre></div>
+        <div class="callout danger">
+          <strong>Critical selection:</strong> choose <code>Maildir-format mail directories</code>. Do not choose <code>MH-format mail directories</code>. The wrong MH backend can show folders while hiding Maildir messages.
+        </div>
+        <div class="command"><div class="command-title"><span>Verify backend</span><button class="copy">Copy command</button></div><pre><code>echo "== stop Evolution =="
+flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+sleep 2
+
+echo "== verify final test account backend =="
+grep -RInE 'DisplayName=atiq@tagindustries.com.sg|BackendName=maildir|BackendName=mh|Path=/mail/Mailstore/evolution/test-maildir' \
+  ~/.var/app/org.gnome.Evolution/config/evolution/sources \
+  2&gt;/dev/null || true
+
+echo "== data location sizes =="
+du -shL ~/.var/app/org.gnome.Evolution /mail/AppData/flatpak-evolution/appdir 2&gt;/dev/null || true
+du -sh /mail/Mailstore/evolution/test-maildir
+df -hT / /mail</code></pre></div>
+        <p>Correct result: <code>BackendName=maildir</code> and <code>Path=/mail/Mailstore/evolution/test-maildir</code>.</p>
+      </section>
+
+      <section id="maintenance">
+        <h2>Maintenance, Backup, and Transfer</h2>
+        <h3>Bogofilter warning</h3>
+        <p>If Evolution prints bogofilter <code>wordlist.db</code> errors, disable automatic junk filtering until spam/ham training is intentionally configured.</p>
+        <h3>Update</h3>
+        <div class="command"><div class="command-title"><span>Backup then update Evolution Flatpak</span><button class="copy">Copy command</button></div><pre><code>flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+mkdir -p /mail/Backups/evolution-flatpak
+tar -C /mail/AppData/flatpak-evolution -czf /mail/Backups/evolution-flatpak/appdir-before-flatpak-update-$(date +%Y%m%d-%H%M%S).tar.gz appdir
+flatpak --user update org.gnome.Evolution
+flatpak --user info org.gnome.Evolution</code></pre></div>
+        <h3>Transfer to another machine</h3>
+        <p>Restore <code>/mail/AppData/flatpak-evolution/appdir</code> and <code>/mail/Mailstore/evolution</code>, reinstall the Flatpak, recreate the symlink, and grant <code>/mail</code> access.</p>
+        <div class="command"><div class="command-title"><span>Recreate symlink and /mail access</span><button class="copy">Copy command</button></div><pre><code>mkdir -p "$HOME/.var/app"
+rm -rf "$HOME/.var/app/org.gnome.Evolution"
+ln -s /mail/AppData/flatpak-evolution/appdir "$HOME/.var/app/org.gnome.Evolution"
+flatpak --user override org.gnome.Evolution --filesystem=/mail:create</code></pre></div>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+        <table>
+          <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td>System Flathub remote fails with <code>ConfigureRemote not allowed</code>.</td><td>Use <code>flatpak --user remote-add</code>.</td></tr>
+            <tr><td>Evolution does not appear in IceWM menu.</td><td>Launch with <code>flatpak --user run org.gnome.Evolution</code>; restart the session later for menu integration.</td></tr>
+            <tr><td>Folders visible but messages missing.</td><td>Remove the account and recreate it as <code>Maildir-format mail directories</code>, not MH.</td></tr>
+            <tr><td>Data appears under <code>~/.var/app</code>.</td><td>Expected if it is a symlink. Verify with <code>readlink -f ~/.var/app/org.gnome.Evolution</code>.</td></tr>
+            <tr><td>Bogofilter errors.</td><td>Disable junk filtering until training is configured.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="next">
+        <h2>Next Migration Step</h2>
+        <p>After this setup is complete, return to the Betterbird migration pipeline. Convert the staged Betterbird maildir-lite archive into canonical Maildir++ under <code>/mail/Mailstore/evolution/local-maildir</code>, validate it, and only then add the production Maildir account to Evolution.</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      var buttons = document.querySelectorAll("button.copy");
+      buttons.forEach(function (button) {
+        button.addEventListener("click", function () {
+          var code = button.closest(".command").querySelector("pre").innerText;
+          navigator.clipboard.writeText(code).then(function () {
+            var original = button.textContent;
+            button.textContent = "Copied";
+            setTimeout(function () { button.textContent = original; }, 1200);
+          }, function () {
+            button.textContent = "Select text";
+          });
+        });
+      });
+    }());
+  </script>
+</body>
+</html>

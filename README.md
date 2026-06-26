@@ -10,6 +10,7 @@ No broader application type, framework, package manager, or deployment target ha
 - Project memory documents live in `docs/`.
 - `AGENTS.md` defines rules for future Codex sessions.
 - Approved mail migration utilities live in `src/`.
+- Offline DIY guides now cover Betterbird profile transport and the validated Evolution Flatpak setup on antiX.
 - Windows 11 and Debian Linux portability is a project requirement.
 
 ## Start Here
@@ -31,6 +32,8 @@ Before doing project work, read these files:
 ├── docs/
 │   ├── CHANGELOG.md
 │   ├── DECISIONS.md
+│   ├── EVOLUTION_FLATPAK_ANTIX_GUIDE.html
+│   ├── EVOLUTION_FLATPAK_ANTIX_GUIDE.txt
 │   ├── IDEAS.md
 │   ├── PROJECT_STATE.md
 │   ├── TODO.md
