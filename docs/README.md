@@ -18,6 +18,10 @@ Betterbird mail migration utilities.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.html`: offline browser guide with copy buttons for installing and validating Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the Evolution Flatpak guide.
 
+## antiX Desktop Helpers
+
+- `../scripts/evolution_flatpak_icewm_launcher_setup.sh`: user-level helper for adding Evolution Flatpak to the IceWM menu and taskbar toolbar while starting `gnome-keyring-daemon` at login.
+
 For transport commands, `--manifest` always points to `manifest.json`.
 `inventory.jsonl` must stay beside it and is read automatically by the
 transport script.

@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-26
 
+- Added `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for Evolution Flatpak IceWM menu/taskbar integration with keyring startup fallback.
+- Updated the Evolution Flatpak HTML and text guides with an IceWM launcher phase, validation commands, transfer notes, and troubleshooting for menu/toolbar/keyring issues.
 - Added `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html` and `.txt`, complete DIY guides for installing and validating Evolution Flatpak 3.60.2 on antiX runit/IceWM with app data symlinked to `/mail`.
 - Recorded the accepted Evolution Flatpak path as the preferred first GUI mail-client setup for the constrained antiX VM, with source-build kept as fallback.
 - Added `codex-input/` to `.gitignore` so local pasted terminal logs are not committed.

@@ -75,6 +75,12 @@ Expected important paths after the setup:
   /mail/Backups/evolution-flatpak
     Local backup staging for Evolution Flatpak setup.
 
+  ~/.local/bin/evolution-flatpak-mail
+    User launcher wrapper for IceWM menu and taskbar startup.
+
+  ~/.local/state/evolution-flatpak
+    Launcher log and IceWM config backups.
+
 
 Why Flatpak Was Chosen First
 ----------------------------
@@ -488,6 +494,90 @@ Expected result:
 Do not configure production mail yet.
 
 
+Phase 11B - IceWM Menu and Taskbar Launcher
+===========================================
+
+After the terminal launch works, install a user-level wrapper so Evolution can
+start from the IceWM menu and taskbar toolbar without opening a terminal.
+
+This uses:
+
+  ~/.local/bin/evolution-flatpak-mail
+  ~/.icewm/menu
+  ~/.icewm/toolbar
+  ~/.icewm/startup
+  ~/.local/state/evolution-flatpak
+
+Run these commands on the antiX VM. They assume this repository is cloned or
+copied to:
+
+  ~/antiX_VM_Laptop
+
+If the folder name is different, adjust only the cd line.
+
+Inspect current IceWM, Flatpak, and keyring state:
+
+COPY COMMAND:
+
+  cd ~/antiX_VM_Laptop
+  sh scripts/evolution_flatpak_icewm_launcher_setup.sh inspect
+
+Install the launcher wrapper and IceWM entries:
+
+COPY COMMAND:
+
+  cd ~/antiX_VM_Laptop
+  sh -n scripts/evolution_flatpak_icewm_launcher_setup.sh
+  sh scripts/evolution_flatpak_icewm_launcher_setup.sh install
+  sh scripts/evolution_flatpak_icewm_launcher_setup.sh validate
+
+What the helper does:
+
+- Creates ~/.local/bin/evolution-flatpak-mail.
+- Starts gnome-keyring at IceWM startup.
+- Keeps a wrapper fallback in case the startup script did not run.
+- Adds a marked Evolution Mail entry to ~/.icewm/menu.
+- Adds a marked Evolution Mail quick-launch entry to ~/.icewm/toolbar.
+- Backs up existing IceWM files under ~/.local/state/evolution-flatpak.
+- Replaces only marked blocks, so repeated runs do not duplicate entries.
+
+Launch through the installed wrapper:
+
+COPY COMMAND:
+
+  ~/.local/bin/evolution-flatpak-mail
+
+Then test:
+
+1. IceWM menu -> Evolution Mail.
+2. The Evolution Mail taskbar toolbar button.
+3. Repeated clicks do not create a broken state.
+
+If the menu or toolbar does not refresh immediately, run:
+
+COPY COMMAND:
+
+  icewm --restart
+
+If it still does not appear, log out and back into IceWM.
+
+Verify the installed files and keyring:
+
+COPY COMMAND:
+
+  grep -RIn 'CODEX EVOLUTION FLATPAK' ~/.icewm/menu ~/.icewm/toolbar ~/.icewm/startup
+  pgrep -fa gnome-keyring || true
+  tail -n 80 ~/.local/state/evolution-flatpak/launcher.log 2>/dev/null || true
+  flatpak --user info --show-permissions org.gnome.Evolution | sed -n '1,120p'
+
+Remove the integration if needed:
+
+COPY COMMAND:
+
+  cd ~/antiX_VM_Laptop
+  sh scripts/evolution_flatpak_icewm_launcher_setup.sh uninstall
+
+
 Phase 12 - Stop Evolution and Confirm Clean State
 =================================================
 
@@ -765,7 +855,14 @@ COPY COMMAND:
 
   flatpak --user override org.gnome.Evolution --filesystem=/mail:create
 
-8. Start keyring and launch Evolution.
+8. Reinstall IceWM menu/taskbar integration:
+
+COPY COMMAND:
+
+  cd ~/antiX_VM_Laptop
+  sh scripts/evolution_flatpak_icewm_launcher_setup.sh install
+
+9. Start Evolution from the IceWM menu, toolbar, or wrapper.
 
 
 Backup Checklist
@@ -777,6 +874,8 @@ Back up these paths:
   /mail/Mailstore/evolution
   /mail/SearchIndex/notmuch
   /mail/Backups/evolution-flatpak
+  ~/.local/bin/evolution-flatpak-mail, or rerun the repository helper script
+  ~/.icewm/menu, ~/.icewm/toolbar, and ~/.icewm/startup, or rerun the helper
   ~/.mbsyncrc, after mbsync is configured
   ~/.notmuch-config, after notmuch is configured
 
@@ -800,21 +899,42 @@ COPY COMMAND:
   flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 
-Problem: Evolution does not appear in the IceWM menu.
+Problem: Evolution does not appear in the IceWM menu or toolbar.
 
 Cause:
 
-Flatpak export paths may not be in XDG_DATA_DIRS until session restart.
+The IceWM menu or toolbar has not refreshed, or the user IceWM files do not
+contain the marked launcher blocks.
 
 Fix:
 
-Launch from terminal:
+Validate the helper entries:
 
 COPY COMMAND:
 
-  flatpak --user run org.gnome.Evolution
+  cd ~/antiX_VM_Laptop
+  sh scripts/evolution_flatpak_icewm_launcher_setup.sh validate
+  icewm --restart
 
-Then restart the desktop session later if menu integration matters.
+If the entries still do not appear, log out and back into IceWM.
+
+
+Problem: Evolution asks for secrets or keyring each launch.
+
+Likely cause:
+
+The IceWM startup script did not run, or gnome-keyring was not already running.
+
+Fix:
+
+COPY COMMAND:
+
+  ls -l ~/.icewm/startup
+  grep -n 'CODEX EVOLUTION FLATPAK KEYRING' ~/.icewm/startup
+  pgrep -fa gnome-keyring || true
+  ~/.local/bin/evolution-flatpak-mail
+
+The wrapper starts gnome-keyring as a fallback even if IceWM startup did not run.
 
 
 Problem: Evolution sees folder names but no Maildir messages.

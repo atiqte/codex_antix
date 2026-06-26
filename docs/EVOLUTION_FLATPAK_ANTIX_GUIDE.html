@@ -218,6 +218,7 @@
       <a href="#mail-access">/mail Access</a>
       <a href="#symlink">Move App Data</a>
       <a href="#first-launch">First Launch</a>
+      <a href="#icewm-launcher">IceWM Launcher</a>
       <a href="#maildir-test">Maildir++ Test</a>
       <a href="#account">Evolution Account</a>
       <a href="#maintenance">Maintenance</a>
@@ -256,6 +257,8 @@
             <tr><td><code>/mail/Mailstore/evolution/local-maildir</code></td><td>Future production Maildir++ target for converted Betterbird mail.</td></tr>
             <tr><td><code>/mail/SearchIndex/notmuch</code></td><td>Future optional notmuch index.</td></tr>
             <tr><td><code>/mail/Backups/evolution-flatpak</code></td><td>Local backup staging for Evolution Flatpak data.</td></tr>
+            <tr><td><code>~/.local/bin/evolution-flatpak-mail</code></td><td>User launcher wrapper for IceWM menu and taskbar startup.</td></tr>
+            <tr><td><code>~/.local/state/evolution-flatpak</code></td><td>Launcher logs and IceWM config backups.</td></tr>
           </tbody>
         </table>
       </section>
@@ -478,6 +481,30 @@ find /mail/Mailstore/evolution -maxdepth 3 -type d | sort
 df -hT / /mail</code></pre></div>
       </section>
 
+      <section id="icewm-launcher">
+        <h2>Phase 7B - IceWM Menu and Taskbar Launcher</h2>
+        <p>After the terminal launch works, install a user-level wrapper so Evolution can start from the IceWM menu and taskbar toolbar without opening a terminal.</p>
+        <div class="callout warn">
+          <strong>Run this on the antiX VM.</strong>
+          The commands assume this repository is cloned or copied to <code>~/antiX_VM_Laptop</code>. If the folder name is different, adjust only the <code>cd</code> line.
+        </div>
+        <div class="command"><div class="command-title"><span>Inspect IceWM, Flatpak, and keyring state</span><button class="copy">Copy command</button></div><pre><code>cd ~/antiX_VM_Laptop
+sh scripts/evolution_flatpak_icewm_launcher_setup.sh inspect</code></pre></div>
+        <div class="command"><div class="command-title"><span>Install menu, toolbar, startup, and wrapper entries</span><button class="copy">Copy command</button></div><pre><code>cd ~/antiX_VM_Laptop
+sh -n scripts/evolution_flatpak_icewm_launcher_setup.sh
+sh scripts/evolution_flatpak_icewm_launcher_setup.sh install
+sh scripts/evolution_flatpak_icewm_launcher_setup.sh validate</code></pre></div>
+        <p>The helper creates <code>~/.local/bin/evolution-flatpak-mail</code>, backs up existing IceWM files under <code>~/.local/state/evolution-flatpak</code>, and inserts marked blocks into <code>~/.icewm/menu</code>, <code>~/.icewm/toolbar</code>, and <code>~/.icewm/startup</code>.</p>
+        <div class="command"><div class="command-title"><span>Launch through the installed wrapper</span><button class="copy">Copy command</button></div><pre><code>~/.local/bin/evolution-flatpak-mail</code></pre></div>
+        <p>Then test the IceWM menu item named <strong>Evolution Mail</strong> and the taskbar toolbar button. If they do not appear immediately, log out and back into IceWM.</p>
+        <div class="command"><div class="command-title"><span>Verify IceWM launcher files and keyring</span><button class="copy">Copy command</button></div><pre><code>grep -RIn 'CODEX EVOLUTION FLATPAK' ~/.icewm/menu ~/.icewm/toolbar ~/.icewm/startup
+pgrep -fa gnome-keyring || true
+tail -n 80 ~/.local/state/evolution-flatpak/launcher.log 2&gt;/dev/null || true
+flatpak --user info --show-permissions org.gnome.Evolution | sed -n '1,120p'</code></pre></div>
+        <div class="command"><div class="command-title"><span>Remove launcher integration if needed</span><button class="copy">Copy command</button></div><pre><code>cd ~/antiX_VM_Laptop
+sh scripts/evolution_flatpak_icewm_launcher_setup.sh uninstall</code></pre></div>
+      </section>
+
       <section id="maildir-test">
         <h2>Phase 8 - Maildir++ Test Tree</h2>
         <div class="command"><div class="command-title"><span>Create test Maildir++ with sample messages</span><button class="copy">Copy command</button></div><pre><code>set -eu
@@ -605,11 +632,13 @@ tar -C /mail/AppData/flatpak-evolution -czf /mail/Backups/evolution-flatpak/appd
 flatpak --user update org.gnome.Evolution
 flatpak --user info org.gnome.Evolution</code></pre></div>
         <h3>Transfer to another machine</h3>
-        <p>Restore <code>/mail/AppData/flatpak-evolution/appdir</code> and <code>/mail/Mailstore/evolution</code>, reinstall the Flatpak, recreate the symlink, and grant <code>/mail</code> access.</p>
+        <p>Restore <code>/mail/AppData/flatpak-evolution/appdir</code> and <code>/mail/Mailstore/evolution</code>, reinstall the Flatpak, recreate the symlink, grant <code>/mail</code> access, and rerun the IceWM launcher helper.</p>
         <div class="command"><div class="command-title"><span>Recreate symlink and /mail access</span><button class="copy">Copy command</button></div><pre><code>mkdir -p "$HOME/.var/app"
 rm -rf "$HOME/.var/app/org.gnome.Evolution"
 ln -s /mail/AppData/flatpak-evolution/appdir "$HOME/.var/app/org.gnome.Evolution"
-flatpak --user override org.gnome.Evolution --filesystem=/mail:create</code></pre></div>
+flatpak --user override org.gnome.Evolution --filesystem=/mail:create
+cd ~/antiX_VM_Laptop
+sh scripts/evolution_flatpak_icewm_launcher_setup.sh install</code></pre></div>
       </section>
 
       <section id="troubleshooting">
@@ -618,7 +647,8 @@ flatpak --user override org.gnome.Evolution --filesystem=/mail:create</code></pr
           <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
           <tbody>
             <tr><td>System Flathub remote fails with <code>ConfigureRemote not allowed</code>.</td><td>Use <code>flatpak --user remote-add</code>.</td></tr>
-            <tr><td>Evolution does not appear in IceWM menu.</td><td>Launch with <code>flatpak --user run org.gnome.Evolution</code>; restart the session later for menu integration.</td></tr>
+            <tr><td>Evolution does not appear in IceWM menu or toolbar.</td><td>Run <code>sh scripts/evolution_flatpak_icewm_launcher_setup.sh validate</code>, then <code>icewm --restart</code> or log out and back in.</td></tr>
+            <tr><td>Evolution asks for secrets or keyring each launch.</td><td>Confirm <code>~/.icewm/startup</code> is executable and contains the marked keyring block; the wrapper also starts keyring as fallback.</td></tr>
             <tr><td>Folders visible but messages missing.</td><td>Remove the account and recreate it as <code>Maildir-format mail directories</code>, not MH.</td></tr>
             <tr><td>Data appears under <code>~/.var/app</code>.</td><td>Expected if it is a symlink. Verify with <code>readlink -f ~/.var/app/org.gnome.Evolution</code>.</td></tr>
             <tr><td>Bogofilter errors.</td><td>Disable junk filtering until training is configured.</td></tr>

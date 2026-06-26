@@ -4,6 +4,8 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
+- [ ] On antiX, run `scripts/evolution_flatpak_icewm_launcher_setup.sh inspect`, then `install`, then `validate`.
+- [ ] On antiX, click-test Evolution from the IceWM menu and taskbar toolbar.
 - [ ] On Fedora, stop Betterbird fully and confirm no profile lock markers remain.
 - [ ] Pack the full Betterbird profile with `src/betterbird_profile_transport.py pack --source ~/Betterbird-Email --out <transfer-dir>`.
 - [ ] Transfer `manifest.json`, `inventory.jsonl`, and all `betterbird-profile.tar.gz.partNNNN` files to antiX.
@@ -38,3 +40,4 @@
 - [x] Create Betterbird profile transport DIY guide in HTML and plain text formats.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
+- [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.

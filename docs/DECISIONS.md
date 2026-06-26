@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-26: Launch Evolution Flatpak Through User-Level IceWM Helper
+
+- Status: accepted
+- Context: The owner needed Evolution Flatpak to launch from IceWM without manually running `gnome-keyring-daemon --start --components=secrets,pkcs11,ssh` and `flatpak --user run org.gnome.Evolution` in a terminal each time.
+- Decision: Use a user-level wrapper at `~/.local/bin/evolution-flatpak-mail`, add marked IceWM `menu` and `toolbar` entries, and start `gnome-keyring-daemon` from `~/.icewm/startup` with wrapper-level fallback.
+- Consequence: Evolution launch integration stays under the user account, uses no `sudo`, installs no packages, and remains reversible by removing the marked blocks or running the helper uninstall mode.
+
 ### 2026-06-26: Use Evolution Flatpak as First Validated Evolution Path on antiX
 
 - Status: accepted
