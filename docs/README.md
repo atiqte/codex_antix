@@ -17,10 +17,13 @@ Betterbird mail migration utilities.
 - `BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`: terminal-friendly plain text version of the same guide.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.html`: offline browser guide with copy buttons for installing and validating Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the Evolution Flatpak guide.
+- `MBSYNC_ANTIX_GUIDE.html`: offline browser guide with copy buttons for the first deletion-safe mbsync INBOX test on antiX.
+- `MBSYNC_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the mbsync antiX guide.
 
 ## antiX Desktop Helpers
 
 - `../scripts/evolution_flatpak_icewm_launcher_setup.sh`: user-level helper for adding Evolution Flatpak to the IceWM Personal menu and taskbar toolbar while starting `gnome-keyring-daemon` at login.
+- `../scripts/mbsync_provider_inbox_setup.sh`: antiX helper for installing isync/mbsync, creating the isolated `/mail` test layout, writing a pull-only INBOX config, dry-running, and pulling once.
 
 For transport commands, `--manifest` always points to `manifest.json`.
 `inventory.jsonl` must stay beside it and is read automatically by the

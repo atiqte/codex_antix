@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-26: Use APT mbsync for First IMAP INBOX Test
+
+- Status: accepted
+- Context: After the Evolution Flatpak setup was completed, the owner wanted the next migration phase to add mbsync for new IMAP mail while preserving the Betterbird-only local archive and avoiding premature notmuch/Astroid setup.
+- Decision: Use antiX/Debian APT `isync`/`mbsync` first, create an isolated INBOX-only test Maildir at `/mail/Mailstore/mbsync/provider-inbox-test`, store mbsync state under `/mail/AppData/isync/state/provider`, write logs under `/mail/Logs/mbsync`, and generate `~/.config/isyncrc` with `PassCmd` reading `~/.config/isync/provider.pass`.
+- Consequence: The first mbsync workflow is explicit, reversible, and deletion-safe with `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`. notmuch/Astroid remain later sidecar search tests after Evolution and mbsync are proven.
+
 ### 2026-06-26: Launch Evolution Flatpak Through User-Level IceWM Helper
 
 - Status: accepted

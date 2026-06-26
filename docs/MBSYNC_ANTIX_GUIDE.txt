@@ -1,0 +1,465 @@
+mbsync antiX INBOX Test Guide
+=============================
+
+Purpose
+-------
+
+This guide implements the first mbsync phase after Evolution Flatpak validation.
+It installs and configures isync/mbsync for one standard IMAP INBOX test pull
+into an isolated Maildir++ tree under /mail.
+
+The first mbsync setup is intentionally conservative:
+
+- Use antiX/Debian APT package isync instead of source-building.
+- Pull only the provider INBOX at first.
+- Store the first test under /mail/Mailstore/mbsync/provider-inbox-test.
+- Keep sync state under /mail/AppData/isync/state/provider.
+- Keep logs under /mail/Logs/mbsync.
+- Use ~/.config/isyncrc with PassCmd reading ~/.config/isync/provider.pass.
+- Do not push local changes to the provider.
+- Do not propagate provider-side deletions to local archive mail.
+- Do not expunge either side.
+- Do not configure notmuch or Astroid yet.
+
+Evolution remains the daily GUI client. notmuch/Astroid remains a later sidecar
+search layer after Evolution and mbsync are proven on the real mail set.
+
+
+Final Layout
+------------
+
+Target paths on antiX:
+
+  /mail/Mailstore/evolution/local-maildir
+    Converted Betterbird production archive. mbsync must not write here during
+    the first test.
+
+  /mail/Mailstore/mbsync/provider-inbox-test
+    First isolated IMAP INBOX pull target.
+
+  /mail/Mailstore/mbsync/provider-live
+    Reserved for the later live IMAP workflow after the test is validated.
+
+  /mail/AppData/isync/state/provider
+    mbsync state files.
+
+  /mail/Logs/mbsync
+    mbsync run logs.
+
+  /mail/SearchIndex/notmuch
+    Reserved for later notmuch index testing.
+
+Local config paths:
+
+  ~/.config/isyncrc
+    mbsync config used with -c.
+
+  ~/.config/isync/provider.pass
+    Local password/app-password file. chmod 600. Do not share this file.
+
+
+Safety Rules
+------------
+
+1. Keep the Betterbird converted archive and the mbsync test tree separate.
+2. Use only INBOX until the first two manual syncs are clean.
+3. Do not run Evolution against a Maildir while mbsync is actively writing it.
+4. Do not paste passwords into chat or screenshots.
+5. Review dry-run output before the first real pull.
+6. Keep Remove None and Expunge None until deletion behavior is deliberately
+   tested.
+
+
+Helper Script
+-------------
+
+Run the helper from the repository root on the antiX VM:
+
+  sh scripts/mbsync_provider_inbox_setup.sh inspect
+
+Available commands:
+
+  inspect
+    Read-only system, disk, package, and current mbsync state check.
+
+  install-packages
+    Runs apt update and installs isync, ca-certificates, and libsasl2-modules.
+
+  create-layout
+    Creates the isolated Maildir++, state, log, and secret directories.
+
+  write-config
+    Prompts for IMAP host, username, and app password, then writes the pull-only
+    config.
+
+  list
+    Lists the remote store and configured channel mailboxes.
+
+  dry-run
+    Runs verbose simulation mode. No mail or state files are modified.
+
+  sync-once
+    Runs one real INBOX pull and writes a timestamped log.
+
+  status
+    Shows counts, disk usage, sync-state files, sample files, and redacted
+    config.
+
+  redact-config
+    Prints ~/.config/isyncrc with User and PassCmd redacted.
+
+
+Batch 1 - Discovery Only
+------------------------
+
+Run this first and send the output back for review:
+
+  sh scripts/mbsync_provider_inbox_setup.sh inspect
+
+Manual equivalent:
+
+  echo "== system =="
+  cat /etc/os-release
+  uname -a
+
+  echo "== disk =="
+  df -hT / /mail
+  findmnt /mail
+
+  echo "== current mail layout =="
+  ls -ld /mail /mail/Mailstore /mail/AppData /mail/SearchIndex 2>/dev/null || true
+
+  echo "== package candidates =="
+  apt-cache policy isync ca-certificates libsasl2-modules notmuch astroid
+
+  echo "== current mbsync if installed =="
+  command -v mbsync || true
+  mbsync --version 2>/dev/null || true
+
+Expected result:
+
+- /mail is mounted.
+- APT shows isync as available.
+- If antiX 26 uses Debian Trixie packages, isync should be 1.5.1-1 or close.
+- mbsync may be missing before installation.
+
+
+Batch 2 - Install mbsync
+------------------------
+
+Run only after Batch 1 looks correct:
+
+  sh scripts/mbsync_provider_inbox_setup.sh install-packages
+
+Manual equivalent:
+
+  sudo apt update
+  sudo apt install isync ca-certificates libsasl2-modules
+  mbsync --version
+
+Expected result:
+
+- mbsync prints version information.
+- Do not install notmuch or Astroid in this phase.
+
+
+Batch 3 - Create Isolated Layout
+--------------------------------
+
+Run:
+
+  sh scripts/mbsync_provider_inbox_setup.sh create-layout
+
+Manual equivalent:
+
+  set -eu
+  mkdir -p /mail/Mailstore/mbsync/provider-inbox-test/cur
+  mkdir -p /mail/Mailstore/mbsync/provider-inbox-test/new
+  mkdir -p /mail/Mailstore/mbsync/provider-inbox-test/tmp
+  mkdir -p /mail/Mailstore/mbsync/provider-live
+  mkdir -p /mail/AppData/isync/state/provider
+  mkdir -p /mail/Logs/mbsync
+  mkdir -p /mail/SearchIndex/notmuch
+  mkdir -p "$HOME/.config/isync"
+
+  chmod 700 "$HOME/.config/isync"
+  chmod 700 /mail/AppData/isync /mail/AppData/isync/state /mail/AppData/isync/state/provider /mail/Logs/mbsync
+  chmod 700 /mail/Mailstore/mbsync/provider-inbox-test /mail/Mailstore/mbsync/provider-inbox-test/cur /mail/Mailstore/mbsync/provider-inbox-test/new /mail/Mailstore/mbsync/provider-inbox-test/tmp
+
+  ls -ld /mail/Mailstore/mbsync/provider-inbox-test /mail/AppData/isync/state/provider /mail/Logs/mbsync "$HOME/.config/isync"
+
+Expected result:
+
+- provider-inbox-test has cur, new, and tmp.
+- state and logs are under /mail.
+- notmuch directory exists but is unused.
+
+
+Batch 4 - Write Pull-Only Config
+--------------------------------
+
+Run locally on antiX. The password prompt is silent. Do not share the password
+file or unredacted config.
+
+  sh scripts/mbsync_provider_inbox_setup.sh write-config
+
+The generated config uses this policy:
+
+  Sync PullNew
+  Create Near
+  Remove None
+  Expunge None
+  CopyArrivalDate yes
+
+Manual equivalent:
+
+  set -eu
+
+  printf 'IMAP host, example imap.example.com: '
+  IFS= read -r IMAP_HOST
+  printf 'IMAP username/email: '
+  IFS= read -r IMAP_USER
+  printf 'IMAP app password: '
+  old_stty=$(stty -g 2>/dev/null || true)
+  stty -echo 2>/dev/null || true
+  IFS= read -r IMAP_PASS
+  if [ -n "$old_stty" ]; then
+    stty "$old_stty" 2>/dev/null || true
+  else
+    stty echo 2>/dev/null || true
+  fi
+  echo
+
+  printf '%s\n' "$IMAP_PASS" > "$HOME/.config/isync/provider.pass"
+  chmod 600 "$HOME/.config/isync/provider.pass"
+
+  cat > "$HOME/.config/isyncrc" <<EOF
+  FSync yes
+
+  IMAPAccount provider
+  Host $IMAP_HOST
+  Port 993
+  User $IMAP_USER
+  PassCmd "cat ~/.config/isync/provider.pass"
+  TLSType IMAPS
+  SystemCertificates yes
+  Timeout 60
+
+  IMAPStore provider-remote
+  Account provider
+
+  MaildirStore provider-local
+  Inbox /mail/Mailstore/mbsync/provider-inbox-test
+  SubFolders Maildir++
+
+  Channel provider-inbox
+  Far :provider-remote:
+  Near :provider-local:
+  Sync PullNew
+  Create Near
+  Remove None
+  Expunge None
+  CopyArrivalDate yes
+  SyncState /mail/AppData/isync/state/provider/
+  EOF
+
+  chmod 600 "$HOME/.config/isyncrc"
+
+  sed -e 's/^User .*/User ***REDACTED***/' -e 's/^PassCmd .*/PassCmd ***REDACTED***/' "$HOME/.config/isyncrc"
+
+Expected result:
+
+- ~/.config/isyncrc exists and is chmod 600.
+- ~/.config/isync/provider.pass exists and is chmod 600.
+- Redacted config shows PullNew, Remove None, and Expunge None.
+
+
+Batch 5 - List and Dry-Run
+--------------------------
+
+Run:
+
+  sh scripts/mbsync_provider_inbox_setup.sh list
+  sh scripts/mbsync_provider_inbox_setup.sh dry-run
+
+Manual equivalent:
+
+  echo "== list remote store =="
+  mbsync -c "$HOME/.config/isyncrc" --list-stores provider-remote
+
+  echo "== list channel mailboxes =="
+  mbsync -c "$HOME/.config/isyncrc" --list provider-inbox
+
+  echo "== dry run =="
+  mbsync -c "$HOME/.config/isyncrc" --dry-run -V provider-inbox
+
+Expected result:
+
+- Authentication succeeds.
+- Channel mailbox is INBOX only.
+- Dry-run shows new messages to pull, not pushes or expunges.
+- If the provider rejects the login, use an app password or provider-specific
+  IMAP setting before continuing.
+
+
+Batch 6 - First Real Pull
+-------------------------
+
+Run only after Batch 5 is clean:
+
+  sh scripts/mbsync_provider_inbox_setup.sh sync-once
+
+Manual equivalent:
+
+  set -eu
+  LOG="/mail/Logs/mbsync/$(date +%Y%m%d-%H%M%S)-provider-inbox.log"
+
+  mbsync -c "$HOME/.config/isyncrc" -V provider-inbox | tee "$LOG"
+
+  echo "== local message files =="
+  find /mail/Mailstore/mbsync/provider-inbox-test/cur /mail/Mailstore/mbsync/provider-inbox-test/new -type f | wc -l
+
+  echo "== disk usage =="
+  du -sh /mail/Mailstore/mbsync/provider-inbox-test /mail/AppData/isync/state/provider "$LOG"
+
+  echo "== sample files =="
+  find /mail/Mailstore/mbsync/provider-inbox-test/cur /mail/Mailstore/mbsync/provider-inbox-test/new -type f | sed -n '1,10p'
+
+Expected result:
+
+- Timestamped log is saved under /mail/Logs/mbsync.
+- Message files appear under cur or new.
+- Sync state appears under /mail/AppData/isync/state/provider.
+- No production Betterbird/Evolution archive path is touched.
+
+
+Batch 7 - Evolution Read Test
+-----------------------------
+
+After mbsync exits, launch Evolution and add a temporary local Maildir account:
+
+  Receiving type:
+    Maildir-format mail directories
+
+  Path:
+    /mail/Mailstore/mbsync/provider-inbox-test
+
+Validate:
+
+- INBOX messages appear.
+- Text and HTML messages render.
+- Attachments open or save.
+- Message dates look reasonable.
+- Evolution can search sender, subject, date, body text, and message ID.
+
+Then close Evolution before the next mbsync run:
+
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true
+
+
+Batch 8 - Second Manual Sync
+----------------------------
+
+Run one more manual sync after Evolution is closed:
+
+  sh scripts/mbsync_provider_inbox_setup.sh sync-once
+
+Expected result:
+
+- No duplicate flood.
+- No unexpected deletion.
+- New provider messages, if any, are pulled.
+- Existing local files remain present.
+
+
+When to Expand Beyond INBOX
+---------------------------
+
+Do not add more folders until:
+
+- Batch 5 dry-run is clean.
+- Batch 6 real pull is clean.
+- Evolution can read the test Maildir.
+- Batch 8 second sync is clean.
+- The logs show no unexpected push, delete, or expunge behavior.
+
+Next expansion should still be conservative:
+
+1. Pick one small low-risk folder.
+2. Add one test channel or narrow mailbox selection.
+3. Dry-run.
+4. Pull once.
+5. Validate in Evolution.
+6. Repeat only after the previous folder is understood.
+
+
+Troubleshooting
+---------------
+
+Problem: mbsync command not found.
+
+Run:
+
+  sh scripts/mbsync_provider_inbox_setup.sh install-packages
+
+
+Problem: login fails.
+
+Check:
+
+- IMAP is enabled in the provider account.
+- The username is the full email address if the provider requires it.
+- The password is an app password if normal password login is blocked.
+- The provider supports IMAPS on port 993.
+
+Do not paste the password into chat.
+
+
+Problem: dry-run lists many folders.
+
+Stop. The first channel should be INBOX only. Review:
+
+  sh scripts/mbsync_provider_inbox_setup.sh redact-config
+
+For this first test there should be no Patterns line.
+
+
+Problem: Evolution sees folder names but no messages.
+
+In Evolution, remove the temporary account and recreate it as:
+
+  Maildir-format mail directories
+
+Do not choose:
+
+  MH-format mail directories
+
+
+Problem: local files disappear.
+
+Stop using the channel and preserve the current files/logs. Check the config:
+
+  grep -E '^(Sync|Create|Remove|Expunge) ' "$HOME/.config/isyncrc"
+
+The first test must show:
+
+  Sync PullNew
+  Create Near
+  Remove None
+  Expunge None
+
+
+notmuch and Astroid Later
+-------------------------
+
+Do not install or configure notmuch/Astroid during the first mbsync phase.
+
+After Evolution plus mbsync is stable, test notmuch as a sidecar index on a
+copy or read-only workflow. The reserved path is:
+
+  /mail/SearchIndex/notmuch
+
+The goal is not to force Evolution to use notmuch. The goal is to keep
+Evolution as the daily GUI and later evaluate notmuch/Astroid for very fast
+search over very large local mail collections.

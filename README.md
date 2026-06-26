@@ -10,8 +10,8 @@ No broader application type, framework, package manager, or deployment target ha
 - Project memory documents live in `docs/`.
 - `AGENTS.md` defines rules for future Codex sessions.
 - Approved mail migration utilities live in `src/`.
-- Offline DIY guides now cover Betterbird profile transport and the validated Evolution Flatpak setup on antiX.
-- An IceWM launcher helper is available for Evolution Flatpak Personal menu/taskbar integration.
+- Offline DIY guides now cover Betterbird profile transport, the validated Evolution Flatpak setup on antiX, and the first deletion-safe mbsync INBOX test.
+- AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration and the first mbsync INBOX test setup.
 - Windows 11 and Debian Linux portability is a project requirement.
 
 ## Start Here
@@ -29,6 +29,7 @@ Before doing project work, read these files:
 ```text
 .
 ├── AGENTS.md
+├── .gitattributes
 ├── README.md
 ├── docs/
 │   ├── CHANGELOG.md
@@ -37,15 +38,18 @@ Before doing project work, read these files:
 │   ├── EVOLUTION_FLATPAK_ANTIX_GUIDE.txt
 │   ├── IDEAS.md
 │   ├── PROJECT_STATE.md
+│   ├── MBSYNC_ANTIX_GUIDE.html
+│   ├── MBSYNC_ANTIX_GUIDE.txt
 │   ├── TODO.md
 │   └── WORKFLOW.md
 ├── scripts/
-│   └── evolution_flatpak_icewm_launcher_setup.sh
+│   ├── evolution_flatpak_icewm_launcher_setup.sh
+│   └── mbsync_provider_inbox_setup.sh
 ├── src/
 └── tests/
 ```
 
-`src/` currently contains the approved Betterbird profile transport and maildir-lite conversion utilities. `scripts/` contains user-level antiX setup helpers. Broader application work should remain undecided until the project type is explicitly chosen.
+`src/` currently contains the approved Betterbird profile transport and maildir-lite conversion utilities. `scripts/` contains user-level antiX setup helpers for Evolution launch integration and the first mbsync INBOX test. Broader application work should remain undecided until the project type is explicitly chosen.
 
 ## Development Policy
 

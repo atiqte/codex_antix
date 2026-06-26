@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mbsync antiX INBOX Test Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #17212f;
+      --muted: #526071;
+      --line: #d8dee8;
+      --code-bg: #101827;
+      --code-ink: #edf3ff;
+      --accent: #1769aa;
+      --accent-ink: #ffffff;
+      --ok: #13734b;
+      --warn: #9a5b00;
+      --danger: #a63232;
+      --note-bg: #eef6ff;
+      --warn-bg: #fff7e6;
+      --danger-bg: #fff0f0;
+      --ok-bg: #ebf8f1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    h1, h2, h3 { line-height: 1.2; margin-top: 0; }
+
+    h1 {
+      max-width: 1180px;
+      margin: 0 auto 8px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      max-width: 1180px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    nav {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    nav h2 { font-size: 15px; margin-bottom: 10px; }
+
+    nav a {
+      display: block;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfe;
+    }
+
+    .callout {
+      border-left: 5px solid var(--accent);
+      background: var(--note-bg);
+      padding: 14px 16px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+
+    .callout.warning { border-left-color: var(--warn); background: var(--warn-bg); }
+    .callout.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+    .callout.ok { border-left-color: var(--ok); background: var(--ok-bg); }
+
+    .command {
+      border: 1px solid #293449;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 14px 0;
+      background: var(--code-bg);
+    }
+
+    .command-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #172237;
+      color: #dce8ff;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    button.copy {
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      padding: 7px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button.copy:focus {
+      outline: 3px solid #9ecbff;
+      outline-offset: 2px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow-x: auto;
+      color: var(--code-ink);
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    code { font-family: Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    p code, li code, td code {
+      color: #102f55;
+      background: #edf2f8;
+      border: 1px solid #d7e0ec;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #edf2f8; }
+    .checklist li { margin-bottom: 8px; }
+
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; padding: 16px; }
+      nav { position: static; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>mbsync antiX INBOX Test Guide</h1>
+    <p class="subtitle">Offline step-by-step setup for the first deletion-safe IMAP INBOX pull into an isolated Maildir++ tree under /mail.</p>
+  </header>
+
+  <main>
+    <nav aria-label="Table of contents">
+      <h2>Contents</h2>
+      <a href="#purpose">Purpose</a>
+      <a href="#layout">Layout</a>
+      <a href="#safety">Safety Rules</a>
+      <a href="#helper">Helper Script</a>
+      <a href="#batch1">Batch 1</a>
+      <a href="#batch2">Batch 2</a>
+      <a href="#batch3">Batch 3</a>
+      <a href="#batch4">Batch 4</a>
+      <a href="#batch5">Batch 5</a>
+      <a href="#batch6">Batch 6</a>
+      <a href="#evolution">Evolution Test</a>
+      <a href="#next">Next Steps</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+    </nav>
+
+    <div>
+      <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This guide implements the first mbsync phase after Evolution Flatpak validation. It installs and configures <code>isync</code>/<code>mbsync</code> for one standard IMAP INBOX test pull into an isolated Maildir++ tree under <code>/mail</code>.</p>
+        <div class="grid">
+          <div class="box">
+            <h3>First target</h3>
+            <p><code>/mail/Mailstore/mbsync/provider-inbox-test</code></p>
+          </div>
+          <div class="box">
+            <h3>Policy</h3>
+            <p><code>Sync PullNew</code>, <code>Create Near</code>, <code>Remove None</code>, and <code>Expunge None</code>.</p>
+          </div>
+        </div>
+        <div class="callout warning">
+          <strong>Do not install notmuch or Astroid in this phase.</strong>
+          They remain later sidecar search tests after Evolution and mbsync are stable.
+        </div>
+      </section>
+
+      <section id="layout">
+        <h2>Layout</h2>
+        <table>
+          <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>/mail/Mailstore/evolution/local-maildir</code></td><td>Converted Betterbird production archive. mbsync must not write here during the first test.</td></tr>
+            <tr><td><code>/mail/Mailstore/mbsync/provider-inbox-test</code></td><td>First isolated IMAP INBOX pull target.</td></tr>
+            <tr><td><code>/mail/Mailstore/mbsync/provider-live</code></td><td>Reserved for the later live IMAP workflow.</td></tr>
+            <tr><td><code>/mail/AppData/isync/state/provider</code></td><td>mbsync state files.</td></tr>
+            <tr><td><code>/mail/Logs/mbsync</code></td><td>mbsync run logs.</td></tr>
+            <tr><td><code>/mail/SearchIndex/notmuch</code></td><td>Reserved for later notmuch indexing.</td></tr>
+            <tr><td><code>~/.config/isyncrc</code></td><td>mbsync config used with <code>-c</code>.</td></tr>
+            <tr><td><code>~/.config/isync/provider.pass</code></td><td>chmod 600 password/app-password file read by <code>PassCmd</code>.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="safety">
+        <h2>Safety Rules</h2>
+        <ul class="checklist">
+          <li>Keep the Betterbird converted archive and mbsync test tree separate.</li>
+          <li>Use only INBOX until the first two manual syncs are clean.</li>
+          <li>Do not run Evolution against a Maildir while mbsync is actively writing it.</li>
+          <li>Do not paste passwords into chat or screenshots.</li>
+          <li>Review dry-run output before the first real pull.</li>
+          <li>Keep <code>Remove None</code> and <code>Expunge None</code> until deletion behavior is deliberately tested.</li>
+        </ul>
+      </section>
+
+      <section id="helper">
+        <h2>Helper Script</h2>
+        <p>Run commands from the repository root on the antiX VM.</p>
+        <div class="command"><div class="command-title"><span>Show helper usage</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh --help</code></pre></div>
+        <p>The helper supports <code>inspect</code>, <code>install-packages</code>, <code>create-layout</code>, <code>write-config</code>, <code>list</code>, <code>dry-run</code>, <code>sync-once</code>, <code>status</code>, and <code>redact-config</code>.</p>
+      </section>
+
+      <section id="batch1">
+        <h2>Batch 1 - Discovery Only</h2>
+        <div class="command"><div class="command-title"><span>Inspect current antiX state</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh inspect</code></pre></div>
+        <p>Expected result: <code>/mail</code> is mounted, APT shows <code>isync</code> as available, and <code>mbsync</code> may be missing before installation.</p>
+      </section>
+
+      <section id="batch2">
+        <h2>Batch 2 - Install mbsync</h2>
+        <div class="command"><div class="command-title"><span>Install isync/mbsync</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh install-packages</code></pre></div>
+        <p>Expected result: <code>mbsync --version</code> prints version information. Do not install notmuch or Astroid in this phase.</p>
+      </section>
+
+      <section id="batch3">
+        <h2>Batch 3 - Create Isolated Layout</h2>
+        <div class="command"><div class="command-title"><span>Create /mail layout</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh create-layout</code></pre></div>
+        <p>Expected result: the test Maildir has <code>cur</code>, <code>new</code>, and <code>tmp</code>; state and logs live under <code>/mail</code>.</p>
+      </section>
+
+      <section id="batch4">
+        <h2>Batch 4 - Write Pull-Only Config</h2>
+        <p>The helper prompts for IMAP host, username, and app password locally on antiX. The password prompt is silent. Do not share the password file or unredacted config.</p>
+        <div class="command"><div class="command-title"><span>Create first mbsync config</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh write-config</code></pre></div>
+        <div class="command"><div class="command-title"><span>Show redacted config</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh redact-config</code></pre></div>
+      </section>
+
+      <section id="batch5">
+        <h2>Batch 5 - List and Dry-Run</h2>
+        <div class="command"><div class="command-title"><span>List remote/channel mailboxes</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh list</code></pre></div>
+        <div class="command"><div class="command-title"><span>Dry-run the INBOX pull</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh dry-run</code></pre></div>
+        <p>Expected result: authentication succeeds, the channel mailbox is INBOX only, and dry-run shows pulls rather than pushes or expunges.</p>
+      </section>
+
+      <section id="batch6">
+        <h2>Batch 6 - First Real Pull</h2>
+        <div class="callout danger">
+          Run this only after the dry-run output is clean.
+        </div>
+        <div class="command"><div class="command-title"><span>Pull INBOX once</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh sync-once</code></pre></div>
+        <div class="command"><div class="command-title"><span>Show status after sync</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh status</code></pre></div>
+        <p>Expected result: messages appear under <code>cur</code> or <code>new</code>, a timestamped log is saved, and the production Betterbird/Evolution archive is untouched.</p>
+      </section>
+
+      <section id="evolution">
+        <h2>Evolution Read Test</h2>
+        <p>After mbsync exits, launch Evolution and add a temporary local Maildir account.</p>
+        <table>
+          <tbody>
+            <tr><td>Receiving type</td><td><code>Maildir-format mail directories</code></td></tr>
+            <tr><td>Path</td><td><code>/mail/Mailstore/mbsync/provider-inbox-test</code></td></tr>
+          </tbody>
+        </table>
+        <p>Validate message reading, HTML rendering, attachments, dates, and Evolution search. Then close Evolution before the next mbsync run.</p>
+        <div class="command"><div class="command-title"><span>Stop Evolution before next sync</span><button class="copy">Copy command</button></div><pre><code>flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true</code></pre></div>
+      </section>
+
+      <section id="next">
+        <h2>Next Steps</h2>
+        <p>Run one more manual sync after Evolution is closed:</p>
+        <div class="command"><div class="command-title"><span>Second manual sync</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh sync-once</code></pre></div>
+        <p>Do not add more folders until the dry-run, first pull, Evolution read test, and second sync are all clean.</p>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+        <table>
+          <thead><tr><th>Problem</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><code>mbsync</code> command not found.</td><td>Run <code>sh scripts/mbsync_provider_inbox_setup.sh install-packages</code>.</td></tr>
+            <tr><td>Login fails.</td><td>Confirm IMAP is enabled, username format is correct, an app password is used if required, and port 993 is supported.</td></tr>
+            <tr><td>Dry-run lists many folders.</td><td>Stop. Review <code>sh scripts/mbsync_provider_inbox_setup.sh redact-config</code>; the first test should target INBOX only.</td></tr>
+            <tr><td>Evolution sees folders but no messages.</td><td>Recreate the account as <code>Maildir-format mail directories</code>, not MH-format mail directories.</td></tr>
+            <tr><td>Local files disappear.</td><td>Stop using the channel and verify the config still says <code>Sync PullNew</code>, <code>Remove None</code>, and <code>Expunge None</code>.</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    document.querySelectorAll('button.copy').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const command = button.closest('.command').querySelector('code').textContent;
+        try {
+          await navigator.clipboard.writeText(command);
+          const original = button.textContent;
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = original; }, 1400);
+        } catch (error) {
+          button.textContent = 'Select text';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

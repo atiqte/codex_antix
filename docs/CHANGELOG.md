@@ -4,6 +4,10 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-26
 
+- Added `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt`, complete DIY guides for the first deletion-safe mbsync INBOX test on antiX.
+- Added `scripts/mbsync_provider_inbox_setup.sh`, an antiX helper for mbsync inspection, APT install, isolated `/mail` layout creation, pull-only config generation, dry-run, sync-once, and status checks.
+- Recorded the accepted first mbsync path: APT `isync`/`mbsync`, INBOX-only pull into `/mail/Mailstore/mbsync/provider-inbox-test`, and notmuch/Astroid deferred as a later sidecar search layer.
+- Added `.gitattributes` to keep shell and Python scripts LF-only across Windows and antiX checkouts.
 - Updated the Evolution IceWM launcher helper and guides to use `~/.icewm/personal` for the Personal menu and the official Flatpak-exported `org.gnome.Evolution.svg` icon after VM validation.
 - Added `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for Evolution Flatpak IceWM menu/taskbar integration with keyring startup fallback.
 - Updated the Evolution Flatpak HTML and text guides with an IceWM launcher phase, validation commands, transfer notes, and troubleshooting for menu/toolbar/keyring issues.
