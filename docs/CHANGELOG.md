@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-26
 
+- Updated the Evolution IceWM launcher helper and guides to use `~/.icewm/personal` for the Personal menu and the official Flatpak-exported `org.gnome.Evolution.svg` icon after VM validation.
 - Added `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for Evolution Flatpak IceWM menu/taskbar integration with keyring startup fallback.
 - Updated the Evolution Flatpak HTML and text guides with an IceWM launcher phase, validation commands, transfer notes, and troubleshooting for menu/toolbar/keyring issues.
 - Added `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html` and `.txt`, complete DIY guides for installing and validating Evolution Flatpak 3.60.2 on antiX runit/IceWM with app data symlinked to `/mail`.

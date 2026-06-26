@@ -20,7 +20,7 @@ Betterbird mail migration utilities.
 
 ## antiX Desktop Helpers
 
-- `../scripts/evolution_flatpak_icewm_launcher_setup.sh`: user-level helper for adding Evolution Flatpak to the IceWM menu and taskbar toolbar while starting `gnome-keyring-daemon` at login.
+- `../scripts/evolution_flatpak_icewm_launcher_setup.sh`: user-level helper for adding Evolution Flatpak to the IceWM Personal menu and taskbar toolbar while starting `gnome-keyring-daemon` at login.
 
 For transport commands, `--manifest` always points to `manifest.json`.
 `inventory.jsonl` must stay beside it and is read automatically by the

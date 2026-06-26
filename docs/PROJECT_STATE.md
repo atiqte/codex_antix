@@ -97,7 +97,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - Default mode is `--dry-run`; `--copy` refuses unmarked or unsafe sources and writes through Maildir `tmp` before atomic rename.
 - Duplicates are kept, but duplicate `Message-ID` and content hashes are logged.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
-- Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The helper creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `menu` and `toolbar` entries, adds a marked keyring startup block, and keeps wrapper-level keyring fallback. Final click validation must be done inside the antiX IceWM session.
+- Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The validated setup creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `~/.icewm/personal` and `~/.icewm/toolbar` entries, adds a marked keyring startup block to `~/.icewm/startup`, and keeps wrapper-level keyring fallback.
+- The validated IceWM launcher uses the official Flatpak-exported icon at `~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg`. The tested antiX VM showed SHA256 `dcda7580deebec635ff3d560795a45dd41e62ce3e7d311a170b46b4cf2a0cbb2`.
 - The verified Evolution test account uses `BackendName=maildir` and reads a Maildir++ test tree at `/mail/Mailstore/evolution/test-maildir`. Selecting `MH-format mail directories` is a known wrong path because it can show folder names while hiding Maildir `cur`/`new` messages.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
@@ -113,16 +114,15 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 ## Next Actions
 
 1. Review the setup and memory files.
-2. Run `scripts/evolution_flatpak_icewm_launcher_setup.sh inspect`, `install`, and `validate` on antiX, then click-test the IceWM menu and toolbar launchers.
-3. Pack a representative Fedora Betterbird profile sample with `src/betterbird_profile_transport.py pack`.
-4. Verify transferred parts on antiX with `verify-archive`.
-5. Restore into `/mail/import-staging/betterbird-maildir` with `unpack`.
-6. Verify the restored profile with `verify-tree`.
-7. Run the converter dry-run on antiX against the staged Betterbird profile.
-8. Review conversion logs before any full copy.
-9. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
-10. Add the validated production Maildir++ tree to Evolution using `Maildir-format mail directories`.
-11. Decide broader project type and future packaging only if needed.
+2. Pack a representative Fedora Betterbird profile sample with `src/betterbird_profile_transport.py pack`.
+3. Verify transferred parts on antiX with `verify-archive`.
+4. Restore into `/mail/import-staging/betterbird-maildir` with `unpack`.
+5. Verify the restored profile with `verify-tree`.
+6. Run the converter dry-run on antiX against the staged Betterbird profile.
+7. Review conversion logs before any full copy.
+8. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
+9. Add the validated production Maildir++ tree to Evolution using `Maildir-format mail directories`.
+10. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

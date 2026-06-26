@@ -3,17 +3,22 @@ set -eu
 
 APP_ID=${EVOLUTION_APP_ID:-org.gnome.Evolution}
 APP_LABEL=${EVOLUTION_APP_LABEL:-Evolution Mail}
-APP_ICON=${EVOLUTION_APP_ICON:-org.gnome.Evolution}
 
 HOME_DIR=${HOME:?HOME is not set}
 ICEWM_DIR=${ICEWM_DIR:-"$HOME_DIR/.icewm"}
+MENU_FILE=${ICEWM_MENU_FILE:-"$ICEWM_DIR/personal"}
+TOOLBAR_FILE=${ICEWM_TOOLBAR_FILE:-"$ICEWM_DIR/toolbar"}
+STARTUP_FILE=${ICEWM_STARTUP_FILE:-"$ICEWM_DIR/startup"}
 BIN_DIR=${BIN_DIR:-"$HOME_DIR/.local/bin"}
 STATE_ROOT=${XDG_STATE_HOME:-"$HOME_DIR/.local/state"}
 STATE_DIR="$STATE_ROOT/evolution-flatpak"
 WRAPPER="$BIN_DIR/evolution-flatpak-mail"
+OFFICIAL_ICON="$HOME_DIR/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 
-BEGIN_MENU="# BEGIN CODEX EVOLUTION FLATPAK MENU"
-END_MENU="# END CODEX EVOLUTION FLATPAK MENU"
+BEGIN_MENU="# BEGIN CODEX EVOLUTION FLATPAK PERSONAL MENU"
+END_MENU="# END CODEX EVOLUTION FLATPAK PERSONAL MENU"
+OLD_BEGIN_MENU="# BEGIN CODEX EVOLUTION FLATPAK MENU"
+OLD_END_MENU="# END CODEX EVOLUTION FLATPAK MENU"
 BEGIN_TOOLBAR="# BEGIN CODEX EVOLUTION FLATPAK TOOLBAR"
 END_TOOLBAR="# END CODEX EVOLUTION FLATPAK TOOLBAR"
 BEGIN_STARTUP="# BEGIN CODEX EVOLUTION FLATPAK KEYRING"
@@ -24,9 +29,9 @@ usage() {
 Usage: $(basename "$0") inspect|install|validate|launch|uninstall
 
 Commands:
-  inspect    Print read-only IceWM, Flatpak, and keyring state.
-  install    Install the wrapper and IceWM menu/toolbar/startup entries.
-  validate   Check wrapper syntax, IceWM entries, Flatpak app, and /mail access.
+  inspect    Print read-only IceWM, Flatpak, keyring, and icon state.
+  install    Install the wrapper, Personal menu entry, toolbar entry, and keyring startup.
+  validate   Check wrapper syntax, IceWM entries, official icon, Flatpak app, and /mail access.
   launch     Launch Evolution through the installed wrapper.
   uninstall  Remove the marked IceWM blocks and launcher wrapper.
 
@@ -42,13 +47,43 @@ log() {
   printf '%s\n' "$*"
 }
 
+resolved_icon() {
+  if [ "${EVOLUTION_APP_ICON:-}" ]; then
+    printf '%s\n' "$EVOLUTION_APP_ICON"
+  elif [ -f "$OFFICIAL_ICON" ]; then
+    printf '%s\n' "$OFFICIAL_ICON"
+  else
+    printf '%s\n' "$APP_ID"
+  fi
+}
+
 print_file_head() {
   file=$1
   if [ -f "$file" ]; then
     log "--- $file ---"
+    ls -l "$file"
     sed -n '1,180p' "$file"
   else
     log "--- missing: $file ---"
+  fi
+}
+
+inspect_icon() {
+  icon=$(resolved_icon)
+  log "== Evolution icon =="
+  log "Resolved IceWM icon: $icon"
+  if [ -f "$OFFICIAL_ICON" ]; then
+    ls -l "$OFFICIAL_ICON"
+    file "$OFFICIAL_ICON" 2>/dev/null || true
+    sha256sum "$OFFICIAL_ICON" 2>/dev/null || true
+  else
+    log "Official Flatpak SVG icon not found: $OFFICIAL_ICON"
+  fi
+
+  desktop="$HOME_DIR/.local/share/flatpak/exports/share/applications/$APP_ID.desktop"
+  if [ -f "$desktop" ]; then
+    log "--- Flatpak desktop metadata ---"
+    grep -E '^(Name|GenericName|Comment|Exec|Icon|X-Flatpak)=' "$desktop" 2>/dev/null || true
   fi
 }
 
@@ -68,6 +103,10 @@ inspect() {
   command -v gnome-keyring-daemon || true
   command -v pgrep || true
   command -v sh || true
+  command -v awk || true
+  command -v sed || true
+  command -v grep || true
+  command -v mktemp || true
 
   log "== Flatpak Evolution =="
   flatpak --user info "$APP_ID" 2>/dev/null || true
@@ -76,6 +115,8 @@ inspect() {
   log "== keyring/dbus processes =="
   echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:+set}"
   pgrep -fa 'dbus|gnome-keyring' 2>/dev/null || true
+
+  inspect_icon
 
   log "== IceWM directories =="
   for dir in "$ICEWM_DIR" /etc/icewm /usr/share/icewm /etc/X11/icewm; do
@@ -89,9 +130,13 @@ inspect() {
 
   log "== user IceWM files =="
   print_file_head "$ICEWM_DIR/menu"
-  print_file_head "$ICEWM_DIR/toolbar"
-  print_file_head "$ICEWM_DIR/startup"
+  print_file_head "$MENU_FILE"
+  print_file_head "$TOOLBAR_FILE"
+  print_file_head "$STARTUP_FILE"
   print_file_head "$ICEWM_DIR/preferences"
+
+  log "== existing launcher markers =="
+  grep -RIn 'CODEX EVOLUTION FLATPAK' "$ICEWM_DIR/menu" "$MENU_FILE" "$TOOLBAR_FILE" "$STARTUP_FILE" 2>/dev/null || true
 }
 
 backup_file() {
@@ -101,25 +146,6 @@ backup_file() {
     mkdir -p "$backup_dir"
     cp -p "$file" "$backup_dir/$(basename "$file")"
   fi
-}
-
-copy_system_file_if_missing() {
-  name=$1
-  dest="$ICEWM_DIR/$name"
-  if [ -e "$dest" ]; then
-    return 0
-  fi
-
-  for src in "/etc/icewm/$name" "/usr/share/icewm/$name" "/etc/X11/icewm/$name"; do
-    if [ -r "$src" ]; then
-      cp "$src" "$dest"
-      log "Copied $src -> $dest"
-      return 0
-    fi
-  done
-
-  : > "$dest"
-  log "Created empty $dest"
 }
 
 remove_marked_block() {
@@ -205,23 +231,26 @@ fi
 exec flatpak --user run "$APP_ID" "$@"
 EOF
 
-  chmod +x "$WRAPPER"
+  chmod 755 "$WRAPPER"
 }
 
 install_icewm_blocks() {
+  icon=$(resolved_icon)
+
   mkdir -p "$ICEWM_DIR" "$STATE_DIR"
   backup_dir="$STATE_DIR/icewm-backup-$(timestamp)"
   mkdir -p "$backup_dir"
 
   backup_file "$ICEWM_DIR/menu" "$backup_dir"
-  backup_file "$ICEWM_DIR/toolbar" "$backup_dir"
-  backup_file "$ICEWM_DIR/startup" "$backup_dir"
+  backup_file "$MENU_FILE" "$backup_dir"
+  backup_file "$TOOLBAR_FILE" "$backup_dir"
+  backup_file "$STARTUP_FILE" "$backup_dir"
 
-  copy_system_file_if_missing menu
-  copy_system_file_if_missing toolbar
+  [ -f "$MENU_FILE" ] || : > "$MENU_FILE"
+  [ -f "$TOOLBAR_FILE" ] || : > "$TOOLBAR_FILE"
 
-  if [ ! -e "$ICEWM_DIR/startup" ]; then
-    printf '%s\n\n' '#!/bin/sh' > "$ICEWM_DIR/startup"
+  if [ ! -e "$STARTUP_FILE" ]; then
+    printf '%s\n\n' '#!/bin/sh' > "$STARTUP_FILE"
   fi
 
   menu_block=$(mktemp "${TMPDIR:-/tmp}/evolution-menu.XXXXXX")
@@ -230,13 +259,13 @@ install_icewm_blocks() {
 
   {
     printf '%s\n' "$BEGIN_MENU"
-    printf 'prog "%s" %s %s\n' "$APP_LABEL" "$APP_ICON" "$WRAPPER"
+    printf 'prog "%s" %s %s\n' "$APP_LABEL" "$icon" "$WRAPPER"
     printf '%s\n' "$END_MENU"
   } > "$menu_block"
 
   {
     printf '%s\n' "$BEGIN_TOOLBAR"
-    printf 'prog "%s" %s %s\n' "$APP_LABEL" "$APP_ICON" "$WRAPPER"
+    printf 'prog "%s" %s %s\n' "$APP_LABEL" "$icon" "$WRAPPER"
     printf '%s\n' "$END_TOOLBAR"
   } > "$toolbar_block"
 
@@ -248,13 +277,16 @@ install_icewm_blocks() {
     printf '%s\n' "$END_STARTUP"
   } > "$startup_block"
 
-  append_marked_block "$ICEWM_DIR/menu" "$BEGIN_MENU" "$END_MENU" "$menu_block"
-  append_marked_block "$ICEWM_DIR/toolbar" "$BEGIN_TOOLBAR" "$END_TOOLBAR" "$toolbar_block"
-  append_marked_block "$ICEWM_DIR/startup" "$BEGIN_STARTUP" "$END_STARTUP" "$startup_block"
+  remove_marked_block "$ICEWM_DIR/menu" "$OLD_BEGIN_MENU" "$OLD_END_MENU"
+  append_marked_block "$MENU_FILE" "$BEGIN_MENU" "$END_MENU" "$menu_block"
+  append_marked_block "$TOOLBAR_FILE" "$BEGIN_TOOLBAR" "$END_TOOLBAR" "$toolbar_block"
+  append_marked_block "$STARTUP_FILE" "$BEGIN_STARTUP" "$END_STARTUP" "$startup_block"
 
   rm -f "$menu_block" "$toolbar_block" "$startup_block"
-  chmod +x "$ICEWM_DIR/startup"
+  chmod 644 "$MENU_FILE" "$TOOLBAR_FILE"
+  chmod 755 "$STARTUP_FILE"
 
+  log "Installed icon: $icon"
   log "Backups written under: $backup_dir"
 }
 
@@ -277,6 +309,7 @@ install() {
 
 validate() {
   fail=0
+  icon=$(resolved_icon)
 
   log "== validate wrapper =="
   if [ -x "$WRAPPER" ]; then
@@ -287,32 +320,41 @@ validate() {
     fail=1
   fi
 
+  log "== validate official icon =="
+  if [ -f "$OFFICIAL_ICON" ]; then
+    ls -l "$OFFICIAL_ICON"
+    sha256sum "$OFFICIAL_ICON" 2>/dev/null || true
+  else
+    log "ERROR: official Flatpak icon missing: $OFFICIAL_ICON"
+    fail=1
+  fi
+
   log "== validate IceWM entries =="
-  if [ -f "$ICEWM_DIR/menu" ] && grep -F "$WRAPPER" "$ICEWM_DIR/menu" >/dev/null; then
-    grep -F "$WRAPPER" "$ICEWM_DIR/menu"
+  if [ -f "$MENU_FILE" ] && grep -F "$WRAPPER" "$MENU_FILE" >/dev/null && grep -F "$icon" "$MENU_FILE" >/dev/null; then
+    grep -F "$WRAPPER" "$MENU_FILE"
   else
-    log "ERROR: missing Evolution wrapper entry in $ICEWM_DIR/menu"
+    log "ERROR: missing Evolution wrapper/icon entry in $MENU_FILE"
     fail=1
   fi
 
-  if [ -f "$ICEWM_DIR/toolbar" ] && grep -F "$WRAPPER" "$ICEWM_DIR/toolbar" >/dev/null; then
-    grep -F "$WRAPPER" "$ICEWM_DIR/toolbar"
+  if [ -f "$TOOLBAR_FILE" ] && grep -F "$WRAPPER" "$TOOLBAR_FILE" >/dev/null && grep -F "$icon" "$TOOLBAR_FILE" >/dev/null; then
+    grep -F "$WRAPPER" "$TOOLBAR_FILE"
   else
-    log "ERROR: missing Evolution wrapper entry in $ICEWM_DIR/toolbar"
+    log "ERROR: missing Evolution wrapper/icon entry in $TOOLBAR_FILE"
     fail=1
   fi
 
-  if [ -f "$ICEWM_DIR/startup" ] && grep -F 'gnome-keyring-daemon --start --components=secrets,pkcs11,ssh' "$ICEWM_DIR/startup" >/dev/null; then
-    grep -F 'gnome-keyring-daemon --start --components=secrets,pkcs11,ssh' "$ICEWM_DIR/startup"
+  if [ -f "$STARTUP_FILE" ] && grep -F 'gnome-keyring-daemon --start --components=secrets,pkcs11,ssh' "$STARTUP_FILE" >/dev/null; then
+    grep -F 'gnome-keyring-daemon --start --components=secrets,pkcs11,ssh' "$STARTUP_FILE"
   else
-    log "ERROR: missing keyring startup entry in $ICEWM_DIR/startup"
+    log "ERROR: missing keyring startup entry in $STARTUP_FILE"
     fail=1
   fi
 
-  if [ -x "$ICEWM_DIR/startup" ]; then
-    ls -l "$ICEWM_DIR/startup"
+  if [ -x "$STARTUP_FILE" ]; then
+    ls -l "$STARTUP_FILE"
   else
-    log "ERROR: $ICEWM_DIR/startup is not executable"
+    log "ERROR: $STARTUP_FILE is not executable"
     fail=1
   fi
 
@@ -360,12 +402,14 @@ uninstall() {
   backup_dir="$STATE_DIR/icewm-backup-before-uninstall-$(timestamp)"
   mkdir -p "$backup_dir"
   backup_file "$ICEWM_DIR/menu" "$backup_dir"
-  backup_file "$ICEWM_DIR/toolbar" "$backup_dir"
-  backup_file "$ICEWM_DIR/startup" "$backup_dir"
+  backup_file "$MENU_FILE" "$backup_dir"
+  backup_file "$TOOLBAR_FILE" "$backup_dir"
+  backup_file "$STARTUP_FILE" "$backup_dir"
 
-  remove_marked_block "$ICEWM_DIR/menu" "$BEGIN_MENU" "$END_MENU"
-  remove_marked_block "$ICEWM_DIR/toolbar" "$BEGIN_TOOLBAR" "$END_TOOLBAR"
-  remove_marked_block "$ICEWM_DIR/startup" "$BEGIN_STARTUP" "$END_STARTUP"
+  remove_marked_block "$ICEWM_DIR/menu" "$OLD_BEGIN_MENU" "$OLD_END_MENU"
+  remove_marked_block "$MENU_FILE" "$BEGIN_MENU" "$END_MENU"
+  remove_marked_block "$TOOLBAR_FILE" "$BEGIN_TOOLBAR" "$END_TOOLBAR"
+  remove_marked_block "$STARTUP_FILE" "$BEGIN_STARTUP" "$END_STARTUP"
   rm -f "$WRAPPER"
   restart_icewm
   log "Removed marked IceWM blocks and wrapper. Backups written under: $backup_dir"

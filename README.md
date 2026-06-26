@@ -11,7 +11,7 @@ No broader application type, framework, package manager, or deployment target ha
 - `AGENTS.md` defines rules for future Codex sessions.
 - Approved mail migration utilities live in `src/`.
 - Offline DIY guides now cover Betterbird profile transport and the validated Evolution Flatpak setup on antiX.
-- An IceWM launcher helper is available for Evolution Flatpak menu/taskbar integration.
+- An IceWM launcher helper is available for Evolution Flatpak Personal menu/taskbar integration.
 - Windows 11 and Debian Linux portability is a project requirement.
 
 ## Start Here

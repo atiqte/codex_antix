@@ -81,6 +81,9 @@ Expected important paths after the setup:
   ~/.local/state/evolution-flatpak
     Launcher log and IceWM config backups.
 
+  ~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg
+    Official Flatpak-exported Evolution icon used by IceWM entries.
+
 
 Why Flatpak Was Chosen First
 ----------------------------
@@ -498,22 +501,26 @@ Phase 11B - IceWM Menu and Taskbar Launcher
 ===========================================
 
 After the terminal launch works, install a user-level wrapper so Evolution can
-start from the IceWM menu and taskbar toolbar without opening a terminal.
+start from IceWM's Personal menu and taskbar toolbar without opening a
+terminal.
 
 This uses:
 
   ~/.local/bin/evolution-flatpak-mail
-  ~/.icewm/menu
+  ~/.icewm/personal
   ~/.icewm/toolbar
   ~/.icewm/startup
   ~/.local/state/evolution-flatpak
+  ~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg
 
 Run these commands on the antiX VM. They assume this repository is cloned or
 copied to:
 
   ~/antiX_VM_Laptop
 
-If the folder name is different, adjust only the cd line.
+If the folder name is different, adjust only the cd line. If you are not using
+Git on antiX, copy the script file to the VM and run it from that location
+instead.
 
 Inspect current IceWM, Flatpak, and keyring state:
 
@@ -522,7 +529,8 @@ COPY COMMAND:
   cd ~/antiX_VM_Laptop
   sh scripts/evolution_flatpak_icewm_launcher_setup.sh inspect
 
-Install the launcher wrapper and IceWM entries:
+Install the launcher wrapper, Personal menu, toolbar, startup, and official
+icon entries:
 
 COPY COMMAND:
 
@@ -536,10 +544,21 @@ What the helper does:
 - Creates ~/.local/bin/evolution-flatpak-mail.
 - Starts gnome-keyring at IceWM startup.
 - Keeps a wrapper fallback in case the startup script did not run.
-- Adds a marked Evolution Mail entry to ~/.icewm/menu.
+- Adds a marked Evolution Mail entry to ~/.icewm/personal.
 - Adds a marked Evolution Mail quick-launch entry to ~/.icewm/toolbar.
+- Uses the official Flatpak-exported Evolution SVG icon.
 - Backs up existing IceWM files under ~/.local/state/evolution-flatpak.
 - Replaces only marked blocks, so repeated runs do not duplicate entries.
+- Avoids editing the main ~/.icewm/menu because antiX already exposes
+  ~/.icewm/personal through the Personal menu.
+
+Official icon:
+
+  ~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg
+
+Verified SHA256 on the tested VM:
+
+  dcda7580deebec635ff3d560795a45dd41e62ce3e7d311a170b46b4cf2a0cbb2
 
 Launch through the installed wrapper:
 
@@ -549,7 +568,7 @@ COPY COMMAND:
 
 Then test:
 
-1. IceWM menu -> Evolution Mail.
+1. IceWM menu -> Personal -> Evolution Mail.
 2. The Evolution Mail taskbar toolbar button.
 3. Repeated clicks do not create a broken state.
 
@@ -565,7 +584,9 @@ Verify the installed files and keyring:
 
 COPY COMMAND:
 
-  grep -RIn 'CODEX EVOLUTION FLATPAK' ~/.icewm/menu ~/.icewm/toolbar ~/.icewm/startup
+  grep -RIn 'CODEX EVOLUTION FLATPAK' ~/.icewm/personal ~/.icewm/toolbar ~/.icewm/startup
+  grep -RIn 'org.gnome.Evolution.svg' ~/.icewm/personal ~/.icewm/toolbar
+  sha256sum ~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg
   pgrep -fa gnome-keyring || true
   tail -n 80 ~/.local/state/evolution-flatpak/launcher.log 2>/dev/null || true
   flatpak --user info --show-permissions org.gnome.Evolution | sed -n '1,120p'
@@ -710,8 +731,7 @@ Launch Evolution:
 
 COPY COMMAND:
 
-  gnome-keyring-daemon --start --components=secrets,pkcs11,ssh || true
-  flatpak --user run org.gnome.Evolution
+  ~/.local/bin/evolution-flatpak-mail
 
 In the Evolution GUI:
 
@@ -875,7 +895,7 @@ Back up these paths:
   /mail/SearchIndex/notmuch
   /mail/Backups/evolution-flatpak
   ~/.local/bin/evolution-flatpak-mail, or rerun the repository helper script
-  ~/.icewm/menu, ~/.icewm/toolbar, and ~/.icewm/startup, or rerun the helper
+  ~/.icewm/personal, ~/.icewm/toolbar, and ~/.icewm/startup, or rerun the helper
   ~/.mbsyncrc, after mbsync is configured
   ~/.notmuch-config, after notmuch is configured
 
@@ -903,7 +923,7 @@ Problem: Evolution does not appear in the IceWM menu or toolbar.
 
 Cause:
 
-The IceWM menu or toolbar has not refreshed, or the user IceWM files do not
+The IceWM Personal menu or toolbar has not refreshed, or the user IceWM files do not
 contain the marked launcher blocks.
 
 Fix:
@@ -917,6 +937,28 @@ COPY COMMAND:
   icewm --restart
 
 If the entries still do not appear, log out and back into IceWM.
+
+
+Problem: Evolution icon is generic or wrong.
+
+Cause:
+
+IceWM may not resolve the icon name org.gnome.Evolution through the current
+icon theme.
+
+Fix:
+
+Use the direct official Flatpak-exported icon path in ~/.icewm/personal and
+~/.icewm/toolbar:
+
+  ~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg
+
+Verify:
+
+COPY COMMAND:
+
+  grep -RIn 'org.gnome.Evolution.svg' ~/.icewm/personal ~/.icewm/toolbar
+  sha256sum ~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg
 
 
 Problem: Evolution asks for secrets or keyring each launch.
