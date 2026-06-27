@@ -30,7 +30,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for installing and preparing Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
-- `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the next controlled second-folder expansion on antiX.
+- `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
 - `src/` placeholder folder for future implementation work.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.

@@ -1,12 +1,21 @@
-mbsync antiX INBOX Test Guide
-=============================
+mbsync antiX Guide: INBOX Test and Production Provider-Live
+===========================================================
 
 Purpose
 -------
 
-This guide implements the first mbsync phase after Evolution Flatpak validation.
-It installs and configures isync/mbsync for one standard IMAP INBOX test pull
-into an isolated Maildir++ tree under /mail.
+This guide started as the first mbsync phase after Evolution Flatpak
+validation. It installs and configures isync/mbsync for one standard IMAP INBOX
+test pull into an isolated Maildir++ tree under /mail.
+
+Current validated production state, as of 2026-06-27:
+
+- The INBOX test path remains available at
+  /mail/Mailstore/mbsync/provider-inbox-test.
+- Production live mail is now under /mail/Mailstore/mbsync/provider-live.
+- Normal production folders are receive-only.
+- Sent is the only push-capable folder, through a narrow Sent-only channel.
+- The 180-second auto-sync loop now syncs provider-live-group.
 
 The first mbsync setup is intentionally conservative:
 
@@ -38,13 +47,20 @@ Target paths on antiX:
     First isolated IMAP INBOX pull target.
 
   /mail/Mailstore/mbsync/provider-live
-    Reserved for the later live IMAP workflow after the test is validated.
+    Validated production live IMAP Maildir++ tree.
 
   /mail/AppData/isync/state/provider
-    mbsync state files.
+    First INBOX test mbsync state files.
+
+  /mail/AppData/isync/state/provider-live
+    Production provider-live mbsync state files, including the reused Sent
+    state file.
 
   /mail/Logs/mbsync
-    mbsync run logs.
+    First INBOX test mbsync run logs.
+
+  /mail/Logs/mbsync-live
+    Production provider-live mbsync logs.
 
   /mail/SearchIndex/notmuch
     Reserved for later notmuch index testing.
@@ -68,6 +84,96 @@ Safety Rules
 5. Review dry-run output before the first real pull.
 6. Keep Remove None and Expunge None until deletion behavior is deliberately
    tested.
+7. Keep normal production folders receive-only. Sent upload is the only
+   approved push path.
+
+
+Validated Production Provider-Live
+----------------------------------
+
+The production setup validated on 2026-06-27 uses these folders:
+
+  INBOX
+  Drafts
+  Trash
+  spam
+  Sent
+  Junk
+  Archive
+
+The current production config block is:
+
+  # BEGIN CODEX MBSYNC PROVIDER LIVE
+  # Production Maildir tree under /mail.
+  # Receive-only for normal folders; Sent has a narrow PushNew-only upload path.
+  MaildirStore provider-live-local
+  Inbox /mail/Mailstore/mbsync/provider-live
+  SubFolders Maildir++
+
+  Channel provider-live
+  Far :provider-remote:
+  Near :provider-live-local:
+  Patterns "INBOX" "Drafts" "Trash" "spam" "Junk" "Archive"
+  Sync PullNew
+  Create Near
+  Remove None
+  Expunge None
+  CopyArrivalDate yes
+  SyncState /mail/AppData/isync/state/provider-live/
+
+  Channel provider-live-sent-upload
+  Far :provider-remote:Sent
+  Near :provider-live-local:Sent
+  Sync PullNew PushNew
+  Create None
+  Remove None
+  Expunge None
+  CopyArrivalDate yes
+  SyncState /mail/AppData/isync/state/provider-live/
+
+  Group provider-live-group
+  Channel provider-live
+  Channel provider-live-sent-upload
+  # END CODEX MBSYNC PROVIDER LIVE
+
+Validated results:
+
+- First provider-live pull: 163 messages.
+- After SMTP/Gmail reply test: 170 messages.
+- Sent upload test: remote INBOX.Sent increased from 4 to 5.
+- Automatic Sent upload test: local Sent and remote INBOX.Sent both reached 6.
+- Final audit: loop running, target provider-live-group, tmp count 0.
+
+Evolution production account:
+
+  TAG-Mustang_mbsync-Live
+
+Receiving path:
+
+  /mail/Mailstore/mbsync/provider-live
+
+Sent folder:
+
+  TAG-Mustang_mbsync-Live / Sent
+
+Evolution source identity should store sent copies with a folder URI like:
+
+  folder://ca9e0701d552924b5b13afa4b29213e130bba0bf/Sent
+
+It must not use:
+
+  folder://local/Sent
+
+Production auto-sync controls:
+
+  mbsync-provider-live-control status
+  mbsync-provider-live-control pause
+  mbsync-provider-live-control resume
+  mbsync-provider-live-control sync-now
+  mbsync-provider-live-control stop-loop
+  mbsync-provider-live-control start
+
+The loop starts from the marked IceWM startup block and runs every 180 seconds.
 
 
 Helper Script
@@ -453,6 +559,11 @@ List the provider folder names before choosing a second test folder:
 Batch 11 - Add One Second-Folder Test Channel
 ---------------------------------------------
 
+Historical note: this was the conservative promotion path before the provider
+was cleaned up to the exact seven desired folders. For the TAG Mustang mailbox,
+this path was superseded by the validated provider-live setup documented above.
+Keep this batch only as a fallback pattern for a future unknown provider.
+
 After reviewing the remote folder list, choose exactly one small non-INBOX,
 non-special folder. Set REMOTE_FOLDER to the exact remote name printed by
 Batch 10.
@@ -564,10 +675,14 @@ Run only after Batch 11 creates the second-folder test channel.
   done
 
 
-When to Expand Beyond INBOX
----------------------------
+Historical Conservative Expansion Note
+--------------------------------------
 
-Do not add more folders until:
+The following rule was used before production provider-live was validated. It
+remains useful for a new provider, but it is no longer the current next action
+for TAG Mustang.
+
+For a new or unknown provider, do not add more folders until:
 
 - Batch 5 dry-run is clean.
 - Batch 6 real pull is clean.
@@ -578,7 +693,7 @@ Do not add more folders until:
 - Remote folders are listed read-only.
 - One small second folder passes two real pulls without duplicate flood.
 
-Next expansion should still be conservative:
+For a new provider, next expansion should still be conservative:
 
 1. Pick one small low-risk folder.
 2. Add one test channel or narrow mailbox selection.
@@ -586,6 +701,10 @@ Next expansion should still be conservative:
 4. Pull a second time to confirm state handling.
 5. Validate in Evolution only after mbsync exits.
 6. Create /mail/Mailstore/mbsync/provider-live only after the previous folder is understood.
+
+For the current TAG Mustang setup, provider-live already exists and is
+validated. Normal folders remain receive-only, and Sent upload is handled only
+by provider-live-sent-upload.
 
 
 Troubleshooting
@@ -642,6 +761,27 @@ The first test must show:
   Create Near
   Remove None
   Expunge None
+
+
+Problem: sent messages do not appear on the IMAP server.
+
+Check that Evolution saves sent copies to the production account:
+
+  TAG-Mustang_mbsync-Live / Sent
+
+Then verify:
+
+  grep -RIn 'SentFolder=' "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources"
+  mbsync -c "$HOME/.config/isyncrc" --list provider-live-sent-upload
+  mbsync-provider-live-control status
+
+The expected channel mapping is:
+
+  Sent <=> Sent
+
+The loop/control scripts should target:
+
+  CHANNEL="provider-live-group"
 
 
 notmuch and Astroid Later

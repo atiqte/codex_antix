@@ -64,3 +64,4 @@
 - [x] Add a narrow `provider-live-sent-upload` mbsync channel with `Sync PullNew PushNew` only for Sent.
 - [x] Update the auto-sync loop/control target to `provider-live-group`.
 - [x] Validate controlled Sent upload, zero-duplicate second Sent sync, full group sync, and automatic loop Sent upload.
+- [x] Update the mbsync HTML and text DIY guides with the validated production `provider-live` and Sent-upload setup.

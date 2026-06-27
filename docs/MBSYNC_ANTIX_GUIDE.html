@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>mbsync antiX INBOX Test Guide</title>
+  <title>mbsync antiX Guide: INBOX Test and Production Provider-Live</title>
   <style>
     :root {
       color-scheme: light;
@@ -199,8 +199,8 @@
 </head>
 <body>
   <header>
-    <h1>mbsync antiX INBOX Test Guide</h1>
-    <p class="subtitle">Offline step-by-step setup for the first deletion-safe IMAP INBOX pull into an isolated Maildir++ tree under /mail.</p>
+    <h1>mbsync antiX Guide: INBOX Test and Production Provider-Live</h1>
+    <p class="subtitle">Offline setup notes for the first deletion-safe INBOX test and the validated production provider-live tree with narrow Sent upload.</p>
   </header>
 
   <main>
@@ -209,6 +209,7 @@
       <a href="#purpose">Purpose</a>
       <a href="#layout">Layout</a>
       <a href="#safety">Safety Rules</a>
+      <a href="#production">Production State</a>
       <a href="#helper">Helper Script</a>
       <a href="#batch1">Batch 1</a>
       <a href="#batch2">Batch 2</a>
@@ -226,7 +227,7 @@
     <div>
       <section id="purpose">
         <h2>Purpose</h2>
-        <p>This guide implements the first mbsync phase after Evolution Flatpak validation. It installs and configures <code>isync</code>/<code>mbsync</code> for one standard IMAP INBOX test pull into an isolated Maildir++ tree under <code>/mail</code>.</p>
+        <p>This guide started as the first mbsync phase after Evolution Flatpak validation. It installs and configures <code>isync</code>/<code>mbsync</code> for one standard IMAP INBOX test pull into an isolated Maildir++ tree under <code>/mail</code>.</p>
         <div class="grid">
           <div class="box">
             <h3>First target</h3>
@@ -238,8 +239,8 @@
           </div>
         </div>
         <div class="callout warning">
-          <strong>Do not install notmuch or Astroid in this phase.</strong>
-          They remain later sidecar search tests after Evolution and mbsync are stable.
+          <strong>Current production state:</strong>
+          <code>/mail/Mailstore/mbsync/provider-live</code> is now validated. Normal folders are receive-only, Sent upload is handled by a narrow Sent-only channel, and the 180-second loop syncs <code>provider-live-group</code>.
         </div>
       </section>
 
@@ -251,9 +252,11 @@
             <tr><td><code>/mail/Mailstore/evolution/local-maildir</code></td><td>Converted Betterbird production archive. mbsync must not write here during the first test.</td></tr>
             <tr><td><code>/mail/Mailstore/mbsync/provider-inbox-test</code></td><td>First isolated IMAP INBOX pull target.</td></tr>
             <tr><td><code>/mail/Mailstore/mbsync/provider-folder-test</code></td><td>Next isolated single-folder test target after INBOX validation.</td></tr>
-            <tr><td><code>/mail/Mailstore/mbsync/provider-live</code></td><td>Reserved for the later live IMAP workflow.</td></tr>
-            <tr><td><code>/mail/AppData/isync/state/provider</code></td><td>mbsync state files.</td></tr>
-            <tr><td><code>/mail/Logs/mbsync</code></td><td>mbsync run logs.</td></tr>
+            <tr><td><code>/mail/Mailstore/mbsync/provider-live</code></td><td>Validated production live IMAP Maildir++ tree.</td></tr>
+            <tr><td><code>/mail/AppData/isync/state/provider</code></td><td>First INBOX test mbsync state files.</td></tr>
+            <tr><td><code>/mail/AppData/isync/state/provider-live</code></td><td>Production state files, including the reused Sent state file.</td></tr>
+            <tr><td><code>/mail/Logs/mbsync</code></td><td>First INBOX test sync logs.</td></tr>
+            <tr><td><code>/mail/Logs/mbsync-live</code></td><td>Production provider-live sync logs.</td></tr>
             <tr><td><code>/mail/SearchIndex/notmuch</code></td><td>Reserved for later notmuch indexing.</td></tr>
             <tr><td><code>~/.config/isyncrc</code></td><td>mbsync config used with <code>-c</code>.</td></tr>
             <tr><td><code>~/.config/isync/provider.pass</code></td><td>chmod 600 password/app-password file read by <code>PassCmd</code>.</td></tr>
@@ -270,7 +273,65 @@
           <li>Do not paste passwords into chat or screenshots.</li>
           <li>Review dry-run output before the first real pull.</li>
           <li>Keep <code>Remove None</code> and <code>Expunge None</code> until deletion behavior is deliberately tested.</li>
+          <li>Keep normal production folders receive-only. Sent upload is the only approved push path.</li>
         </ul>
+      </section>
+
+      <section id="production">
+        <h2>Validated Production Provider-Live</h2>
+        <p>The production setup validated on 2026-06-27 uses <code>INBOX</code>, <code>Drafts</code>, <code>Trash</code>, <code>spam</code>, <code>Sent</code>, <code>Junk</code>, and <code>Archive</code>. Normal folders stay receive-only; Sent is uploaded through one narrow Sent-only channel.</p>
+        <div class="command"><div class="command-title"><span>Current production mbsync block</span><button class="copy">Copy command</button></div><pre><code># BEGIN CODEX MBSYNC PROVIDER LIVE
+# Production Maildir tree under /mail.
+# Receive-only for normal folders; Sent has a narrow PushNew-only upload path.
+MaildirStore provider-live-local
+Inbox /mail/Mailstore/mbsync/provider-live
+SubFolders Maildir++
+
+Channel provider-live
+Far :provider-remote:
+Near :provider-live-local:
+Patterns "INBOX" "Drafts" "Trash" "spam" "Junk" "Archive"
+Sync PullNew
+Create Near
+Remove None
+Expunge None
+CopyArrivalDate yes
+SyncState /mail/AppData/isync/state/provider-live/
+
+Channel provider-live-sent-upload
+Far :provider-remote:Sent
+Near :provider-live-local:Sent
+Sync PullNew PushNew
+Create None
+Remove None
+Expunge None
+CopyArrivalDate yes
+SyncState /mail/AppData/isync/state/provider-live/
+
+Group provider-live-group
+Channel provider-live
+Channel provider-live-sent-upload
+# END CODEX MBSYNC PROVIDER LIVE</code></pre></div>
+
+        <table>
+          <thead><tr><th>Validated item</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>First provider-live pull</td><td>163 messages.</td></tr>
+            <tr><td>After SMTP/Gmail reply test</td><td>170 messages.</td></tr>
+            <tr><td>Controlled Sent upload</td><td>Remote <code>INBOX.Sent</code> increased from 4 to 5 with <code>Far: +1</code>.</td></tr>
+            <tr><td>Automatic Sent upload</td><td>Local Sent and remote <code>INBOX.Sent</code> both reached 6.</td></tr>
+            <tr><td>Final audit</td><td>Loop running, target <code>provider-live-group</code>, tmp count 0.</td></tr>
+          </tbody>
+        </table>
+
+        <p>Evolution production account: <code>TAG-Mustang_mbsync-Live</code>. Receiving path: <code>/mail/Mailstore/mbsync/provider-live</code>. Sent folder: <code>TAG-Mustang_mbsync-Live / Sent</code>. The Sent folder must not be <code>folder://local/Sent</code>.</p>
+
+        <div class="command"><div class="command-title"><span>Production auto-sync controls</span><button class="copy">Copy command</button></div><pre><code>mbsync-provider-live-control status
+mbsync-provider-live-control pause
+mbsync-provider-live-control resume
+mbsync-provider-live-control sync-now
+mbsync-provider-live-control stop-loop
+mbsync-provider-live-control start</code></pre></div>
       </section>
 
       <section id="helper">
@@ -338,14 +399,14 @@ pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true</code></pre></div>
 
       <section id="next">
         <h2>Next Steps</h2>
-        <p>Run one more manual sync after Evolution is closed:</p>
+        <p>For the first INBOX test, run one more manual sync after Evolution is closed:</p>
         <div class="command"><div class="command-title"><span>Second manual sync</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh sync-once</code></pre></div>
-        <p>Do not add more folders until the dry-run, first pull, Evolution read test, and second sync are all clean.</p>
+        <p>For a new provider, do not add more folders until the dry-run, first pull, Evolution read test, and second sync are all clean. For the TAG Mustang mailbox, production <code>provider-live</code> is already validated in the Production State section.</p>
       </section>
 
       <section id="validated">
         <h2>Validated Result</h2>
-        <p>The antiX INBOX validation completed on 2026-06-27: <code>isync 1.5.1</code> pulled 144 provider INBOX messages into <code>/mail/Mailstore/mbsync/provider-inbox-test</code>, Evolution read the tree as <code>BackendName=maildir</code>, and post-Evolution mbsync succeeded without duplicate flood or unexpected deletions.</p>
+        <p>The antiX INBOX validation completed on 2026-06-27: <code>isync 1.5.1</code> pulled 144 provider INBOX messages into <code>/mail/Mailstore/mbsync/provider-inbox-test</code>, Evolution read the tree as <code>BackendName=maildir</code>, and post-Evolution mbsync succeeded without duplicate flood or unexpected deletions. The later production validation is recorded in the Production State section.</p>
         <div class="callout ok">
           Keep <code>/mail/Mailstore/mbsync/provider-inbox-test</code> as a validated test tree. Do not turn it into the final live tree.
         </div>
@@ -353,6 +414,9 @@ pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true</code></pre></div>
 
       <section id="promote">
         <h2>Promote Safely</h2>
+        <div class="callout warning">
+          <strong>Historical note:</strong> this conservative second-folder promotion path was used before the provider was cleaned up to the exact seven desired folders. For the TAG Mustang mailbox, it is superseded by the validated <code>provider-live</code> setup above. Keep this section only as a fallback pattern for a future unknown provider.
+        </div>
         <p>Before adding any more folders, snapshot the working config and logs. This does not copy <code>provider.pass</code>.</p>
         <div class="command"><div class="command-title"><span>Snapshot validated mbsync state</span><button class="copy">Copy command</button></div><pre><code>set -eu
 SNAP="/mail/Backups/mbsync/$(date +%Y%m%d-%H%M%S)-inbox-validated"
@@ -506,6 +570,7 @@ done</code></pre></div>
             <tr><td>Dry-run lists many folders.</td><td>Stop. Review <code>sh scripts/mbsync_provider_inbox_setup.sh redact-config</code>; the first test should target INBOX only.</td></tr>
             <tr><td>Evolution sees folders but no messages.</td><td>Recreate the account as <code>Maildir-format mail directories</code>, not MH-format mail directories.</td></tr>
             <tr><td>Local files disappear.</td><td>Stop using the channel and verify the config still says <code>Sync PullNew</code>, <code>Remove None</code>, and <code>Expunge None</code>.</td></tr>
+            <tr><td>Sent messages do not appear on the IMAP server.</td><td>Verify Evolution saves sent copies to <code>TAG-Mustang_mbsync-Live / Sent</code>, <code>mbsync --list provider-live-sent-upload</code> prints <code>Sent &lt;=&gt; Sent</code>, and loop/control scripts show <code>CHANNEL="provider-live-group"</code>.</td></tr>
           </tbody>
         </table>
       </section>

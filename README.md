@@ -10,7 +10,7 @@ No broader application type, framework, package manager, or deployment target ha
 - Project memory documents live in `docs/`.
 - `AGENTS.md` defines rules for future Codex sessions.
 - Approved mail migration utilities live in `src/`.
-- Offline DIY guides now cover Betterbird profile transport, the validated Evolution Flatpak setup on antiX, and the first deletion-safe mbsync INBOX test. The validated production `provider-live` mbsync setup, including narrow Sent upload, is recorded in project memory.
+- Offline DIY guides now cover Betterbird profile transport, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, and the validated production `provider-live` setup including narrow Sent upload.
 - AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration and the first mbsync INBOX test setup.
 - Windows 11 and Debian Linux portability is a project requirement.
 
