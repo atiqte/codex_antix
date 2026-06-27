@@ -211,6 +211,31 @@ Available commands:
     Shows counts, disk usage, sync-state files, sample files, and redacted
     config.
 
+  production-layout
+    Creates production provider-live Maildir, state, log, and loop paths.
+
+  write-production-config
+    Appends or replaces the validated provider-live production block.
+
+  production-list
+    Lists provider-live, provider-live-sent-upload, and provider-live-group
+    mappings.
+
+  production-sync
+    Runs one provider-live-group sync and saves the full log.
+
+  production-status
+    Shows provider-live counts, state files, logs, control scripts, and config.
+
+  write-autosync
+    Writes the provider-live loop/control scripts targeting provider-live-group.
+
+  install-autosync-startup
+    Adds the marked IceWM startup block for provider-live auto-sync.
+
+  autosync-status
+    Prints provider-live auto-sync status through the control script.
+
   redact-config
     Prints ~/.config/isyncrc with User and PassCmd redacted.
 

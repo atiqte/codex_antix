@@ -40,7 +40,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `tests/test_betterbird_profile_transport.py`, standard-library tests for split archive transport safety.
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`, standard-library tests for folder mapping and portable validation.
 - `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for adding Evolution Flatpak to IceWM menu/taskbar launch surfaces and starting `gnome-keyring-daemon`.
-- `scripts/mbsync_provider_inbox_setup.sh`, an antiX helper for inspecting package/layout state, installing isync/mbsync, creating the isolated `/mail` mbsync test layout, writing a pull-only INBOX config, dry-running, and pulling once.
+- `scripts/mbsync_provider_inbox_setup.sh`, an antiX helper for inspecting package/layout state, installing isync/mbsync, creating the isolated `/mail` mbsync test layout, writing a pull-only INBOX config, production `provider-live` layout/config/status, Sent-only upload channel setup, and provider-live auto-sync loop/startup setup.
 
 ## What Is Intentionally Undecided
 
@@ -120,6 +120,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - Evolution's production account `TAG-Mustang_mbsync-Live` now stores sent copies in `folder://ca9e0701d552924b5b13afa4b29213e130bba0bf/Sent`, which corresponds to `/mail/Mailstore/mbsync/provider-live/.Sent`.
 - Sent upload was validated on 2026-06-27. A controlled Sent-only upload changed remote `INBOX.Sent` from 4 to 5 messages with `Far: +1`; a second Sent sync had zero delta. A later automatic loop test saved one new local Sent message and uploaded it to remote Sent, reaching local Sent 6 and remote `INBOX.Sent` 6 with `MaxPushedUid 6`.
 - The production auto-sync loop uses `~/.local/bin/mbsync-provider-live-loop` and `~/.local/bin/mbsync-provider-live-control`, polls every 180 seconds, writes daily logs under `/mail/Logs/mbsync-live`, targets `provider-live-group`, supports `status`, `pause`, `resume`, `sync-now`, `stop-loop`, and `start`, and starts from a marked IceWM startup block. Final audit confirmed repeated automatic group runs with exit `0`, no lock left behind, and `tmp` still empty.
+- `scripts/mbsync_provider_inbox_setup.sh` now includes production helper commands for the validated setup: `production-layout`, `write-production-config`, `production-list`, `production-sync`, `production-status`, `write-autosync`, `install-autosync-startup`, and `autosync-status`.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.

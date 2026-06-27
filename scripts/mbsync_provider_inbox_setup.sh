@@ -2,6 +2,7 @@
 set -eu
 
 PROFILE=${MBSYNC_PROFILE:-provider}
+MARKER_PROFILE=${MBSYNC_MARKER_PROFILE:-$PROFILE}
 MAIL_ROOT=${MAIL_ROOT:-/mail}
 HOME_DIR=${HOME:?HOME is not set}
 CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME_DIR/.config"}
@@ -11,19 +12,36 @@ PASS_FILE=${MBSYNC_PASS_FILE:-"$SECRET_DIR/$PROFILE.pass"}
 TEST_MAILDIR=${MBSYNC_TEST_MAILDIR:-"$MAIL_ROOT/Mailstore/mbsync/$PROFILE-inbox-test"}
 LIVE_MAILDIR=${MBSYNC_LIVE_MAILDIR:-"$MAIL_ROOT/Mailstore/mbsync/$PROFILE-live"}
 STATE_DIR=${MBSYNC_STATE_DIR:-"$MAIL_ROOT/AppData/isync/state/$PROFILE"}
+LIVE_STATE_DIR=${MBSYNC_LIVE_STATE_DIR:-"$MAIL_ROOT/AppData/isync/state/$PROFILE-live"}
 LOG_DIR=${MBSYNC_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync"}
+LIVE_LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
+LIVE_LOOP_STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
 NOTMUCH_DIR=${NOTMUCH_DIR:-"$MAIL_ROOT/SearchIndex/notmuch"}
+BIN_DIR=${MBSYNC_BIN_DIR:-"$HOME_DIR/.local/bin"}
+LOOP_SCRIPT=${MBSYNC_LIVE_LOOP_SCRIPT:-"$BIN_DIR/mbsync-$PROFILE-live-loop"}
+CONTROL_SCRIPT=${MBSYNC_LIVE_CONTROL_SCRIPT:-"$BIN_DIR/mbsync-$PROFILE-live-control"}
+ICEWM_STARTUP=${MBSYNC_ICEWM_STARTUP:-"$HOME_DIR/.icewm/startup"}
+SENT_MAILBOX=${MBSYNC_SENT_MAILBOX:-Sent}
+LIVE_PATTERNS=${MBSYNC_LIVE_PATTERNS:-'"INBOX" "Drafts" "Trash" "spam" "Junk" "Archive"'}
 
 ACCOUNT="$PROFILE"
 REMOTE_STORE="$PROFILE-remote"
 LOCAL_STORE="$PROFILE-local"
 CHANNEL="$PROFILE-inbox"
-BEGIN_MARKER="# BEGIN CODEX MBSYNC $PROFILE INBOX TEST"
-END_MARKER="# END CODEX MBSYNC $PROFILE INBOX TEST"
+LIVE_LOCAL_STORE="$PROFILE-live-local"
+LIVE_CHANNEL="$PROFILE-live"
+LIVE_SENT_CHANNEL="$PROFILE-live-sent-upload"
+LIVE_GROUP="$PROFILE-live-group"
+BEGIN_MARKER="# BEGIN CODEX MBSYNC $MARKER_PROFILE INBOX TEST"
+END_MARKER="# END CODEX MBSYNC $MARKER_PROFILE INBOX TEST"
+LIVE_BEGIN_MARKER="# BEGIN CODEX MBSYNC $MARKER_PROFILE LIVE"
+LIVE_END_MARKER="# END CODEX MBSYNC $MARKER_PROFILE LIVE"
+STARTUP_BEGIN_MARKER="# BEGIN CODEX MBSYNC $MARKER_PROFILE LIVE AUTOSYNC"
+STARTUP_END_MARKER="# END CODEX MBSYNC $MARKER_PROFILE LIVE AUTOSYNC"
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") inspect|install-packages|create-layout|write-config|list|dry-run|sync-once|status|redact-config
+Usage: $(basename "$0") COMMAND
 
 Commands:
   inspect           Print system, disk, package, and current mbsync state.
@@ -34,16 +52,29 @@ Commands:
   dry-run           Run a verbose mbsync simulation for the INBOX channel.
   sync-once         Run one real INBOX pull, saving the full log under /mail/Logs/mbsync.
   status            Print counts, disk usage, sync-state files, and redacted config.
+  production-layout Create production provider-live Maildir, state, log, and loop paths.
+  write-production-config
+                    Append or replace the validated provider-live production block.
+  production-list   List production provider-live, Sent upload, and group mappings.
+  production-sync   Run one provider-live-group sync and save a log.
+  production-status Print provider-live counts, state, logs, controls, and redacted config.
+  write-autosync    Write provider-live loop/control scripts targeting provider-live-group.
+  install-autosync-startup
+                    Add a marked IceWM startup block for provider-live auto-sync.
+  autosync-status   Print provider-live auto-sync status through the control script.
   redact-config     Print the mbsync config with username and password command redacted.
 
 Environment overrides:
   MBSYNC_PROFILE       Default: provider
   MAIL_ROOT            Default: /mail
   MBSYNC_CONFIG_FILE   Default: ~/.config/isyncrc
+  MBSYNC_LIVE_PATTERNS Default: "INBOX" "Drafts" "Trash" "spam" "Junk" "Archive"
+  MBSYNC_SENT_MAILBOX  Default: Sent
   MBSYNC_OVERWRITE_CONFIG=1 allows replacing a non-Codex existing config.
 
 The generated channel uses Sync PullNew, Create Near, Remove None, and Expunge None.
-It is intended for the first provider INBOX test only.
+The production provider-live block keeps normal folders receive-only and enables
+PushNew only for the Sent folder.
 EOF
 }
 
@@ -70,6 +101,13 @@ validate_profile() {
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
+}
+
+config_has_inbox_marker() {
+  [ -f "$CONFIG_FILE" ] || return 1
+  grep -F "$BEGIN_MARKER" "$CONFIG_FILE" >/dev/null 2>&1 && return 0
+  grep -F "# BEGIN CODEX MBSYNC $PROFILE INBOX TEST" "$CONFIG_FILE" >/dev/null 2>&1 && return 0
+  return 1
 }
 
 print_path() {
@@ -113,8 +151,14 @@ inspect() {
   print_path "$SECRET_DIR"
   print_path "$PASS_FILE"
   print_path "$TEST_MAILDIR"
+  print_path "$LIVE_MAILDIR"
   print_path "$STATE_DIR"
+  print_path "$LIVE_STATE_DIR"
   print_path "$LOG_DIR"
+  print_path "$LIVE_LOG_DIR"
+  print_path "$LIVE_LOOP_STATE_DIR"
+  print_path "$LOOP_SCRIPT"
+  print_path "$CONTROL_SCRIPT"
 }
 
 install_packages() {
@@ -165,6 +209,38 @@ create_layout() {
   print_path "$LOG_DIR"
   print_path "$NOTMUCH_DIR"
   print_path "$SECRET_DIR"
+}
+
+create_production_layout() {
+  validate_profile
+
+  mkdir -p "$MAIL_ROOT/Mailstore/mbsync" \
+    "$MAIL_ROOT/AppData/isync/state" \
+    "$LIVE_STATE_DIR" \
+    "$LIVE_LOG_DIR" \
+    "$LIVE_LOOP_STATE_DIR" \
+    "$BIN_DIR"
+
+  create_maildir "$LIVE_MAILDIR"
+  create_maildir "$LIVE_MAILDIR/.$SENT_MAILBOX"
+
+  chmod 700 "$MAIL_ROOT/AppData/isync" \
+    "$MAIL_ROOT/AppData/isync/state" \
+    "$LIVE_STATE_DIR" \
+    "$LIVE_LOG_DIR" \
+    "$LIVE_LOOP_STATE_DIR" \
+    "$BIN_DIR"
+
+  log "== created production layout =="
+  print_path "$LIVE_MAILDIR"
+  print_path "$LIVE_MAILDIR/cur"
+  print_path "$LIVE_MAILDIR/new"
+  print_path "$LIVE_MAILDIR/tmp"
+  print_path "$LIVE_MAILDIR/.$SENT_MAILBOX"
+  print_path "$LIVE_STATE_DIR"
+  print_path "$LIVE_LOG_DIR"
+  print_path "$LIVE_LOOP_STATE_DIR"
+  print_path "$BIN_DIR"
 }
 
 prompt_if_empty() {
@@ -224,7 +300,7 @@ write_config() {
   validate_profile
   create_layout
 
-  if [ -f "$CONFIG_FILE" ] && ! grep -F "$BEGIN_MARKER" "$CONFIG_FILE" >/dev/null 2>&1; then
+  if [ -f "$CONFIG_FILE" ] && ! config_has_inbox_marker; then
     if [ "${MBSYNC_OVERWRITE_CONFIG:-0}" != "1" ]; then
       die "$CONFIG_FILE exists and is not marked as a Codex mbsync test config. Set MBSYNC_OVERWRITE_CONFIG=1 to replace it after reviewing."
     fi
@@ -262,9 +338,11 @@ PassCmd "cat $pass_cmd_path"
 TLSType IMAPS
 SystemCertificates yes
 Timeout 60
+PipelineDepth 1
 
 IMAPStore $REMOTE_STORE
 Account $ACCOUNT
+UseNamespace yes
 
 MaildirStore $LOCAL_STORE
 Inbox $TEST_MAILDIR
@@ -302,6 +380,136 @@ redact_config() {
 require_config() {
   [ -f "$CONFIG_FILE" ] || die "missing config: $CONFIG_FILE"
   need_cmd mbsync
+}
+
+backup_to_mail() {
+  label=$1
+  backup_dir="$MAIL_ROOT/Backups/mbsync/$(timestamp)-$label"
+  mkdir -p "$backup_dir"
+  chmod 700 "$MAIL_ROOT/Backups" "$MAIL_ROOT/Backups/mbsync" "$backup_dir" 2>/dev/null || true
+  printf '%s\n' "$backup_dir"
+}
+
+remove_live_block() {
+  input=$1
+  output=$2
+  old_begin="# BEGIN CODEX MBSYNC $PROFILE LIVE"
+  old_end="# END CODEX MBSYNC $PROFILE LIVE"
+  awk -v begin="$LIVE_BEGIN_MARKER" -v end="$LIVE_END_MARKER" \
+    -v old_begin="$old_begin" -v old_end="$old_end" '
+      $0 == begin || $0 == old_begin { skip = 1; next }
+      $0 == end || $0 == old_end { skip = 0; next }
+      !skip { print }
+    ' "$input" > "$output"
+}
+
+warn_live_base_config() {
+  grep -F "PipelineDepth 1" "$CONFIG_FILE" >/dev/null 2>&1 || \
+    log "WARNING: expected PipelineDepth 1 under IMAPAccount $ACCOUNT"
+  grep -F "UseNamespace yes" "$CONFIG_FILE" >/dev/null 2>&1 || \
+    log "WARNING: expected UseNamespace yes under IMAPStore $REMOTE_STORE"
+}
+
+write_production_config() {
+  validate_profile
+  [ -f "$CONFIG_FILE" ] || die "missing config: $CONFIG_FILE"
+  grep -F "IMAPAccount $ACCOUNT" "$CONFIG_FILE" >/dev/null 2>&1 || die "missing IMAPAccount $ACCOUNT"
+  grep -F "IMAPStore $REMOTE_STORE" "$CONFIG_FILE" >/dev/null 2>&1 || die "missing IMAPStore $REMOTE_STORE"
+
+  create_production_layout
+  warn_live_base_config
+
+  backup_dir=$(backup_to_mail "before-provider-live-config")
+  cp -p "$CONFIG_FILE" "$backup_dir/isyncrc.before-provider-live"
+  log "Backed up config to: $backup_dir/isyncrc.before-provider-live"
+
+  tmp_config=$(mktemp)
+  remove_live_block "$CONFIG_FILE" "$tmp_config"
+
+  cat >> "$tmp_config" <<EOF
+
+$LIVE_BEGIN_MARKER
+# Production Maildir tree under /mail.
+# Receive-only for normal folders; $SENT_MAILBOX has a narrow PushNew-only upload path.
+MaildirStore $LIVE_LOCAL_STORE
+Inbox $LIVE_MAILDIR
+SubFolders Maildir++
+
+Channel $LIVE_CHANNEL
+Far :$REMOTE_STORE:
+Near :$LIVE_LOCAL_STORE:
+Patterns $LIVE_PATTERNS
+Sync PullNew
+Create Near
+Remove None
+Expunge None
+CopyArrivalDate yes
+SyncState $LIVE_STATE_DIR/
+
+Channel $LIVE_SENT_CHANNEL
+Far :$REMOTE_STORE:$SENT_MAILBOX
+Near :$LIVE_LOCAL_STORE:$SENT_MAILBOX
+Sync PullNew PushNew
+Create None
+Remove None
+Expunge None
+CopyArrivalDate yes
+SyncState $LIVE_STATE_DIR/
+
+Group $LIVE_GROUP
+Channel $LIVE_CHANNEL
+Channel $LIVE_SENT_CHANNEL
+$LIVE_END_MARKER
+EOF
+
+  install -m 600 "$tmp_config" "$CONFIG_FILE"
+  rm -f "$tmp_config"
+
+  log "== wrote production provider-live config =="
+  awk -v begin="$LIVE_BEGIN_MARKER" -v end="$LIVE_END_MARKER" '
+    $0 == begin { show = 1 }
+    show { print }
+    $0 == end { show = 0 }
+  ' "$CONFIG_FILE"
+}
+
+production_list() {
+  require_config
+
+  log "== list remote store =="
+  mbsync -c "$CONFIG_FILE" --list-stores "$REMOTE_STORE"
+
+  log "== list production receive-only channel =="
+  mbsync -c "$CONFIG_FILE" --list "$LIVE_CHANNEL"
+
+  log "== list Sent upload channel =="
+  mbsync -c "$CONFIG_FILE" --list "$LIVE_SENT_CHANNEL"
+
+  log "== list production group =="
+  mbsync -c "$CONFIG_FILE" --list "$LIVE_GROUP"
+}
+
+production_sync() {
+  require_config
+  mkdir -p "$LIVE_LOG_DIR"
+  chmod 700 "$LIVE_LOG_DIR"
+
+  log_file="$LIVE_LOG_DIR/$(timestamp)-$LIVE_GROUP.log"
+
+  log "== real sync: $LIVE_GROUP =="
+  if mbsync -c "$CONFIG_FILE" -V "$LIVE_GROUP" > "$log_file" 2>&1; then
+    cat "$log_file"
+  else
+    status=$?
+    cat "$log_file"
+    log "mbsync failed; full log: $log_file"
+    exit "$status"
+  fi
+
+  log "== saved log =="
+  ls -l "$log_file"
+
+  production_status
 }
 
 list_mailboxes() {
@@ -383,6 +591,316 @@ status() {
   fi
 }
 
+production_status() {
+  log "== production config policy =="
+  if [ -f "$CONFIG_FILE" ]; then
+    awk -v begin="$LIVE_BEGIN_MARKER" -v end="$LIVE_END_MARKER" '
+      $0 == begin { show = 1 }
+      show { print }
+      $0 == end { show = 0 }
+    ' "$CONFIG_FILE" | sed \
+      -e 's/^User .*/User ***REDACTED***/' \
+      -e 's/^PassCmd .*/PassCmd ***REDACTED***/'
+  else
+    log "missing config: $CONFIG_FILE"
+  fi
+
+  log "== production channel mappings =="
+  if command -v mbsync >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
+    mbsync -c "$CONFIG_FILE" --list "$LIVE_CHANNEL" 2>/dev/null || true
+    mbsync -c "$CONFIG_FILE" --list "$LIVE_SENT_CHANNEL" 2>/dev/null || true
+  fi
+
+  log "== provider-live folder counts =="
+  for dir in "$LIVE_MAILDIR" "$LIVE_MAILDIR"/.*; do
+    [ -d "$dir" ] || continue
+    base=$(basename "$dir")
+    [ "$base" = "." ] && continue
+    [ "$base" = ".." ] && continue
+    [ -d "$dir/cur" ] || continue
+
+    if [ "$dir" = "$LIVE_MAILDIR" ]; then
+      name=INBOX
+    else
+      name=${base#.}
+    fi
+
+    cur_new=$(find "$dir/cur" "$dir/new" -type f 2>/dev/null | wc -l)
+    tmp_count=$(find "$dir/tmp" -type f 2>/dev/null | wc -l)
+    printf '%-20s messages=%s tmp=%s\n' "$name" "$cur_new" "$tmp_count"
+  done | sort
+
+  log "== disk usage =="
+  du -sh "$LIVE_MAILDIR" "$LIVE_STATE_DIR" "$LIVE_LOG_DIR" 2>/dev/null || true
+
+  log "== production state files =="
+  find "$LIVE_STATE_DIR" -maxdepth 1 -type f -print 2>/dev/null | sort | sed -n '1,40p' || true
+
+  log "== auto-sync scripts =="
+  print_path "$LOOP_SCRIPT"
+  print_path "$CONTROL_SCRIPT"
+  print_path "$ICEWM_STARTUP"
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" status || true
+  fi
+}
+
+write_autosync() {
+  validate_profile
+  create_production_layout
+  mkdir -p "$BIN_DIR"
+  chmod 700 "$BIN_DIR"
+
+  backup_dir=$(backup_to_mail "before-provider-live-autosync")
+  [ ! -e "$LOOP_SCRIPT" ] || cp -p "$LOOP_SCRIPT" "$backup_dir/$(basename "$LOOP_SCRIPT").before"
+  [ ! -e "$CONTROL_SCRIPT" ] || cp -p "$CONTROL_SCRIPT" "$backup_dir/$(basename "$CONTROL_SCRIPT").before"
+  log "Backed up existing auto-sync scripts, if any, to: $backup_dir"
+
+  cat > "$LOOP_SCRIPT" <<'EOF'
+#!/bin/sh
+set -u
+
+PROFILE=${MBSYNC_PROFILE:-provider}
+MAIL_ROOT=${MAIL_ROOT:-/mail}
+CONFIG=${MBSYNC_CONFIG_FILE:-"$HOME/.config/isyncrc"}
+CHANNEL=${MBSYNC_LIVE_GROUP:-"$PROFILE-live-group"}
+STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
+LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
+INTERVAL_SECONDS=${MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS:-180}
+
+LOCK_DIR="$STATE_DIR/lock"
+PAUSE_FILE="$STATE_DIR/paused"
+STOP_FILE="$STATE_DIR/stop"
+PID_FILE="$STATE_DIR/loop.pid"
+LAST_STATUS="$STATE_DIR/last-status.txt"
+
+mkdir -p "$STATE_DIR" "$LOG_DIR"
+chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
+echo "$$" > "$PID_FILE"
+rm -f "$STOP_FILE"
+
+log_line() {
+  printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S%z')" "$*"
+}
+
+run_sync_once() {
+  log_file="$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+
+  if [ -e "$PAUSE_FILE" ]; then
+    log_line "paused; skipping sync" >> "$log_file"
+    printf '%s\n' "paused $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
+    return 0
+  fi
+
+  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    log_line "lock exists; previous sync still running, skipping" >> "$log_file"
+    printf '%s\n' "locked $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
+    return 0
+  fi
+
+  {
+    log_line "sync start"
+    mbsync -c "$CONFIG" "$CHANNEL"
+    rc=$?
+    log_line "sync exit=$rc"
+    printf '%s\n' "last_exit=$rc $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+    return "$rc"
+  } >> "$log_file" 2>&1
+}
+
+trap 'rm -f "$PID_FILE"; rmdir "$LOCK_DIR" 2>/dev/null || true; exit 0' INT TERM HUP
+log_line "loop start interval=${INTERVAL_SECONDS}s pid=$$" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+
+while :; do
+  if [ -e "$STOP_FILE" ]; then
+    log_line "stop file found; loop exiting" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+    rm -f "$STOP_FILE" "$PID_FILE"
+    exit 0
+  fi
+
+  run_sync_once || true
+
+  slept=0
+  while [ "$slept" -lt "$INTERVAL_SECONDS" ]; do
+    if [ -e "$STOP_FILE" ]; then
+      log_line "stop file found during sleep; loop exiting" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+      rm -f "$STOP_FILE" "$PID_FILE"
+      exit 0
+    fi
+    sleep 5
+    slept=$((slept + 5))
+  done
+done
+EOF
+
+  cat > "$CONTROL_SCRIPT" <<'EOF'
+#!/bin/sh
+set -u
+
+PROFILE=${MBSYNC_PROFILE:-provider}
+MAIL_ROOT=${MAIL_ROOT:-/mail}
+CONFIG=${MBSYNC_CONFIG_FILE:-"$HOME/.config/isyncrc"}
+CHANNEL=${MBSYNC_LIVE_GROUP:-"$PROFILE-live-group"}
+STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
+LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
+LOOP=${MBSYNC_LIVE_LOOP_SCRIPT:-"$HOME/.local/bin/mbsync-$PROFILE-live-loop"}
+
+LOCK_DIR="$STATE_DIR/lock"
+PAUSE_FILE="$STATE_DIR/paused"
+STOP_FILE="$STATE_DIR/stop"
+PID_FILE="$STATE_DIR/loop.pid"
+LAST_STATUS="$STATE_DIR/last-status.txt"
+
+mkdir -p "$STATE_DIR" "$LOG_DIR"
+chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
+
+is_loop_running() {
+  if [ -s "$PID_FILE" ]; then
+    pid=$(cat "$PID_FILE" 2>/dev/null || true)
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+    return $?
+  fi
+  pgrep -f "$LOOP" >/dev/null 2>&1
+}
+
+case "${1:-status}" in
+  start)
+    if is_loop_running; then
+      echo "provider-live loop already running"
+      exit 0
+    fi
+    if [ ! -x "$LOOP" ]; then
+      echo "missing executable loop script: $LOOP"
+      exit 1
+    fi
+    rm -f "$STOP_FILE"
+    nohup "$LOOP" >/tmp/mbsync-provider-live-loop.nohup 2>&1 &
+    echo "provider-live loop started"
+    ;;
+  pause)
+    date '+paused at %Y-%m-%d %H:%M:%S%z' > "$PAUSE_FILE"
+    echo "provider-live auto-sync paused"
+    ;;
+  resume)
+    rm -f "$PAUSE_FILE"
+    echo "provider-live auto-sync resumed"
+    ;;
+  stop-loop)
+    touch "$STOP_FILE"
+    if [ -s "$PID_FILE" ]; then
+      pid=$(cat "$PID_FILE" 2>/dev/null || true)
+      [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+    fi
+    echo "provider-live loop stop requested"
+    ;;
+  sync-now)
+    if [ -e "$PAUSE_FILE" ]; then
+      echo "provider-live is paused; refusing sync-now until resumed"
+      exit 1
+    fi
+    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+      echo "provider-live sync already running"
+      exit 1
+    fi
+    log_file="$LOG_DIR/$(date +%Y%m%d-%H%M%S)-$PROFILE-live-manual-sync-now.log"
+    {
+      echo "$(date '+%Y-%m-%d %H:%M:%S%z') manual sync start"
+      mbsync -c "$CONFIG" "$CHANNEL"
+      rc=$?
+      echo "$(date '+%Y-%m-%d %H:%M:%S%z') manual sync exit=$rc"
+      echo "last_manual_exit=$rc $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
+      rmdir "$LOCK_DIR" 2>/dev/null || true
+      echo "$rc" > "$STATE_DIR/sync-now.rc"
+    } > "$log_file" 2>&1
+    rc=$(cat "$STATE_DIR/sync-now.rc" 2>/dev/null || echo 1)
+    rm -f "$STATE_DIR/sync-now.rc"
+    cat "$log_file"
+    echo "log: $log_file"
+    exit "$rc"
+    ;;
+  status)
+    echo "== provider-live auto-sync status =="
+    if is_loop_running; then
+      echo "loop=running"
+      [ -s "$PID_FILE" ] && echo "pid=$(cat "$PID_FILE")"
+    else
+      echo "loop=stopped"
+    fi
+    if [ -e "$PAUSE_FILE" ]; then
+      echo "paused=yes"
+      cat "$PAUSE_FILE"
+    else
+      echo "paused=no"
+    fi
+    if [ -e "$LOCK_DIR" ]; then
+      echo "sync_lock=present"
+    else
+      echo "sync_lock=absent"
+    fi
+    [ ! -f "$LAST_STATUS" ] || cat "$LAST_STATUS"
+    echo "channel=$CHANNEL"
+    echo "latest_logs:"
+    ls -lt "$LOG_DIR" 2>/dev/null | sed -n '1,8p' || true
+    ;;
+  *)
+    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status}"
+    exit 2
+    ;;
+esac
+EOF
+
+  chmod 700 "$LOOP_SCRIPT" "$CONTROL_SCRIPT"
+  sh -n "$LOOP_SCRIPT"
+  sh -n "$CONTROL_SCRIPT"
+
+  log "== wrote auto-sync scripts =="
+  ls -l "$LOOP_SCRIPT" "$CONTROL_SCRIPT"
+}
+
+install_autosync_startup() {
+  [ -x "$CONTROL_SCRIPT" ] || die "missing executable control script: $CONTROL_SCRIPT"
+  mkdir -p "$(dirname "$ICEWM_STARTUP")"
+
+  backup_dir=$(backup_to_mail "before-provider-live-icewm-startup")
+  if [ -e "$ICEWM_STARTUP" ]; then
+    cp -p "$ICEWM_STARTUP" "$backup_dir/startup.before-provider-live-autosync"
+  else
+    printf '%s\n' '#!/bin/sh' > "$ICEWM_STARTUP"
+  fi
+
+  tmp_startup=$(mktemp)
+  awk -v begin="$STARTUP_BEGIN_MARKER" -v end="$STARTUP_END_MARKER" '
+    $0 == begin { skip = 1; next }
+    $0 == end { skip = 0; next }
+    !skip { print }
+  ' "$ICEWM_STARTUP" > "$tmp_startup"
+
+  cat >> "$tmp_startup" <<EOF
+
+$STARTUP_BEGIN_MARKER
+# Start provider-live mbsync polling when IceWM session starts.
+if [ -x "$CONTROL_SCRIPT" ]; then
+  "$CONTROL_SCRIPT" start >/tmp/mbsync-provider-live-icewm-startup.log 2>&1 &
+fi
+$STARTUP_END_MARKER
+EOF
+
+  install -m 700 "$tmp_startup" "$ICEWM_STARTUP"
+  rm -f "$tmp_startup"
+
+  log "== installed IceWM startup block =="
+  grep -nA5 -B2 "CODEX MBSYNC $MARKER_PROFILE LIVE AUTOSYNC" "$ICEWM_STARTUP" || true
+}
+
+autosync_status() {
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" status
+  else
+    die "missing executable control script: $CONTROL_SCRIPT"
+  fi
+}
+
 validate_profile
 
 case "${1:-}" in
@@ -394,6 +912,14 @@ case "${1:-}" in
   dry-run) dry_run ;;
   sync-once) sync_once ;;
   status) status ;;
+  production-layout) create_production_layout ;;
+  write-production-config) write_production_config ;;
+  production-list) production_list ;;
+  production-sync) production_sync ;;
+  production-status) production_status ;;
+  write-autosync) write_autosync ;;
+  install-autosync-startup) install_autosync_startup ;;
+  autosync-status) autosync_status ;;
   redact-config) redact_config ;;
   -h|--help|help|'') usage ;;
   *)
