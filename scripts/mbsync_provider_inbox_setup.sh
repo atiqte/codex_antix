@@ -64,7 +64,7 @@ Commands:
   production-list   List production provider-live, Sent upload, and group mappings.
   production-sync   Run one provider-live-group sync and save a log.
   production-status Print provider-live counts, state, logs, controls, and redacted config.
-  write-autosync    Write provider-live loop/control scripts with log retention.
+  write-autosync    Write provider-live loop/control scripts with hardened controls.
   install-autosync-startup
                     Add a marked IceWM startup block for provider-live auto-sync.
   autosync-status   Print provider-live auto-sync status through the control script.
@@ -96,7 +96,7 @@ The generated channel uses Sync PullNew, Create Near, Remove None, and Expunge N
 The production provider-live block keeps normal folders receive-only and enables
 PushNew only for the Sent folder.
 Generated provider-live controls include logs, cleanup-logs, timeout visibility,
-sync lock age, and clear-stale-lock.
+sync lock age, stale loop PID protection, and clear-stale-lock.
 EOF
 }
 
@@ -742,7 +742,11 @@ clear_lock_if_owned() {
 
 run_mbsync_with_timeout() {
   if command -v timeout >/dev/null 2>&1 && [ "$SYNC_TIMEOUT_SECONDS" -gt 0 ]; then
-    timeout --kill-after=60s "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+    if timeout --help 2>&1 | grep -q -- '--kill-after'; then
+      timeout --kill-after=60s "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+    else
+      timeout "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+    fi
   else
     mbsync -c "$CONFIG" "$CHANNEL"
   fi
@@ -870,10 +874,30 @@ chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
 is_loop_running() {
   if [ -s "$PID_FILE" ]; then
     pid=$(cat "$PID_FILE" 2>/dev/null || true)
-    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
-    return $?
+    if pid_is_loop "$pid"; then
+      return 0
+    fi
   fi
-  pgrep -f "$LOOP" >/dev/null 2>&1
+  pgrep -f "mbsync-$PROFILE-live-loop" >/dev/null 2>&1
+}
+
+pid_is_loop() {
+  pid=${1:-}
+  case "$pid" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  kill -0 "$pid" 2>/dev/null || return 1
+
+  if command -v ps >/dev/null 2>&1; then
+    cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+    [ -n "$cmd" ] || return 1
+    case "$cmd" in
+      *"mbsync-$PROFILE-live-loop"*) return 0 ;;
+      *) return 1 ;;
+    esac
+  fi
+
+  return 0
 }
 
 lock_pid_alive() {
@@ -925,7 +949,11 @@ clear_lock() {
 
 run_mbsync_with_timeout() {
   if command -v timeout >/dev/null 2>&1 && [ "$SYNC_TIMEOUT_SECONDS" -gt 0 ]; then
-    timeout --kill-after=60s "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+    if timeout --help 2>&1 | grep -q -- '--kill-after'; then
+      timeout --kill-after=60s "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+    else
+      timeout "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+    fi
   else
     mbsync -c "$CONFIG" "$CHANNEL"
   fi
@@ -998,7 +1026,12 @@ case "${1:-status}" in
     touch "$STOP_FILE"
     if [ -s "$PID_FILE" ]; then
       pid=$(cat "$PID_FILE" 2>/dev/null || true)
-      [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+      if pid_is_loop "$pid"; then
+        kill "$pid" 2>/dev/null || true
+      else
+        echo "stale loop pid ignored: $pid"
+        rm -f "$PID_FILE"
+      fi
     fi
     echo "provider-live loop stop requested"
     ;;
@@ -1035,9 +1068,20 @@ case "${1:-status}" in
     echo "== provider-live auto-sync status =="
     if is_loop_running; then
       echo "loop=running"
-      [ -s "$PID_FILE" ] && echo "pid=$(cat "$PID_FILE")"
+      if [ -s "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE" 2>/dev/null || true)
+        if pid_is_loop "$pid"; then
+          echo "pid=$pid"
+        else
+          echo "stale_loop_pid=$pid"
+        fi
+      fi
     else
       echo "loop=stopped"
+      if [ -s "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE" 2>/dev/null || true)
+        pid_is_loop "$pid" || echo "stale_loop_pid=$pid"
+      fi
     fi
     if [ -e "$PAUSE_FILE" ]; then
       echo "paused=yes"

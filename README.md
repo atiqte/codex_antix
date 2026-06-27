@@ -49,7 +49,7 @@ Before doing project work, read these files:
 └── tests/
 ```
 
-`src/` currently contains the approved Betterbird profile transport and maildir-lite conversion utilities. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, and the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, and stale-lock recovery. Broader application work should remain undecided until the project type is explicitly chosen.
+`src/` currently contains the approved Betterbird profile transport and maildir-lite conversion utilities. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, and the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, stale-lock recovery, and stale loop PID protection. Broader application work should remain undecided until the project type is explicitly chosen.
 
 ## Development Policy
 

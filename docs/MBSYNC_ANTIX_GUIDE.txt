@@ -197,11 +197,15 @@ Slow-sync and lock behavior:
   duplicate loop starts.
 - The generated scripts wrap mbsync with timeout when the timeout command is
   available. Default timeout is 3600 seconds and can be changed with
-  MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS.
+  MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS. GNU timeout uses
+  --kill-after=60s; other timeout implementations fall back to plain timeout.
 - status prints sync_timeout_seconds and, while a sync is active, sync age,
   channel, pid, and whether the pid is still alive.
 - clear-stale-lock is only for a stale lock whose sync_pid_alive is no. Do not
   clear a lock while mbsync is actually running.
+- start, status, and stop-loop verify that any saved loop pid still belongs to
+  mbsync-provider-live-loop, so a stale pid file does not make the control
+  script report or kill an unrelated process.
 
 Future exact auto-sync reproduction flow:
 
@@ -292,7 +296,8 @@ Available commands:
 
   write-autosync
     Writes the provider-live loop/control scripts targeting provider-live-group
-    with daily log retention, timeout wrapping, and sync-age status.
+    with daily log retention, timeout wrapping, sync-age status, stale loop pid
+    protection, and stale-lock clearing.
 
   install-autosync-startup
     Adds the marked IceWM startup block for provider-live auto-sync.

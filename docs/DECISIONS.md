@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-27: Protect Provider-Live Controls from Stale Loop PID Files
+
+- Status: accepted
+- Context: The provider-live loop stores its process ID so the control command can report status and stop the loop. After a crash, reboot, or abnormal exit, an old PID file could theoretically point at an unrelated future process.
+- Decision: Generated provider-live controls must verify that a saved PID belongs to `mbsync-provider-live-loop` before treating the loop as running or sending a stop signal. Stale PID files are reported as `stale_loop_pid` and ignored for process killing. The timeout wrapper also supports GNU `timeout --kill-after` with a fallback to plain `timeout`.
+- Consequence: Future runs keep the same validated behavior while avoiding false running status and avoiding accidental signals to unrelated processes.
+
 ### 2026-06-27: Add Timeout and Stale-Lock Visibility to Provider-Live Auto-Sync
 
 - Status: accepted

@@ -68,4 +68,4 @@
 - [x] Update `scripts/mbsync_provider_inbox_setup.sh` with production `provider-live`, Sent-upload, and auto-sync helper commands.
 - [x] Add provider-live mbsync log retention with `logs` and `cleanup-logs` controls.
 - [x] Harden the mbsync helper and guides with exact provider-live auto-sync reproduction commands.
-- [x] Add and validate provider-live auto-sync timeout wrapping, sync-age status, and stale-lock clearing.
+- [x] Add and validate provider-live auto-sync timeout wrapping, sync-age status, stale-lock clearing, and stale loop PID protection.

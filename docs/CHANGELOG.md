@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-27
 
+- Hardened provider-live generated controls against stale loop PID files: `status` reports stale loop pids, `stop-loop` avoids signaling unrelated processes, and timeout handling now falls back cleanly when only a non-GNU `timeout` is available.
 - Added provider-live auto-sync timeout and lock-age hardening: generated scripts default to a 3600-second `mbsync` timeout, show active sync age/pid/channel in `status`, expose `clear-stale-lock`, and include an `autosync-stale-lock-proof` helper command.
 - Hardened the mbsync helper and guides so the verified provider-live auto-sync workflow can be reproduced with `autosync-preflight`, `refresh-autosync`, `autosync-validate`, and `autosync-log-rotation-proof`, including the uppercase IceWM marker.
 - Added provider-live mbsync log retention to the helper-generated auto-sync scripts: daily auto logs are compressed/deleted by age, manual logs are retained longer, and `mbsync-provider-live-control` now includes `logs` and `cleanup-logs`.
