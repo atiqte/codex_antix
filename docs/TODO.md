@@ -15,14 +15,14 @@
 - [ ] Run a small antiX copy test and verify byte/hash preservation before full migration.
 - [ ] Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` after staging and dry-run checks pass.
 - [ ] Add the validated production Maildir++ tree to Evolution with `Maildir-format mail directories`.
-- [ ] On antiX, run `sh scripts/mbsync_provider_inbox_setup.sh inspect` and review package/layout output.
-- [ ] On antiX, install isync/mbsync with `sh scripts/mbsync_provider_inbox_setup.sh install-packages` after inspection passes.
-- [ ] On antiX, create the isolated mbsync test layout with `sh scripts/mbsync_provider_inbox_setup.sh create-layout`.
-- [ ] On antiX, write the first pull-only INBOX config with `sh scripts/mbsync_provider_inbox_setup.sh write-config`.
-- [ ] On antiX, run `list` and `dry-run` for the `provider-inbox` channel and confirm no push/delete/expunge behavior.
-- [ ] On antiX, run one real `sync-once` pull into `/mail/Mailstore/mbsync/provider-inbox-test` and review `/mail/Logs/mbsync`.
-- [ ] Add the mbsync INBOX test tree to Evolution as a temporary `Maildir-format mail directories` account only after mbsync exits.
-- [ ] Run a second manual mbsync sync after closing Evolution and confirm no duplicate flood or unexpected deletions.
+- [ ] On antiX, snapshot the validated mbsync config and logs to `/mail/Backups/mbsync` without copying `provider.pass`.
+- [ ] On antiX, inventory remote IMAP folders read-only with `mbsync -c ~/.config/isyncrc --list-stores provider-remote`.
+- [ ] Choose exactly one small non-INBOX, non-special folder for the second isolated mbsync test.
+- [ ] On antiX, create `/mail/Mailstore/mbsync/provider-folder-test` and `/mail/AppData/isync/state/provider-folder-test`.
+- [ ] Add one second-folder mbsync channel using `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`.
+- [ ] Run the second-folder sync twice, confirm no duplicate flood, and verify `tmp` remains empty.
+- [ ] Add the second-folder test tree to Evolution as `Maildir-format mail directories` only after mbsync exits, if GUI validation is needed.
+- [ ] Create `/mail/Mailstore/mbsync/provider-live` only after the second-folder test passes.
 - [ ] Decide broader project type beyond the approved mail migration utility.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
@@ -51,3 +51,7 @@
 - [x] Switch Evolution IceWM entries to the official Flatpak-exported SVG icon.
 - [x] Create mbsync antiX INBOX test guide in HTML and plain text formats.
 - [x] Add antiX mbsync helper for inspect, install, layout, pull-only config, dry-run, sync-once, and status.
+- [x] Validate APT `isync`/`mbsync 1.5.1` on antiX with the provider INBOX.
+- [x] Pull 144 provider INBOX messages into `/mail/Mailstore/mbsync/provider-inbox-test` with deletion-safe policy.
+- [x] Validate Evolution Flatpak reads the mbsync INBOX test Maildir with `BackendName=maildir`.
+- [x] Run post-Evolution mbsync and confirm no duplicate flood or unexpected deletions.

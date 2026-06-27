@@ -2,6 +2,12 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-06-27
+
+- Recorded the successful antiX mbsync INBOX validation: `isync 1.5.1`, 144 messages pulled, Evolution Flatpak reads the test tree as `BackendName=maildir`, and post-Evolution mbsync succeeds without duplicate flood or unexpected deletions.
+- Updated the mbsync guide with the next controlled promotion path: snapshot config/logs, inventory remote folders read-only, test exactly one second folder, then create a separate live tree only after validation.
+- Marked the first mbsync INBOX setup tasks complete and added active tasks for the second-folder mbsync test.
+
 ## 2026-06-26
 
 - Added `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt`, complete DIY guides for the first deletion-safe mbsync INBOX test on antiX.

@@ -373,6 +373,197 @@ Expected result:
 - Existing local files remain present.
 
 
+Validated antiX Result
+----------------------
+
+The first antiX validation completed on 2026-06-27:
+
+- isync/mbsync 1.5.1 installed from APT.
+- IMAP login to mail.tagindustries.com.sg succeeded.
+- 144 INBOX messages were pulled into /mail/Mailstore/mbsync/provider-inbox-test.
+- Evolution Flatpak read the test tree as BackendName=maildir.
+- Evolution search by sender worked.
+- A post-Evolution mbsync run succeeded.
+- No duplicate flood, local deletion, remote deletion, or expunge behavior was
+  observed.
+
+Keep /mail/Mailstore/mbsync/provider-inbox-test as a validated test tree. Do
+not convert it into the final live tree.
+
+
+Batch 9 - Snapshot Working State
+--------------------------------
+
+Run this before expanding beyond INBOX. It copies only config and logs. It does
+not copy provider.pass.
+
+  set -eu
+  SNAP="/mail/Backups/mbsync/$(date +%Y%m%d-%H%M%S)-inbox-validated"
+
+  mkdir -p "$SNAP"
+  chmod 700 /mail/Backups /mail/Backups/mbsync "$SNAP"
+
+  cp -p "$HOME/.config/isyncrc" "$SNAP/isyncrc"
+  cp -p /mail/Logs/mbsync/*.log "$SNAP/" 2>/dev/null || true
+
+  {
+    echo "== date =="
+    date -Is
+    echo "== mbsync version =="
+    mbsync --version
+    echo "== config policy =="
+    grep -E '^(Host|Port|Inbox|SubFolders|Channel|Far|Near|Sync|Create|Remove|Expunge|CopyArrivalDate|SyncState) ' "$HOME/.config/isyncrc"
+    echo "== message counts =="
+    find /mail/Mailstore/mbsync/provider-inbox-test/cur /mail/Mailstore/mbsync/provider-inbox-test/new -type f | wc -l
+    echo "== disk usage =="
+    du -sh /mail/Mailstore/mbsync/provider-inbox-test /mail/AppData/isync/state/provider /mail/Logs/mbsync
+    echo "== Evolution mbsync source =="
+    grep -RInE 'BackendName=|Path=/mail/Mailstore/mbsync/provider-inbox-test' "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources" 2>/dev/null || true
+  } > "$SNAP/validation-summary.txt"
+
+  echo "Snapshot written to: $SNAP"
+  find "$SNAP" -maxdepth 1 -type f -printf '%M %u %g %s %p\n' | sort
+
+
+Batch 10 - Inventory Remote Folders Read-Only
+---------------------------------------------
+
+List the provider folder names before choosing a second test folder:
+
+  set -eu
+  SNAP_ROOT="/mail/Backups/mbsync"
+  mkdir -p "$SNAP_ROOT"
+  chmod 700 "$SNAP_ROOT"
+
+  OUT="$SNAP_ROOT/$(date +%Y%m%d-%H%M%S)-remote-folders.txt"
+  if mbsync -c "$HOME/.config/isyncrc" --list-stores provider-remote > "$OUT" 2>&1; then
+    cat "$OUT"
+  else
+    STATUS=$?
+    cat "$OUT"
+    exit "$STATUS"
+  fi
+
+  echo
+  echo "Remote folder list saved to: $OUT"
+  echo
+  echo "Avoid Trash, Junk, Spam, Sent, Drafts, very large archive folders, and folders you are unsure about."
+
+
+Batch 11 - Add One Second-Folder Test Channel
+---------------------------------------------
+
+After reviewing the remote folder list, choose exactly one small non-INBOX,
+non-special folder. Set REMOTE_FOLDER to the exact remote name printed by
+Batch 10.
+
+This test maps that one remote folder into:
+
+  /mail/Mailstore/mbsync/provider-folder-test
+
+It does not use /mail/Mailstore/mbsync/provider-live.
+
+  set -eu
+
+  printf 'Exact remote folder name to test: '
+  IFS= read -r REMOTE_FOLDER
+
+  if [ -z "$REMOTE_FOLDER" ]; then
+    echo "ERROR: remote folder name is required"
+    exit 1
+  fi
+
+  case "$REMOTE_FOLDER" in
+    INBOX|Trash|Junk|Spam|Sent|Drafts|Deleted*|*Trash*|*Junk*|*Spam*|*Sent*|*Draft*)
+      echo "ERROR: choose a small low-risk non-special folder, not: $REMOTE_FOLDER"
+      exit 1
+      ;;
+  esac
+
+  TEST_ROOT=/mail/Mailstore/mbsync/provider-folder-test
+  TEST_STATE=/mail/AppData/isync/state/provider-folder-test
+  MARKER="# BEGIN CODEX MBSYNC PROVIDER SECOND FOLDER TEST"
+
+  if grep -F "$MARKER" "$HOME/.config/isyncrc" >/dev/null 2>&1; then
+    echo "ERROR: second-folder test block already exists in ~/.config/isyncrc"
+    exit 1
+  fi
+
+  mkdir -p "$TEST_ROOT/cur" "$TEST_ROOT/new" "$TEST_ROOT/tmp" "$TEST_STATE"
+  chmod 700 "$TEST_ROOT" "$TEST_ROOT/cur" "$TEST_ROOT/new" "$TEST_ROOT/tmp" "$TEST_STATE"
+
+  BACKUP="$HOME/.config/isyncrc.before-second-folder.$(date +%Y%m%d-%H%M%S)"
+  cp -p "$HOME/.config/isyncrc" "$BACKUP"
+
+  REMOTE_ESCAPED=$(printf '%s' "$REMOTE_FOLDER" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+  cat >> "$HOME/.config/isyncrc" <<EOF
+
+# BEGIN CODEX MBSYNC PROVIDER SECOND FOLDER TEST
+MaildirStore provider-folder-test-local
+Inbox $TEST_ROOT
+SubFolders Maildir++
+
+Channel provider-folder-test
+Far :provider-remote:"$REMOTE_ESCAPED"
+Near :provider-folder-test-local:
+Sync PullNew
+Create Near
+Remove None
+Expunge None
+CopyArrivalDate yes
+SyncState $TEST_STATE/
+# END CODEX MBSYNC PROVIDER SECOND FOLDER TEST
+EOF
+
+  chmod 600 "$HOME/.config/isyncrc"
+
+  echo "Backed up previous config to: $BACKUP"
+  echo
+  echo "Second-folder test block:"
+  sed -n '/BEGIN CODEX MBSYNC PROVIDER SECOND FOLDER TEST/,/END CODEX MBSYNC PROVIDER SECOND FOLDER TEST/p' "$HOME/.config/isyncrc"
+
+
+Batch 12 - Pull the Second Folder Twice
+---------------------------------------
+
+Run only after Batch 11 creates the second-folder test channel.
+
+  set -eu
+
+  if pgrep -fa 'evolution|org.gnome.Evolution|bwrap|mbsync|isync' >/tmp/codex-mail-processes.txt 2>/dev/null; then
+    cat /tmp/codex-mail-processes.txt
+    echo "ERROR: close Evolution and stop mbsync before this test."
+    exit 1
+  fi
+
+  for RUN in first second; do
+    BEFORE=$(find /mail/Mailstore/mbsync/provider-folder-test/cur /mail/Mailstore/mbsync/provider-folder-test/new -type f | wc -l)
+    LOG="/mail/Logs/mbsync/$(date +%Y%m%d-%H%M%S)-provider-folder-test-$RUN.log"
+    if mbsync -c "$HOME/.config/isyncrc" -V provider-folder-test > "$LOG" 2>&1; then
+      STATUS=0
+    else
+      STATUS=$?
+    fi
+    AFTER=$(find /mail/Mailstore/mbsync/provider-folder-test/cur /mail/Mailstore/mbsync/provider-folder-test/new -type f | wc -l)
+
+    echo "== $RUN run log =="
+    cat "$LOG"
+    echo "== $RUN run status =="
+    echo "$STATUS"
+    echo "before_count=$BEFORE"
+    echo "after_count=$AFTER"
+    echo "delta=$((AFTER - BEFORE))"
+    echo -n "tmp: "
+    find /mail/Mailstore/mbsync/provider-folder-test/tmp -type f | wc -l
+
+    if [ "$STATUS" -ne 0 ]; then
+      exit "$STATUS"
+    fi
+    sleep 2
+  done
+
+
 When to Expand Beyond INBOX
 ---------------------------
 
@@ -383,15 +574,18 @@ Do not add more folders until:
 - Evolution can read the test Maildir.
 - Batch 8 second sync is clean.
 - The logs show no unexpected push, delete, or expunge behavior.
+- The working config/logs are snapshotted.
+- Remote folders are listed read-only.
+- One small second folder passes two real pulls without duplicate flood.
 
 Next expansion should still be conservative:
 
 1. Pick one small low-risk folder.
 2. Add one test channel or narrow mailbox selection.
-3. Dry-run.
-4. Pull once.
-5. Validate in Evolution.
-6. Repeat only after the previous folder is understood.
+3. Pull once with logging.
+4. Pull a second time to confirm state handling.
+5. Validate in Evolution only after mbsync exits.
+6. Create /mail/Mailstore/mbsync/provider-live only after the previous folder is understood.
 
 
 Troubleshooting

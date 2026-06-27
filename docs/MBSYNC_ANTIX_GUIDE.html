@@ -218,6 +218,8 @@
       <a href="#batch6">Batch 6</a>
       <a href="#evolution">Evolution Test</a>
       <a href="#next">Next Steps</a>
+      <a href="#validated">Validated Result</a>
+      <a href="#promote">Promote Safely</a>
       <a href="#troubleshooting">Troubleshooting</a>
     </nav>
 
@@ -248,6 +250,7 @@
           <tbody>
             <tr><td><code>/mail/Mailstore/evolution/local-maildir</code></td><td>Converted Betterbird production archive. mbsync must not write here during the first test.</td></tr>
             <tr><td><code>/mail/Mailstore/mbsync/provider-inbox-test</code></td><td>First isolated IMAP INBOX pull target.</td></tr>
+            <tr><td><code>/mail/Mailstore/mbsync/provider-folder-test</code></td><td>Next isolated single-folder test target after INBOX validation.</td></tr>
             <tr><td><code>/mail/Mailstore/mbsync/provider-live</code></td><td>Reserved for the later live IMAP workflow.</td></tr>
             <tr><td><code>/mail/AppData/isync/state/provider</code></td><td>mbsync state files.</td></tr>
             <tr><td><code>/mail/Logs/mbsync</code></td><td>mbsync run logs.</td></tr>
@@ -338,6 +341,159 @@ pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true</code></pre></div>
         <p>Run one more manual sync after Evolution is closed:</p>
         <div class="command"><div class="command-title"><span>Second manual sync</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh sync-once</code></pre></div>
         <p>Do not add more folders until the dry-run, first pull, Evolution read test, and second sync are all clean.</p>
+      </section>
+
+      <section id="validated">
+        <h2>Validated Result</h2>
+        <p>The antiX INBOX validation completed on 2026-06-27: <code>isync 1.5.1</code> pulled 144 provider INBOX messages into <code>/mail/Mailstore/mbsync/provider-inbox-test</code>, Evolution read the tree as <code>BackendName=maildir</code>, and post-Evolution mbsync succeeded without duplicate flood or unexpected deletions.</p>
+        <div class="callout ok">
+          Keep <code>/mail/Mailstore/mbsync/provider-inbox-test</code> as a validated test tree. Do not turn it into the final live tree.
+        </div>
+      </section>
+
+      <section id="promote">
+        <h2>Promote Safely</h2>
+        <p>Before adding any more folders, snapshot the working config and logs. This does not copy <code>provider.pass</code>.</p>
+        <div class="command"><div class="command-title"><span>Snapshot validated mbsync state</span><button class="copy">Copy command</button></div><pre><code>set -eu
+SNAP="/mail/Backups/mbsync/$(date +%Y%m%d-%H%M%S)-inbox-validated"
+
+mkdir -p "$SNAP"
+chmod 700 /mail/Backups /mail/Backups/mbsync "$SNAP"
+
+cp -p "$HOME/.config/isyncrc" "$SNAP/isyncrc"
+cp -p /mail/Logs/mbsync/*.log "$SNAP/" 2&gt;/dev/null || true
+
+{
+  echo "== date =="
+  date -Is
+  echo "== mbsync version =="
+  mbsync --version
+  echo "== config policy =="
+  grep -E '^(Host|Port|Inbox|SubFolders|Channel|Far|Near|Sync|Create|Remove|Expunge|CopyArrivalDate|SyncState) ' "$HOME/.config/isyncrc"
+  echo "== message counts =="
+  find /mail/Mailstore/mbsync/provider-inbox-test/cur /mail/Mailstore/mbsync/provider-inbox-test/new -type f | wc -l
+  echo "== disk usage =="
+  du -sh /mail/Mailstore/mbsync/provider-inbox-test /mail/AppData/isync/state/provider /mail/Logs/mbsync
+  echo "== Evolution mbsync source =="
+  grep -RInE 'BackendName=|Path=/mail/Mailstore/mbsync/provider-inbox-test' "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources" 2&gt;/dev/null || true
+} &gt; "$SNAP/validation-summary.txt"
+
+echo "Snapshot written to: $SNAP"
+find "$SNAP" -maxdepth 1 -type f -printf '%M %u %g %s %p\n' | sort</code></pre></div>
+
+        <p>Then list remote folders read-only and choose exactly one small non-INBOX, non-special folder.</p>
+        <div class="command"><div class="command-title"><span>Inventory remote folders</span><button class="copy">Copy command</button></div><pre><code>set -eu
+SNAP_ROOT="/mail/Backups/mbsync"
+mkdir -p "$SNAP_ROOT"
+chmod 700 "$SNAP_ROOT"
+
+OUT="$SNAP_ROOT/$(date +%Y%m%d-%H%M%S)-remote-folders.txt"
+if mbsync -c "$HOME/.config/isyncrc" --list-stores provider-remote &gt; "$OUT" 2&gt;&amp;1; then
+  cat "$OUT"
+else
+  STATUS=$?
+  cat "$OUT"
+  exit "$STATUS"
+fi
+
+echo
+echo "Remote folder list saved to: $OUT"
+echo
+echo "Avoid Trash, Junk, Spam, Sent, Drafts, very large archive folders, and folders you are unsure about."</code></pre></div>
+
+        <p>Add one second-folder test channel only after reviewing the folder list.</p>
+        <div class="command"><div class="command-title"><span>Add one second-folder test channel</span><button class="copy">Copy command</button></div><pre><code>set -eu
+
+printf 'Exact remote folder name to test: '
+IFS= read -r REMOTE_FOLDER
+
+if [ -z "$REMOTE_FOLDER" ]; then
+  echo "ERROR: remote folder name is required"
+  exit 1
+fi
+
+case "$REMOTE_FOLDER" in
+  INBOX|Trash|Junk|Spam|Sent|Drafts|Deleted*|*Trash*|*Junk*|*Spam*|*Sent*|*Draft*)
+    echo "ERROR: choose a small low-risk non-special folder, not: $REMOTE_FOLDER"
+    exit 1
+    ;;
+esac
+
+TEST_ROOT=/mail/Mailstore/mbsync/provider-folder-test
+TEST_STATE=/mail/AppData/isync/state/provider-folder-test
+MARKER="# BEGIN CODEX MBSYNC PROVIDER SECOND FOLDER TEST"
+
+if grep -F "$MARKER" "$HOME/.config/isyncrc" &gt;/dev/null 2&gt;&amp;1; then
+  echo "ERROR: second-folder test block already exists in ~/.config/isyncrc"
+  exit 1
+fi
+
+mkdir -p "$TEST_ROOT/cur" "$TEST_ROOT/new" "$TEST_ROOT/tmp" "$TEST_STATE"
+chmod 700 "$TEST_ROOT" "$TEST_ROOT/cur" "$TEST_ROOT/new" "$TEST_ROOT/tmp" "$TEST_STATE"
+
+BACKUP="$HOME/.config/isyncrc.before-second-folder.$(date +%Y%m%d-%H%M%S)"
+cp -p "$HOME/.config/isyncrc" "$BACKUP"
+
+REMOTE_ESCAPED=$(printf '%s' "$REMOTE_FOLDER" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+cat &gt;&gt; "$HOME/.config/isyncrc" &lt;&lt;EOF
+
+# BEGIN CODEX MBSYNC PROVIDER SECOND FOLDER TEST
+MaildirStore provider-folder-test-local
+Inbox $TEST_ROOT
+SubFolders Maildir++
+
+Channel provider-folder-test
+Far :provider-remote:"$REMOTE_ESCAPED"
+Near :provider-folder-test-local:
+Sync PullNew
+Create Near
+Remove None
+Expunge None
+CopyArrivalDate yes
+SyncState $TEST_STATE/
+# END CODEX MBSYNC PROVIDER SECOND FOLDER TEST
+EOF
+
+chmod 600 "$HOME/.config/isyncrc"
+
+echo "Backed up previous config to: $BACKUP"
+sed -n '/BEGIN CODEX MBSYNC PROVIDER SECOND FOLDER TEST/,/END CODEX MBSYNC PROVIDER SECOND FOLDER TEST/p' "$HOME/.config/isyncrc"</code></pre></div>
+
+        <p>Pull the second-folder test twice. Do not run Evolution during this test.</p>
+        <div class="command"><div class="command-title"><span>Pull second-folder test twice</span><button class="copy">Copy command</button></div><pre><code>set -eu
+
+if pgrep -fa 'evolution|org.gnome.Evolution|bwrap|mbsync|isync' &gt;/tmp/codex-mail-processes.txt 2&gt;/dev/null; then
+  cat /tmp/codex-mail-processes.txt
+  echo "ERROR: close Evolution and stop mbsync before this test."
+  exit 1
+fi
+
+for RUN in first second; do
+  BEFORE=$(find /mail/Mailstore/mbsync/provider-folder-test/cur /mail/Mailstore/mbsync/provider-folder-test/new -type f | wc -l)
+  LOG="/mail/Logs/mbsync/$(date +%Y%m%d-%H%M%S)-provider-folder-test-$RUN.log"
+  if mbsync -c "$HOME/.config/isyncrc" -V provider-folder-test &gt; "$LOG" 2&gt;&amp;1; then
+    STATUS=0
+  else
+    STATUS=$?
+  fi
+  AFTER=$(find /mail/Mailstore/mbsync/provider-folder-test/cur /mail/Mailstore/mbsync/provider-folder-test/new -type f | wc -l)
+
+  echo "== $RUN run log =="
+  cat "$LOG"
+  echo "== $RUN run status =="
+  echo "$STATUS"
+  echo "before_count=$BEFORE"
+  echo "after_count=$AFTER"
+  echo "delta=$((AFTER - BEFORE))"
+  echo -n "tmp: "
+  find /mail/Mailstore/mbsync/provider-folder-test/tmp -type f | wc -l
+
+  if [ "$STATUS" -ne 0 ]; then
+    exit "$STATUS"
+  fi
+  sleep 2
+done</code></pre></div>
       </section>
 
       <section id="troubleshooting">

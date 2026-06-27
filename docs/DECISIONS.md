@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-27: Promote mbsync Through One Folder Before Live Tree
+
+- Status: accepted
+- Context: The first antiX mbsync INBOX test succeeded with 144 messages pulled into `/mail/Mailstore/mbsync/provider-inbox-test`, Evolution Flatpak reading the tree as `BackendName=maildir`, and a post-Evolution mbsync run succeeding without duplicate flood or unexpected deletions.
+- Decision: Treat the INBOX test tree as a validated test account, snapshot the working antiX config/logs, list remote IMAP folders read-only, test exactly one small non-INBOX folder in `/mail/Mailstore/mbsync/provider-folder-test`, and only then create `/mail/Mailstore/mbsync/provider-live`.
+- Consequence: The migration avoids a blind all-folder mirror, keeps Betterbird archive migration separate from live IMAP ingestion, preserves the explicit no-delete policy, and defers notmuch/Astroid until the final Maildir layout is stable.
+
 ### 2026-06-26: Use APT mbsync for First IMAP INBOX Test
 
 - Status: accepted
