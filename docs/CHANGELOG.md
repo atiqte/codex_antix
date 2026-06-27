@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-27
 
+- Added provider-live mbsync log retention to the helper-generated auto-sync scripts: daily auto logs are compressed/deleted by age, manual logs are retained longer, and `mbsync-provider-live-control` now includes `logs` and `cleanup-logs`.
 - Updated `scripts/mbsync_provider_inbox_setup.sh` so it remains backward-compatible with the first INBOX test and now also supports production `provider-live` layout/config/status, Sent-only upload, provider-live group sync, auto-sync loop generation, and IceWM startup installation.
 - Updated `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt` so the DIY guide reflects the validated production `provider-live` setup, marks the old second-folder path as historical for this mailbox, and documents narrow Sent upload plus auto-sync controls.
 - Recorded validated Sent upload for production mbsync: Evolution saves sent copies to `TAG-Mustang_mbsync-Live/Sent`, `provider-live-sent-upload` maps only `Sent <=> Sent` with `Sync PullNew PushNew`, and the 180-second loop now syncs `provider-live-group`.

@@ -170,10 +170,34 @@ Production auto-sync controls:
   mbsync-provider-live-control pause
   mbsync-provider-live-control resume
   mbsync-provider-live-control sync-now
+  mbsync-provider-live-control logs
+  mbsync-provider-live-control cleanup-logs
   mbsync-provider-live-control stop-loop
   mbsync-provider-live-control start
 
 The loop starts from the marked IceWM startup block and runs every 180 seconds.
+It writes one daily auto log, for example:
+
+  /mail/Logs/mbsync-live/20260627-provider-live-auto.log
+
+Default log retention:
+
+- Auto logs older than 2 days are compressed with gzip when gzip is available.
+- Auto logs older than 30 days are deleted, compressed or uncompressed.
+- Manual, validation, and troubleshooting logs are kept for 90 days.
+- status and logs show total /mail/Logs/mbsync-live disk usage.
+
+To refresh the antiX scripts after pulling this repository update:
+
+  mbsync-provider-live-control pause
+  mbsync-provider-live-control stop-loop
+  sh scripts/mbsync_provider_inbox_setup.sh write-autosync
+  sh scripts/mbsync_provider_inbox_setup.sh install-autosync-startup
+  sh -n ~/.local/bin/mbsync-provider-live-loop
+  sh -n ~/.local/bin/mbsync-provider-live-control
+  mbsync-provider-live-control cleanup-logs
+  mbsync-provider-live-control start
+  mbsync-provider-live-control status
 
 
 Helper Script
@@ -228,7 +252,8 @@ Available commands:
     Shows provider-live counts, state files, logs, control scripts, and config.
 
   write-autosync
-    Writes the provider-live loop/control scripts targeting provider-live-group.
+    Writes the provider-live loop/control scripts targeting provider-live-group
+    with daily log retention.
 
   install-autosync-startup
     Adds the marked IceWM startup block for provider-live auto-sync.

@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-27: Add Log Retention to Production mbsync Auto-Sync
+
+- Status: accepted
+- Context: The provider-live loop writes one daily auto log every time the VM runs. The owner wanted to prevent `/mail/Logs/mbsync-live` from growing indefinitely while preserving useful troubleshooting history.
+- Decision: Keep the one-file-per-day auto log design, compress auto logs older than 2 days when `gzip` is available, delete auto logs older than 30 days, keep manual/validation logs for 90 days, and expose `logs` plus `cleanup-logs` through `mbsync-provider-live-control`.
+- Consequence: Auto-sync remains lightweight and receive/send policy is unchanged, while log growth is bounded and visible through `status`.
+
 ### 2026-06-27: Enable Narrow Sent Upload for Production mbsync
 
 - Status: accepted

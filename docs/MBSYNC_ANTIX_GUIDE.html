@@ -330,8 +330,20 @@ Channel provider-live-sent-upload
 mbsync-provider-live-control pause
 mbsync-provider-live-control resume
 mbsync-provider-live-control sync-now
+mbsync-provider-live-control logs
+mbsync-provider-live-control cleanup-logs
 mbsync-provider-live-control stop-loop
 mbsync-provider-live-control start</code></pre></div>
+        <p>The loop writes one daily auto log such as <code>/mail/Logs/mbsync-live/20260627-provider-live-auto.log</code>. Default retention compresses auto logs older than 2 days when <code>gzip</code> is available, deletes auto logs older than 30 days, and keeps manual or validation logs for 90 days.</p>
+        <div class="command"><div class="command-title"><span>Refresh scripts after repo update</span><button class="copy">Copy command</button></div><pre><code>mbsync-provider-live-control pause
+mbsync-provider-live-control stop-loop
+sh scripts/mbsync_provider_inbox_setup.sh write-autosync
+sh scripts/mbsync_provider_inbox_setup.sh install-autosync-startup
+sh -n ~/.local/bin/mbsync-provider-live-loop
+sh -n ~/.local/bin/mbsync-provider-live-control
+mbsync-provider-live-control cleanup-logs
+mbsync-provider-live-control start
+mbsync-provider-live-control status</code></pre></div>
       </section>
 
       <section id="helper">
@@ -339,7 +351,7 @@ mbsync-provider-live-control start</code></pre></div>
         <p>Run commands from the repository root on the antiX VM.</p>
         <div class="command"><div class="command-title"><span>Show helper usage</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh --help</code></pre></div>
         <p>The helper supports the original INBOX-test commands: <code>inspect</code>, <code>install-packages</code>, <code>create-layout</code>, <code>write-config</code>, <code>list</code>, <code>dry-run</code>, <code>sync-once</code>, <code>status</code>, and <code>redact-config</code>.</p>
-        <p>It also supports production commands for the validated setup: <code>production-layout</code>, <code>write-production-config</code>, <code>production-list</code>, <code>production-sync</code>, <code>production-status</code>, <code>write-autosync</code>, <code>install-autosync-startup</code>, and <code>autosync-status</code>.</p>
+        <p>It also supports production commands for the validated setup: <code>production-layout</code>, <code>write-production-config</code>, <code>production-list</code>, <code>production-sync</code>, <code>production-status</code>, <code>write-autosync</code>, <code>install-autosync-startup</code>, and <code>autosync-status</code>. The generated provider-live control script includes <code>logs</code> and <code>cleanup-logs</code>.</p>
       </section>
 
       <section id="batch1">

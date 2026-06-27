@@ -58,7 +58,7 @@ Commands:
   production-list   List production provider-live, Sent upload, and group mappings.
   production-sync   Run one provider-live-group sync and save a log.
   production-status Print provider-live counts, state, logs, controls, and redacted config.
-  write-autosync    Write provider-live loop/control scripts targeting provider-live-group.
+  write-autosync    Write provider-live loop/control scripts with log retention.
   install-autosync-startup
                     Add a marked IceWM startup block for provider-live auto-sync.
   autosync-status   Print provider-live auto-sync status through the control script.
@@ -75,6 +75,7 @@ Environment overrides:
 The generated channel uses Sync PullNew, Create Near, Remove None, and Expunge None.
 The production provider-live block keeps normal folders receive-only and enables
 PushNew only for the Sent folder.
+Generated provider-live controls include logs and cleanup-logs for log retention.
 EOF
 }
 
@@ -667,12 +668,16 @@ CHANNEL=${MBSYNC_LIVE_GROUP:-"$PROFILE-live-group"}
 STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
 LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
 INTERVAL_SECONDS=${MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS:-180}
+AUTO_LOG_COMPRESS_DAYS=${MBSYNC_AUTO_LOG_COMPRESS_DAYS:-2}
+AUTO_LOG_DELETE_DAYS=${MBSYNC_AUTO_LOG_DELETE_DAYS:-30}
+MANUAL_LOG_DELETE_DAYS=${MBSYNC_MANUAL_LOG_DELETE_DAYS:-90}
 
 LOCK_DIR="$STATE_DIR/lock"
 PAUSE_FILE="$STATE_DIR/paused"
 STOP_FILE="$STATE_DIR/stop"
 PID_FILE="$STATE_DIR/loop.pid"
 LAST_STATUS="$STATE_DIR/last-status.txt"
+CLEANUP_STAMP="$STATE_DIR/log-cleanup-date"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
@@ -681,6 +686,33 @@ rm -f "$STOP_FILE"
 
 log_line() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S%z')" "$*"
+}
+
+cleanup_logs() {
+  [ -d "$LOG_DIR" ] || return 0
+
+  if command -v gzip >/dev/null 2>&1; then
+    find "$LOG_DIR" -maxdepth 1 -type f -name "????????-$PROFILE-live-auto.log" \
+      -mtime +"$AUTO_LOG_COMPRESS_DAYS" -exec gzip -f {} \; 2>/dev/null || true
+  fi
+
+  find "$LOG_DIR" -maxdepth 1 -type f -name "????????-$PROFILE-live-auto.log.gz" \
+    -mtime +"$AUTO_LOG_DELETE_DAYS" -exec rm -f {} \; 2>/dev/null || true
+  find "$LOG_DIR" -maxdepth 1 -type f -name "????????-$PROFILE-live-auto.log" \
+    -mtime +"$AUTO_LOG_DELETE_DAYS" -exec rm -f {} \; 2>/dev/null || true
+  find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" \
+    ! -name "????????-$PROFILE-live-auto.log" \
+    -mtime +"$MANUAL_LOG_DELETE_DAYS" -exec rm -f {} \; 2>/dev/null || true
+}
+
+cleanup_logs_if_due() {
+  today=$(date +%Y%m%d)
+  last_cleanup=$(cat "$CLEANUP_STAMP" 2>/dev/null || true)
+
+  if [ "$last_cleanup" != "$today" ]; then
+    cleanup_logs
+    printf '%s\n' "$today" > "$CLEANUP_STAMP"
+  fi
 }
 
 run_sync_once() {
@@ -710,9 +742,12 @@ run_sync_once() {
 }
 
 trap 'rm -f "$PID_FILE"; rmdir "$LOCK_DIR" 2>/dev/null || true; exit 0' INT TERM HUP
+cleanup_logs_if_due
 log_line "loop start interval=${INTERVAL_SECONDS}s pid=$$" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
 
 while :; do
+  cleanup_logs_if_due
+
   if [ -e "$STOP_FILE" ]; then
     log_line "stop file found; loop exiting" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
     rm -f "$STOP_FILE" "$PID_FILE"
@@ -745,12 +780,16 @@ CHANNEL=${MBSYNC_LIVE_GROUP:-"$PROFILE-live-group"}
 STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
 LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
 LOOP=${MBSYNC_LIVE_LOOP_SCRIPT:-"$HOME/.local/bin/mbsync-$PROFILE-live-loop"}
+AUTO_LOG_COMPRESS_DAYS=${MBSYNC_AUTO_LOG_COMPRESS_DAYS:-2}
+AUTO_LOG_DELETE_DAYS=${MBSYNC_AUTO_LOG_DELETE_DAYS:-30}
+MANUAL_LOG_DELETE_DAYS=${MBSYNC_MANUAL_LOG_DELETE_DAYS:-90}
 
 LOCK_DIR="$STATE_DIR/lock"
 PAUSE_FILE="$STATE_DIR/paused"
 STOP_FILE="$STATE_DIR/stop"
 PID_FILE="$STATE_DIR/loop.pid"
 LAST_STATUS="$STATE_DIR/last-status.txt"
+CLEANUP_STAMP="$STATE_DIR/log-cleanup-date"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
@@ -762,6 +801,33 @@ is_loop_running() {
     return $?
   fi
   pgrep -f "$LOOP" >/dev/null 2>&1
+}
+
+cleanup_logs() {
+  [ -d "$LOG_DIR" ] || return 0
+
+  if command -v gzip >/dev/null 2>&1; then
+    find "$LOG_DIR" -maxdepth 1 -type f -name "????????-$PROFILE-live-auto.log" \
+      -mtime +"$AUTO_LOG_COMPRESS_DAYS" -exec gzip -f {} \; 2>/dev/null || true
+  fi
+
+  find "$LOG_DIR" -maxdepth 1 -type f -name "????????-$PROFILE-live-auto.log.gz" \
+    -mtime +"$AUTO_LOG_DELETE_DAYS" -exec rm -f {} \; 2>/dev/null || true
+  find "$LOG_DIR" -maxdepth 1 -type f -name "????????-$PROFILE-live-auto.log" \
+    -mtime +"$AUTO_LOG_DELETE_DAYS" -exec rm -f {} \; 2>/dev/null || true
+  find "$LOG_DIR" -maxdepth 1 -type f -name "*.log" \
+    ! -name "????????-$PROFILE-live-auto.log" \
+    -mtime +"$MANUAL_LOG_DELETE_DAYS" -exec rm -f {} \; 2>/dev/null || true
+
+  printf '%s\n' "$(date +%Y%m%d)" > "$CLEANUP_STAMP"
+}
+
+show_logs() {
+  echo "== provider-live log usage =="
+  du -sh "$LOG_DIR" 2>/dev/null || true
+  echo "retention: auto_compress_days=$AUTO_LOG_COMPRESS_DAYS auto_delete_days=$AUTO_LOG_DELETE_DAYS manual_delete_days=$MANUAL_LOG_DELETE_DAYS"
+  echo "== latest logs =="
+  ls -lt "$LOG_DIR" 2>/dev/null | sed -n '1,12p' || true
 }
 
 case "${1:-status}" in
@@ -840,11 +906,20 @@ case "${1:-status}" in
     fi
     [ ! -f "$LAST_STATUS" ] || cat "$LAST_STATUS"
     echo "channel=$CHANNEL"
+    echo "log_usage:"
+    du -sh "$LOG_DIR" 2>/dev/null || true
     echo "latest_logs:"
     ls -lt "$LOG_DIR" 2>/dev/null | sed -n '1,8p' || true
     ;;
+  logs)
+    show_logs
+    ;;
+  cleanup-logs)
+    cleanup_logs
+    show_logs
+    ;;
   *)
-    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status}"
+    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status|logs|cleanup-logs}"
     exit 2
     ;;
 esac
