@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-06-27
+Last updated: 2026-06-28
 
 ## Project Identity
 
@@ -125,6 +125,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The provider-live auto-sync scripts were further hardened on antiX on 2026-06-27 for slow or large syncs. The loop remains sequential, so a sync that takes longer than 180 seconds delays the next pass rather than overlapping it. Generated scripts default to `MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS=3600`, wrap `mbsync` with `timeout` when available, write lock metadata, expose `sync_timeout_seconds`, sync age, sync channel, sync pid, and pid liveness in `status`, and add `clear-stale-lock` for non-running stale locks. The antiX proof created a fake 10-minute-old lock with pid `99999999`, showed `sync_age_seconds=600` and `sync_pid_alive=no`, cleared it successfully, then validated `sync-now` and the restarted loop with exit `0`, `sync_lock=absent`, and all provider-live `tmp` folders empty.
 - The generated provider-live control script now verifies that a saved loop PID belongs to `mbsync-provider-live-loop` before reporting the loop as running or sending a stop signal. Stale loop PID files are shown as `stale_loop_pid` and ignored for process killing. The timeout wrapper uses GNU `timeout --kill-after=60s` when supported and falls back to plain `timeout` otherwise.
 - `scripts/mbsync_provider_inbox_setup.sh` now includes production helper commands for the validated setup: `production-layout`, `write-production-config`, `production-list`, `production-sync`, `production-status`, `write-autosync`, `install-autosync-startup`, `autosync-status`, `autosync-preflight`, `refresh-autosync`, `autosync-stale-lock-proof`, `autosync-validate`, and `autosync-log-rotation-proof`.
+- `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt` now include a clear `Start Here: Fresh Setup` sequence before the production reference material. Fresh antiX runs start with the INBOX validation helper sequence, then production `provider-live`, then Evolution GUI checks, then auto-sync validation. The production mbsync config block is explicitly labeled reference-only so it is not mistaken for a terminal command.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.

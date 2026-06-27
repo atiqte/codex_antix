@@ -69,3 +69,4 @@
 - [x] Add provider-live mbsync log retention with `logs` and `cleanup-logs` controls.
 - [x] Harden the mbsync helper and guides with exact provider-live auto-sync reproduction commands.
 - [x] Add and validate provider-live auto-sync timeout wrapping, sync-age status, stale-lock clearing, and stale loop PID protection.
+- [x] Add a clear Start Here sequence to the mbsync HTML/text guides and label production config snippets as reference-only.

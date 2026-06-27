@@ -207,6 +207,7 @@
     <nav aria-label="Table of contents">
       <h2>Contents</h2>
       <a href="#purpose">Purpose</a>
+      <a href="#start-here">Start Here</a>
       <a href="#layout">Layout</a>
       <a href="#safety">Safety Rules</a>
       <a href="#production">Production State</a>
@@ -242,6 +243,57 @@
           <strong>Current production state:</strong>
           <code>/mail/Mailstore/mbsync/provider-live</code> is now validated. Normal folders are receive-only, Sent upload is handled by a narrow Sent-only channel, and the 180-second loop syncs <code>provider-live-group</code>.
         </div>
+      </section>
+
+      <section id="start-here">
+        <h2>Start Here: Fresh Setup</h2>
+        <div class="callout ok">
+          For a new antiX VM, start copying commands from this section. Run each block from the repository root on antiX, paste the terminal output for review, and continue only after the previous block looks correct.
+        </div>
+        <div class="callout warning">
+          If the current VM already has the validated <code>provider-live</code> setup, do not rerun the fresh setup sequence. Use the maintenance commands at the end of this section instead.
+        </div>
+
+        <h3>1. First INBOX validation</h3>
+        <p>This creates the conservative INBOX-only test tree first, matching the validated path used before production promotion.</p>
+        <div class="command"><div class="command-title"><span>Fresh setup - INBOX test sequence</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh inspect
+sh scripts/mbsync_provider_inbox_setup.sh install-packages
+sh scripts/mbsync_provider_inbox_setup.sh create-layout
+sh scripts/mbsync_provider_inbox_setup.sh write-config
+sh scripts/mbsync_provider_inbox_setup.sh redact-config
+sh scripts/mbsync_provider_inbox_setup.sh list
+sh scripts/mbsync_provider_inbox_setup.sh dry-run
+sh scripts/mbsync_provider_inbox_setup.sh sync-once
+sh scripts/mbsync_provider_inbox_setup.sh status</code></pre></div>
+
+        <h3>2. Production provider-live promotion</h3>
+        <p>After the INBOX test is readable in Evolution and a second manual sync has no duplicate flood, create the production tree.</p>
+        <div class="command"><div class="command-title"><span>Fresh setup - production provider-live sequence</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh production-layout
+sh scripts/mbsync_provider_inbox_setup.sh write-production-config
+sh scripts/mbsync_provider_inbox_setup.sh production-list
+sh scripts/mbsync_provider_inbox_setup.sh production-sync
+sh scripts/mbsync_provider_inbox_setup.sh production-sync
+sh scripts/mbsync_provider_inbox_setup.sh production-status</code></pre></div>
+
+        <h3>3. Evolution GUI checks</h3>
+        <p>Add <code>/mail/Mailstore/mbsync/provider-live</code> to Evolution as <strong>Maildir-format mail directories</strong>. Configure SMTP in Evolution, then set the sent-message folder to <code>TAG-Mustang_mbsync-Live / Sent</code>.</p>
+
+        <h3>4. Auto-sync install and validation</h3>
+        <p>After Evolution reads/searches production mail and SMTP sends successfully, install and verify the 180-second auto-sync loop.</p>
+        <div class="command"><div class="command-title"><span>Fresh setup - auto-sync validation sequence</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
+sh scripts/mbsync_provider_inbox_setup.sh refresh-autosync
+sh scripts/mbsync_provider_inbox_setup.sh autosync-stale-lock-proof
+sh scripts/mbsync_provider_inbox_setup.sh autosync-validate
+sh scripts/mbsync_provider_inbox_setup.sh autosync-log-rotation-proof
+sh scripts/mbsync_provider_inbox_setup.sh autosync-status</code></pre></div>
+
+        <p>Expected final state: <code>loop=running</code>, <code>paused=no</code>, <code>sync_timeout_seconds=3600</code>, <code>sync_lock=absent</code>, <code>channel=provider-live-group</code>, visible <code>log_usage</code>, and empty provider-live <code>tmp</code> directories.</p>
+
+        <h3>Current VM maintenance</h3>
+        <p>For the already validated VM, use these controls instead of rerunning the fresh setup.</p>
+        <div class="command"><div class="command-title"><span>Current VM maintenance commands</span><button class="copy">Copy command</button></div><pre><code>mbsync-provider-live-control status
+mbsync-provider-live-control logs
+mbsync-provider-live-control sync-now</code></pre></div>
       </section>
 
       <section id="layout">
@@ -280,7 +332,10 @@
       <section id="production">
         <h2>Validated Production Provider-Live</h2>
         <p>The production setup validated on 2026-06-27 uses <code>INBOX</code>, <code>Drafts</code>, <code>Trash</code>, <code>spam</code>, <code>Sent</code>, <code>Junk</code>, and <code>Archive</code>. Normal folders stay receive-only; Sent is uploaded through one narrow Sent-only channel.</p>
-        <div class="command"><div class="command-title"><span>Current production mbsync block</span><button class="copy">Copy command</button></div><pre><code># BEGIN CODEX MBSYNC PROVIDER LIVE
+        <div class="callout warning">
+          <strong>Reference only:</strong> the production mbsync block below is shown for audit and troubleshooting. Do not paste it directly into the terminal; use <code>write-production-config</code> from the Start Here sequence to generate it safely.
+        </div>
+        <div class="command"><div class="command-title"><span>Reference only - current production mbsync block</span><button class="copy">Copy reference</button></div><pre><code># BEGIN CODEX MBSYNC PROVIDER LIVE
 # Production Maildir tree under /mail.
 # Receive-only for normal folders; Sent has a narrow PushNew-only upload path.
 MaildirStore provider-live-local

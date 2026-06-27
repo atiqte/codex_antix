@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-06-28
+
+- Clarified the mbsync HTML and text guides with a `Start Here: Fresh Setup` sequence, exact command order for INBOX validation, production promotion, Evolution checks, and auto-sync validation, plus reference-only labels for the production config block.
+
 ## 2026-06-27
 
 - Hardened provider-live generated controls against stale loop PID files: `status` reports stale loop pids, `stop-loop` avoids signaling unrelated processes, and timeout handling now falls back cleanly when only a non-GNU `timeout` is available.

@@ -17,6 +17,74 @@ Current validated production state, as of 2026-06-27:
 - Sent is the only push-capable folder, through a narrow Sent-only channel.
 - The 180-second auto-sync loop now syncs provider-live-group.
 
+Start Here: Fresh Setup
+-----------------------
+
+For a new antiX VM, start copying commands from this section. Run each block
+from the repository root on antiX, paste the terminal output for review, and
+continue only after the previous block looks correct.
+
+If the current VM already has the validated provider-live setup, do not rerun
+the fresh setup sequence. Use the maintenance commands at the end of this
+section instead.
+
+1. First INBOX validation:
+
+  sh scripts/mbsync_provider_inbox_setup.sh inspect
+  sh scripts/mbsync_provider_inbox_setup.sh install-packages
+  sh scripts/mbsync_provider_inbox_setup.sh create-layout
+  sh scripts/mbsync_provider_inbox_setup.sh write-config
+  sh scripts/mbsync_provider_inbox_setup.sh redact-config
+  sh scripts/mbsync_provider_inbox_setup.sh list
+  sh scripts/mbsync_provider_inbox_setup.sh dry-run
+  sh scripts/mbsync_provider_inbox_setup.sh sync-once
+  sh scripts/mbsync_provider_inbox_setup.sh status
+
+2. Production provider-live promotion:
+
+  sh scripts/mbsync_provider_inbox_setup.sh production-layout
+  sh scripts/mbsync_provider_inbox_setup.sh write-production-config
+  sh scripts/mbsync_provider_inbox_setup.sh production-list
+  sh scripts/mbsync_provider_inbox_setup.sh production-sync
+  sh scripts/mbsync_provider_inbox_setup.sh production-sync
+  sh scripts/mbsync_provider_inbox_setup.sh production-status
+
+3. Evolution GUI checks:
+
+  Add /mail/Mailstore/mbsync/provider-live to Evolution as:
+
+    Maildir-format mail directories
+
+  Configure SMTP in Evolution, then set the sent-message folder to:
+
+    TAG-Mustang_mbsync-Live / Sent
+
+4. Auto-sync install and validation:
+
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
+  sh scripts/mbsync_provider_inbox_setup.sh refresh-autosync
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-stale-lock-proof
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-validate
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-log-rotation-proof
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-status
+
+Expected final state:
+
+- loop=running
+- paused=no
+- sync_timeout_seconds=3600
+- sync_lock=absent
+- channel=provider-live-group
+- log_usage is visible.
+- All provider-live tmp directories are empty.
+
+For the already validated VM, use these controls instead of rerunning the fresh
+setup:
+
+  mbsync-provider-live-control status
+  mbsync-provider-live-control logs
+  mbsync-provider-live-control sync-now
+
 The first mbsync setup is intentionally conservative:
 
 - Use antiX/Debian APT package isync instead of source-building.
@@ -101,7 +169,9 @@ The production setup validated on 2026-06-27 uses these folders:
   Junk
   Archive
 
-The current production config block is:
+Reference only: the current production config block below is shown for audit and
+troubleshooting. Do not paste it directly into the terminal. Use
+write-production-config from the Start Here sequence to generate it safely.
 
   # BEGIN CODEX MBSYNC PROVIDER LIVE
   # Production Maildir tree under /mail.
