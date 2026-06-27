@@ -6,7 +6,7 @@ Last updated: 2026-06-27
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, a safe Betterbird maildir-lite to Maildir++ conversion script, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, a validated first mbsync INBOX test path, and a validated deletion-safe production mbsync `provider-live` path
+- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, a safe Betterbird maildir-lite to Maildir++ conversion script, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive plus narrow Sent upload
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -113,10 +113,13 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - antiX validation on 2026-06-27 confirmed `isync 1.5.1`, successful IMAP login to `mail.tagindustries.com.sg`, 144 INBOX messages pulled into `/mail/Mailstore/mbsync/provider-inbox-test`, post-Evolution mbsync succeeded, and Evolution Flatpak created a `BackendName=maildir` source pointing at the test Maildir path.
 - The first mbsync channel is INBOX-only and local-preserving: `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`. `mbsync --dry-run` hit an isync 1.5.1 assertion on the empty test Maildir, so validation proceeded with logged real pulls after confirming the target was empty and deletion-safe policy was intact.
 - The antiX mbsync config/log snapshot was saved under `/mail/Backups/mbsync` before production promotion. Empty remote folders `FARSUK` and `BASUNDHARA` were verified empty and removed from the IMAP server at the owner's request.
-- Production mbsync `provider-live` was validated on 2026-06-27 with the exact remote folders `INBOX`, `Drafts`, `Trash`, `spam`, `Sent`, `Junk`, and `Archive`. It uses `/mail/Mailstore/mbsync/provider-live`, state in `/mail/AppData/isync/state/provider-live`, logs in `/mail/Logs/mbsync-live`, `PipelineDepth 1`, `UseNamespace yes`, explicit `Patterns`, `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`.
+- Production mbsync `provider-live` was validated on 2026-06-27 with the exact remote folders `INBOX`, `Drafts`, `Trash`, `spam`, `Sent`, `Junk`, and `Archive`. It uses `/mail/Mailstore/mbsync/provider-live`, state in `/mail/AppData/isync/state/provider-live`, logs in `/mail/Logs/mbsync-live`, `PipelineDepth 1`, and `UseNamespace yes`.
+- The current production mbsync config keeps normal folders receive-only in channel `provider-live` with explicit `Patterns "INBOX" "Drafts" "Trash" "spam" "Junk" "Archive"`, `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`. Sent mail is handled by a narrow channel `provider-live-sent-upload` mapping only `Sent <=> Sent` with `Sync PullNew PushNew`, `Create None`, `Remove None`, and `Expunge None`.
 - The first `provider-live` pull downloaded 163 messages: 151 INBOX, 4 Sent, and 8 Trash. A second pull had zero delta and no duplicate flood. After Evolution SMTP testing and Gmail replies, a post-SMTP pull reached 170 messages: 158 INBOX, 4 Sent, and 8 Trash. `tmp` remained empty throughout.
 - Evolution Flatpak reads the production `provider-live` tree as `BackendName=maildir` with path `/mail/Mailstore/mbsync/provider-live`. The owner verified opening/searching production messages and successfully sent two messages by SMTP to Gmail; Gmail replies were pulled back into `provider-live`.
-- The production auto-sync loop uses `~/.local/bin/mbsync-provider-live-loop` and `~/.local/bin/mbsync-provider-live-control`, polls every 180 seconds, writes daily logs under `/mail/Logs/mbsync-live`, supports `status`, `pause`, `resume`, `sync-now`, `stop-loop`, and `start`, and starts from a marked IceWM startup block. Final audit confirmed repeated automatic runs with exit `0`, no lock left behind, and `tmp` still empty.
+- Evolution's production account `TAG-Mustang_mbsync-Live` now stores sent copies in `folder://ca9e0701d552924b5b13afa4b29213e130bba0bf/Sent`, which corresponds to `/mail/Mailstore/mbsync/provider-live/.Sent`.
+- Sent upload was validated on 2026-06-27. A controlled Sent-only upload changed remote `INBOX.Sent` from 4 to 5 messages with `Far: +1`; a second Sent sync had zero delta. A later automatic loop test saved one new local Sent message and uploaded it to remote Sent, reaching local Sent 6 and remote `INBOX.Sent` 6 with `MaxPushedUid 6`.
+- The production auto-sync loop uses `~/.local/bin/mbsync-provider-live-loop` and `~/.local/bin/mbsync-provider-live-control`, polls every 180 seconds, writes daily logs under `/mail/Logs/mbsync-live`, targets `provider-live-group`, supports `status`, `pause`, `resume`, `sync-now`, `stop-loop`, and `start`, and starts from a marked IceWM startup block. Final audit confirmed repeated automatic group runs with exit `0`, no lock left behind, and `tmp` still empty.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
@@ -142,7 +145,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 9. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
 10. Add the validated Betterbird archive Maildir++ tree to Evolution using `Maildir-format mail directories`.
 11. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-12. Consider later `PullFlags`, Sent upload, or notmuch/Astroid only as separate controlled changes.
+12. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
 13. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions

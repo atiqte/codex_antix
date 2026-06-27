@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-27
 
+- Recorded validated Sent upload for production mbsync: Evolution saves sent copies to `TAG-Mustang_mbsync-Live/Sent`, `provider-live-sent-upload` maps only `Sent <=> Sent` with `Sync PullNew PushNew`, and the 180-second loop now syncs `provider-live-group`.
 - Recorded the validated production mbsync `provider-live` setup on antiX: seven exact IMAP folders, deletion-safe `Sync PullNew`, Evolution `BackendName=maildir`, SMTP send test, Gmail replies pulled back, and a 180-second IceWM-started auto-sync loop with pause/resume controls.
 - Marked the earlier second-folder-before-live decision as superseded after empty `FARSUK` and `BASUNDHARA` folders were removed and the seven-folder `provider-live` tree passed production validation.
 - Recorded the successful antiX mbsync INBOX validation: `isync 1.5.1`, 144 messages pulled, Evolution Flatpak reads the test tree as `BackendName=maildir`, and post-Evolution mbsync succeeds without duplicate flood or unexpected deletions.

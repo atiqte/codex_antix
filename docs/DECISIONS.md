@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-27: Enable Narrow Sent Upload for Production mbsync
+
+- Status: accepted
+- Context: The production `provider-live` setup was stable as receive-only, but the owner needed every outgoing Evolution sent/reply/forward copy uploaded back to IMAP Sent.
+- Decision: Keep normal folders receive-only in `provider-live`, remove `Sent` from that channel's patterns, add `provider-live-sent-upload` mapping only `Sent <=> Sent` with `Sync PullNew PushNew`, `Create None`, `Remove None`, and `Expunge None`, and run both channels through `provider-live-group`. Configure Evolution's production identity to save sent copies into `TAG-Mustang_mbsync-Live/Sent`.
+- Consequence: Sent copies now upload to remote `INBOX.Sent` while INBOX, Drafts, Trash, spam, Junk, and Archive remain protected from local-to-server push behavior. The auto-sync loop now targets `provider-live-group`.
+
 ### 2026-06-27: Use Deletion-Safe Production mbsync Provider-Live
 
 - Status: accepted

@@ -22,7 +22,7 @@
 ## Later
 
 - [ ] Consider moving the mbsync `PassCmd` from the current chmod `600` password file to GPG after unattended polling remains stable.
-- [ ] Consider `PullFlags`, Sent upload, or broader IMAP two-way behavior only as separate controlled changes.
+- [ ] Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
 - [ ] Configure notmuch/Astroid only after the Betterbird archive and live Maildir layout are stable.
 - [ ] Define the first implementation milestone.
 - [ ] Choose language, runtime, and tooling only after the project type is explicit.
@@ -60,3 +60,7 @@
 - [x] Validate Evolution SMTP by sending two test messages to Gmail and pulling Gmail replies back into `provider-live`.
 - [x] Create and validate the 180-second `provider-live` auto-sync loop with pause, resume, status, sync-now, stop-loop, and start controls.
 - [x] Add the `provider-live` auto-sync loop to IceWM startup with a marked block.
+- [x] Configure Evolution to save production sent copies into `TAG-Mustang_mbsync-Live/Sent`.
+- [x] Add a narrow `provider-live-sent-upload` mbsync channel with `Sync PullNew PushNew` only for Sent.
+- [x] Update the auto-sync loop/control target to `provider-live-group`.
+- [x] Validate controlled Sent upload, zero-duplicate second Sent sync, full group sync, and automatic loop Sent upload.
