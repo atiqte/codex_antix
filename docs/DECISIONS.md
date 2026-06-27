@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-27: Add Timeout and Stale-Lock Visibility to Provider-Live Auto-Sync
+
+- Status: accepted
+- Context: The owner asked what happens if a mailbox sync takes longer than the 180-second poll interval because of many emails or slow internet. The validated loop already runs sequentially and uses a lock to prevent overlap, but a hung `mbsync` could leave a stale lock or make status unclear.
+- Decision: Keep the sequential loop, add a conservative default one-hour `timeout` wrapper around `mbsync` when the `timeout` command is available, write lock metadata at sync start, show `sync_timeout_seconds`, sync age, channel, pid, and pid liveness in `status`, and add `clear-stale-lock` for locks whose pid is no longer alive.
+- Consequence: Slow syncs will not overlap with later loop passes or manual `sync-now`; long but healthy syncs can continue up to the timeout. Operators can distinguish an active sync from a stale lock and clear only the stale case.
+
 ### 2026-06-27: Preserve Exact Provider-Live Auto-Sync Reproduction Workflow
 
 - Status: accepted

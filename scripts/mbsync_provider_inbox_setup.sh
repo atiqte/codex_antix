@@ -72,6 +72,8 @@ Commands:
                     Read-only audit of provider-live scripts, logs, and controls.
   refresh-autosync  Pause, stop, backup, rewrite, and syntax-check auto-sync scripts.
   autosync-validate Resume, sync once, start loop, and audit provider-live state.
+  autosync-stale-lock-proof
+                    Prove stale lock visibility and safe clear-stale-lock behavior.
   autosync-log-rotation-proof
                     Prove cleanup compresses, deletes, keeps, and removes test logs.
   redact-config     Print the mbsync config with username and password command redacted.
@@ -86,13 +88,15 @@ Environment overrides:
   MBSYNC_AUTO_LOG_COMPRESS_DAYS Default: 2
   MBSYNC_AUTO_LOG_DELETE_DAYS   Default: 30
   MBSYNC_MANUAL_LOG_DELETE_DAYS Default: 90
+  MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS Default: 3600
   MBSYNC_AUTOSYNC_VALIDATE_SLEEP_SECONDS Default: 8
   MBSYNC_OVERWRITE_CONFIG=1 allows replacing a non-Codex existing config.
 
 The generated channel uses Sync PullNew, Create Near, Remove None, and Expunge None.
 The production provider-live block keeps normal folders receive-only and enables
 PushNew only for the Sent folder.
-Generated provider-live controls include logs and cleanup-logs for log retention.
+Generated provider-live controls include logs, cleanup-logs, timeout visibility,
+sync lock age, and clear-stale-lock.
 EOF
 }
 
@@ -688,9 +692,14 @@ CHANNEL=${MBSYNC_LIVE_GROUP:-"$PROFILE-live-group"}
 STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
 LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
 INTERVAL_SECONDS=${MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS:-180}
+SYNC_TIMEOUT_SECONDS=${MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS:-3600}
 AUTO_LOG_COMPRESS_DAYS=${MBSYNC_AUTO_LOG_COMPRESS_DAYS:-2}
 AUTO_LOG_DELETE_DAYS=${MBSYNC_AUTO_LOG_DELETE_DAYS:-30}
 MANUAL_LOG_DELETE_DAYS=${MBSYNC_MANUAL_LOG_DELETE_DAYS:-90}
+
+case "$SYNC_TIMEOUT_SECONDS" in
+  ''|*[!0-9]*) SYNC_TIMEOUT_SECONDS=3600 ;;
+esac
 
 LOCK_DIR="$STATE_DIR/lock"
 PAUSE_FILE="$STATE_DIR/paused"
@@ -698,6 +707,10 @@ STOP_FILE="$STATE_DIR/stop"
 PID_FILE="$STATE_DIR/loop.pid"
 LAST_STATUS="$STATE_DIR/last-status.txt"
 CLEANUP_STAMP="$STATE_DIR/log-cleanup-date"
+LOCK_PID_FILE="$LOCK_DIR/pid"
+LOCK_STARTED_EPOCH_FILE="$LOCK_DIR/started_epoch"
+LOCK_STARTED_AT_FILE="$LOCK_DIR/started_at"
+LOCK_CHANNEL_FILE="$LOCK_DIR/channel"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
@@ -706,6 +719,33 @@ rm -f "$STOP_FILE"
 
 log_line() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S%z')" "$*"
+}
+
+write_lock_metadata() {
+  now_epoch=$(date +%s)
+  printf '%s\n' "$$" > "$LOCK_PID_FILE"
+  printf '%s\n' "$now_epoch" > "$LOCK_STARTED_EPOCH_FILE"
+  date '+%Y-%m-%d %H:%M:%S%z' > "$LOCK_STARTED_AT_FILE"
+  printf '%s\n' "$CHANNEL" > "$LOCK_CHANNEL_FILE"
+}
+
+clear_lock() {
+  rm -f "$LOCK_PID_FILE" "$LOCK_STARTED_EPOCH_FILE" "$LOCK_STARTED_AT_FILE" "$LOCK_CHANNEL_FILE"
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+
+clear_lock_if_owned() {
+  [ -f "$LOCK_PID_FILE" ] || return 0
+  owner_pid=$(cat "$LOCK_PID_FILE" 2>/dev/null || true)
+  [ "$owner_pid" = "$$" ] && clear_lock
+}
+
+run_mbsync_with_timeout() {
+  if command -v timeout >/dev/null 2>&1 && [ "$SYNC_TIMEOUT_SECONDS" -gt 0 ]; then
+    timeout --kill-after=60s "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+  else
+    mbsync -c "$CONFIG" "$CHANNEL"
+  fi
 }
 
 cleanup_logs() {
@@ -749,21 +789,25 @@ run_sync_once() {
     printf '%s\n' "locked $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
     return 0
   fi
+  write_lock_metadata
 
   {
-    log_line "sync start"
-    mbsync -c "$CONFIG" "$CHANNEL"
+    log_line "sync start timeout=${SYNC_TIMEOUT_SECONDS}s"
+    run_mbsync_with_timeout
     rc=$?
+    case "$rc" in
+      124|137) log_line "sync timed out or was killed after ${SYNC_TIMEOUT_SECONDS}s" ;;
+    esac
     log_line "sync exit=$rc"
     printf '%s\n' "last_exit=$rc $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
-    rmdir "$LOCK_DIR" 2>/dev/null || true
+    clear_lock
     return "$rc"
   } >> "$log_file" 2>&1
 }
 
-trap 'rm -f "$PID_FILE"; rmdir "$LOCK_DIR" 2>/dev/null || true; exit 0' INT TERM HUP
+trap 'rm -f "$PID_FILE"; clear_lock_if_owned; exit 0' INT TERM HUP
 cleanup_logs_if_due
-log_line "loop start interval=${INTERVAL_SECONDS}s pid=$$" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+log_line "loop start interval=${INTERVAL_SECONDS}s timeout=${SYNC_TIMEOUT_SECONDS}s pid=$$" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
 
 while :; do
   cleanup_logs_if_due
@@ -803,6 +847,11 @@ LOOP=${MBSYNC_LIVE_LOOP_SCRIPT:-"$HOME/.local/bin/mbsync-$PROFILE-live-loop"}
 AUTO_LOG_COMPRESS_DAYS=${MBSYNC_AUTO_LOG_COMPRESS_DAYS:-2}
 AUTO_LOG_DELETE_DAYS=${MBSYNC_AUTO_LOG_DELETE_DAYS:-30}
 MANUAL_LOG_DELETE_DAYS=${MBSYNC_MANUAL_LOG_DELETE_DAYS:-90}
+SYNC_TIMEOUT_SECONDS=${MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS:-3600}
+
+case "$SYNC_TIMEOUT_SECONDS" in
+  ''|*[!0-9]*) SYNC_TIMEOUT_SECONDS=3600 ;;
+esac
 
 LOCK_DIR="$STATE_DIR/lock"
 PAUSE_FILE="$STATE_DIR/paused"
@@ -810,6 +859,10 @@ STOP_FILE="$STATE_DIR/stop"
 PID_FILE="$STATE_DIR/loop.pid"
 LAST_STATUS="$STATE_DIR/last-status.txt"
 CLEANUP_STAMP="$STATE_DIR/log-cleanup-date"
+LOCK_PID_FILE="$LOCK_DIR/pid"
+LOCK_STARTED_EPOCH_FILE="$LOCK_DIR/started_epoch"
+LOCK_STARTED_AT_FILE="$LOCK_DIR/started_at"
+LOCK_CHANNEL_FILE="$LOCK_DIR/channel"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 chmod 700 "$STATE_DIR" "$LOG_DIR" 2>/dev/null || true
@@ -821,6 +874,75 @@ is_loop_running() {
     return $?
   fi
   pgrep -f "$LOOP" >/dev/null 2>&1
+}
+
+lock_pid_alive() {
+  [ -s "$LOCK_PID_FILE" ] || return 1
+  lock_pid=$(cat "$LOCK_PID_FILE" 2>/dev/null || true)
+  [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null
+}
+
+show_lock_status() {
+  echo "sync_timeout_seconds=$SYNC_TIMEOUT_SECONDS"
+  if [ -d "$LOCK_DIR" ]; then
+    echo "sync_lock=present"
+    [ ! -f "$LOCK_STARTED_AT_FILE" ] || echo "sync_started_at=$(cat "$LOCK_STARTED_AT_FILE")"
+    [ ! -f "$LOCK_CHANNEL_FILE" ] || echo "sync_channel=$(cat "$LOCK_CHANNEL_FILE")"
+    if [ -f "$LOCK_STARTED_EPOCH_FILE" ]; then
+      started_epoch=$(cat "$LOCK_STARTED_EPOCH_FILE" 2>/dev/null || echo 0)
+      now_epoch=$(date +%s)
+      case "$started_epoch" in
+        ''|*[!0-9]*) ;;
+        *) echo "sync_age_seconds=$((now_epoch - started_epoch))" ;;
+      esac
+    fi
+    if [ -f "$LOCK_PID_FILE" ]; then
+      lock_pid=$(cat "$LOCK_PID_FILE" 2>/dev/null || true)
+      echo "sync_pid=$lock_pid"
+      if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+        echo "sync_pid_alive=yes"
+      else
+        echo "sync_pid_alive=no"
+      fi
+    fi
+  else
+    echo "sync_lock=absent"
+  fi
+}
+
+write_lock_metadata() {
+  now_epoch=$(date +%s)
+  printf '%s\n' "$$" > "$LOCK_PID_FILE"
+  printf '%s\n' "$now_epoch" > "$LOCK_STARTED_EPOCH_FILE"
+  date '+%Y-%m-%d %H:%M:%S%z' > "$LOCK_STARTED_AT_FILE"
+  printf '%s\n' "$CHANNEL" > "$LOCK_CHANNEL_FILE"
+}
+
+clear_lock() {
+  rm -f "$LOCK_PID_FILE" "$LOCK_STARTED_EPOCH_FILE" "$LOCK_STARTED_AT_FILE" "$LOCK_CHANNEL_FILE"
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+
+run_mbsync_with_timeout() {
+  if command -v timeout >/dev/null 2>&1 && [ "$SYNC_TIMEOUT_SECONDS" -gt 0 ]; then
+    timeout --kill-after=60s "$SYNC_TIMEOUT_SECONDS" mbsync -c "$CONFIG" "$CHANNEL"
+  else
+    mbsync -c "$CONFIG" "$CHANNEL"
+  fi
+}
+
+clear_stale_lock() {
+  if [ ! -d "$LOCK_DIR" ]; then
+    echo "no lock present"
+    return 0
+  fi
+  if lock_pid_alive; then
+    echo "lock pid is still alive; refusing to clear active lock"
+    show_lock_status
+    return 1
+  fi
+  clear_lock
+  echo "stale lock cleared"
 }
 
 cleanup_logs() {
@@ -889,14 +1011,18 @@ case "${1:-status}" in
       echo "provider-live sync already running"
       exit 1
     fi
+    write_lock_metadata
     log_file="$LOG_DIR/$(date +%Y%m%d-%H%M%S)-$PROFILE-live-manual-sync-now.log"
     {
-      echo "$(date '+%Y-%m-%d %H:%M:%S%z') manual sync start"
-      mbsync -c "$CONFIG" "$CHANNEL"
+      echo "$(date '+%Y-%m-%d %H:%M:%S%z') manual sync start timeout=${SYNC_TIMEOUT_SECONDS}s"
+      run_mbsync_with_timeout
       rc=$?
+      case "$rc" in
+        124|137) echo "$(date '+%Y-%m-%d %H:%M:%S%z') manual sync timed out or was killed after ${SYNC_TIMEOUT_SECONDS}s" ;;
+      esac
       echo "$(date '+%Y-%m-%d %H:%M:%S%z') manual sync exit=$rc"
       echo "last_manual_exit=$rc $(date '+%Y-%m-%d %H:%M:%S%z')" > "$LAST_STATUS"
-      rmdir "$LOCK_DIR" 2>/dev/null || true
+      clear_lock
       echo "$rc" > "$STATE_DIR/sync-now.rc"
     } > "$log_file" 2>&1
     rc=$(cat "$STATE_DIR/sync-now.rc" 2>/dev/null || echo 1)
@@ -919,11 +1045,7 @@ case "${1:-status}" in
     else
       echo "paused=no"
     fi
-    if [ -e "$LOCK_DIR" ]; then
-      echo "sync_lock=present"
-    else
-      echo "sync_lock=absent"
-    fi
+    show_lock_status
     [ ! -f "$LAST_STATUS" ] || cat "$LAST_STATUS"
     echo "channel=$CHANNEL"
     echo "log_usage:"
@@ -938,8 +1060,11 @@ case "${1:-status}" in
     cleanup_logs
     show_logs
     ;;
+  clear-stale-lock)
+    clear_stale_lock
+    ;;
   *)
-    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status|logs|cleanup-logs}"
+    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status|logs|cleanup-logs|clear-stale-lock}"
     exit 2
     ;;
 esac
@@ -1043,7 +1168,11 @@ autosync_preflight() {
   du -sh "$LIVE_LOG_DIR" 2>/dev/null || true
   ls -lh "$LIVE_LOG_DIR" 2>/dev/null | tail -20 || true
 
-  log "== current control supports log commands? =="
+  log "== timeout command =="
+  command -v timeout || true
+  timeout --version 2>/dev/null | sed -n '1,2p' || true
+
+  log "== current control supports expected commands? =="
   if [ -x "$CONTROL_SCRIPT" ]; then
     "$CONTROL_SCRIPT" logs 2>&1 || true
     "$CONTROL_SCRIPT" __codex_usage_probe__ 2>&1 | sed -n '1,4p' || true
@@ -1176,6 +1305,67 @@ autosync_validate() {
   [ "$tmp_status" -eq 0 ] || die "one or more provider-live tmp directories contain files"
 }
 
+autosync_stale_lock_proof() {
+  validate_profile
+  [ -x "$CONTROL_SCRIPT" ] || die "missing executable control script: $CONTROL_SCRIPT"
+
+  lock_dir="$LIVE_LOOP_STATE_DIR/lock"
+  lock_pid_file="$lock_dir/pid"
+  lock_started_epoch_file="$lock_dir/started_epoch"
+  lock_started_at_file="$lock_dir/started_at"
+  lock_channel_file="$lock_dir/channel"
+
+  cleanup_fake_lock() {
+    if [ -f "$lock_pid_file" ] && grep -qx '99999999' "$lock_pid_file" 2>/dev/null; then
+      rm -f "$lock_pid_file" "$lock_started_epoch_file" "$lock_started_at_file" "$lock_channel_file"
+      rmdir "$lock_dir" 2>/dev/null || true
+    fi
+  }
+  trap cleanup_fake_lock EXIT HUP INT TERM
+
+  log "== time =="
+  date
+
+  log "== pre-proof status =="
+  "$CONTROL_SCRIPT" status
+
+  if "$CONTROL_SCRIPT" status 2>/dev/null | grep -q '^loop=running$'; then
+    die "auto-sync loop is running; run refresh-autosync or stop-loop before stale-lock proof"
+  fi
+
+  [ ! -d "$lock_dir" ] || die "lock already exists; refusing to overwrite possible real lock: $lock_dir"
+
+  log "== create fake stale lock =="
+  mkdir -p "$lock_dir"
+  fake_started_epoch=$(($(date +%s) - 600))
+  printf '%s\n' '99999999' > "$lock_pid_file"
+  printf '%s\n' "$fake_started_epoch" > "$lock_started_epoch_file"
+  if fake_started_at=$(date -d '10 minutes ago' '+%Y-%m-%d %H:%M:%S%z' 2>/dev/null); then
+    printf '%s\n' "$fake_started_at" > "$lock_started_at_file"
+  else
+    date '+%Y-%m-%d %H:%M:%S%z' > "$lock_started_at_file"
+  fi
+  printf '%s\n' "$LIVE_GROUP" > "$lock_channel_file"
+
+  log "== status with fake stale lock =="
+  "$CONTROL_SCRIPT" status
+
+  log "== clear fake stale lock =="
+  if "$CONTROL_SCRIPT" clear-stale-lock; then
+    clear_rc=0
+  else
+    clear_rc=$?
+  fi
+  log "clear-stale-lock exit code: $clear_rc"
+  [ "$clear_rc" -eq 0 ] || die "clear-stale-lock failed"
+
+  log "== status after clearing fake stale lock =="
+  "$CONTROL_SCRIPT" status
+  [ ! -d "$lock_dir" ] || die "fake stale lock still exists after clear-stale-lock"
+
+  trap - EXIT HUP INT TERM
+}
+
 autosync_log_rotation_proof() {
   validate_profile
   [ -x "$CONTROL_SCRIPT" ] || die "missing executable control script: $CONTROL_SCRIPT"
@@ -1293,6 +1483,7 @@ case "${1:-}" in
   autosync-preflight) autosync_preflight ;;
   refresh-autosync) refresh_autosync ;;
   autosync-validate) autosync_validate ;;
+  autosync-stale-lock-proof) autosync_stale_lock_proof ;;
   autosync-log-rotation-proof) autosync_log_rotation_proof ;;
   redact-config) redact_config ;;
   -h|--help|help|'') usage ;;

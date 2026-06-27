@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-27
 
+- Added provider-live auto-sync timeout and lock-age hardening: generated scripts default to a 3600-second `mbsync` timeout, show active sync age/pid/channel in `status`, expose `clear-stale-lock`, and include an `autosync-stale-lock-proof` helper command.
 - Hardened the mbsync helper and guides so the verified provider-live auto-sync workflow can be reproduced with `autosync-preflight`, `refresh-autosync`, `autosync-validate`, and `autosync-log-rotation-proof`, including the uppercase IceWM marker.
 - Added provider-live mbsync log retention to the helper-generated auto-sync scripts: daily auto logs are compressed/deleted by age, manual logs are retained longer, and `mbsync-provider-live-control` now includes `logs` and `cleanup-logs`.
 - Updated `scripts/mbsync_provider_inbox_setup.sh` so it remains backward-compatible with the first INBOX test and now also supports production `provider-live` layout/config/status, Sent-only upload, provider-live group sync, auto-sync loop generation, and IceWM startup installation.

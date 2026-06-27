@@ -172,6 +172,7 @@ Production auto-sync controls:
   mbsync-provider-live-control sync-now
   mbsync-provider-live-control logs
   mbsync-provider-live-control cleanup-logs
+  mbsync-provider-live-control clear-stale-lock
   mbsync-provider-live-control stop-loop
   mbsync-provider-live-control start
 
@@ -187,10 +188,26 @@ Default log retention:
 - Manual, validation, and troubleshooting logs are kept for 90 days.
 - status and logs show total /mail/Logs/mbsync-live disk usage.
 
+Slow-sync and lock behavior:
+
+- The loop is sequential: it runs one mbsync, waits for it to finish, then
+  sleeps 180 seconds before the next pass. If a sync takes longer than 180
+  seconds, a second loop pass does not start inside the same loop.
+- The lock prevents overlap between the loop, manual sync-now, and accidental
+  duplicate loop starts.
+- The generated scripts wrap mbsync with timeout when the timeout command is
+  available. Default timeout is 3600 seconds and can be changed with
+  MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS.
+- status prints sync_timeout_seconds and, while a sync is active, sync age,
+  channel, pid, and whether the pid is still alive.
+- clear-stale-lock is only for a stale lock whose sync_pid_alive is no. Do not
+  clear a lock while mbsync is actually running.
+
 Future exact auto-sync reproduction flow:
 
   sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
   sh scripts/mbsync_provider_inbox_setup.sh refresh-autosync
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-stale-lock-proof
   sh scripts/mbsync_provider_inbox_setup.sh autosync-validate
   sh scripts/mbsync_provider_inbox_setup.sh autosync-log-rotation-proof
   sh scripts/mbsync_provider_inbox_setup.sh autosync-status
@@ -199,6 +216,7 @@ Expected final auto-sync state:
 
 - loop=running
 - paused=no
+- sync_timeout_seconds=3600
 - sync_lock=absent
 - channel=provider-live-group
 - log_usage is shown and remains small.
@@ -215,6 +233,7 @@ the raw terminal chunks from Codex.
   sh scripts/mbsync_provider_inbox_setup.sh install-autosync-startup
   sh -n ~/.local/bin/mbsync-provider-live-loop
   sh -n ~/.local/bin/mbsync-provider-live-control
+  mbsync-provider-live-control clear-stale-lock   # only if status shows a stale lock
   mbsync-provider-live-control cleanup-logs
   mbsync-provider-live-control start
   mbsync-provider-live-control status
@@ -273,7 +292,7 @@ Available commands:
 
   write-autosync
     Writes the provider-live loop/control scripts targeting provider-live-group
-    with daily log retention.
+    with daily log retention, timeout wrapping, and sync-age status.
 
   install-autosync-startup
     Adds the marked IceWM startup block for provider-live auto-sync.
@@ -294,6 +313,10 @@ Available commands:
     Resumes, runs one provider-live-group sync through sync-now, starts the
     loop, checks status/logs/processes, and verifies provider-live tmp
     directories are empty.
+
+  autosync-stale-lock-proof
+    Creates a fake stale lock while the loop is stopped, proves status shows
+    sync age and sync_pid_alive=no, then proves clear-stale-lock removes it.
 
   autosync-log-rotation-proof
     Creates fake old log files, proves compress/delete/keep behavior, removes
