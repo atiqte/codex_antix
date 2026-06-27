@@ -67,3 +67,4 @@
 - [x] Update the mbsync HTML and text DIY guides with the validated production `provider-live` and Sent-upload setup.
 - [x] Update `scripts/mbsync_provider_inbox_setup.sh` with production `provider-live`, Sent-upload, and auto-sync helper commands.
 - [x] Add provider-live mbsync log retention with `logs` and `cleanup-logs` controls.
+- [x] Harden the mbsync helper and guides with exact provider-live auto-sync reproduction commands.

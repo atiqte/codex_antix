@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-27: Preserve Exact Provider-Live Auto-Sync Reproduction Workflow
+
+- Status: accepted
+- Context: The provider-live auto-sync, Sent upload, log retention, and IceWM startup flow were validated through terminal chunks on antiX. The owner wanted the HTML guide, text guide, and helper script to reproduce the same result without rediscovering marker, backup, stop/start, or log-proof details.
+- Decision: Default the provider marker to uppercase `PROVIDER`, make block replacement tolerate both old lowercase and verified uppercase markers, and add helper commands for preflight, refresh, validation, and log-rotation proof.
+- Consequence: Future runs can use the helper or guide to reach the same final state: `provider-live-group` running, `paused=no`, `sync_lock=absent`, bounded logs, empty `tmp` directories, and the uppercase IceWM startup marker.
+
 ### 2026-06-27: Add Log Retention to Production mbsync Auto-Sync
 
 - Status: accepted

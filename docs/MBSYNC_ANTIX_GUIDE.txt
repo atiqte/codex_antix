@@ -187,7 +187,27 @@ Default log retention:
 - Manual, validation, and troubleshooting logs are kept for 90 days.
 - status and logs show total /mail/Logs/mbsync-live disk usage.
 
-To refresh the antiX scripts after pulling this repository update:
+Future exact auto-sync reproduction flow:
+
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
+  sh scripts/mbsync_provider_inbox_setup.sh refresh-autosync
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-validate
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-log-rotation-proof
+  sh scripts/mbsync_provider_inbox_setup.sh autosync-status
+
+Expected final auto-sync state:
+
+- loop=running
+- paused=no
+- sync_lock=absent
+- channel=provider-live-group
+- log_usage is shown and remains small.
+- All /mail/Mailstore/mbsync/provider-live tmp directories show files=0.
+- IceWM startup contains # BEGIN CODEX MBSYNC PROVIDER LIVE AUTOSYNC.
+
+Manual equivalent for refreshing the antiX scripts after this script/guide
+update is available on antiX. A GitHub clone is not required if you are using
+the raw terminal chunks from Codex.
 
   mbsync-provider-live-control pause
   mbsync-provider-live-control stop-loop
@@ -260,6 +280,24 @@ Available commands:
 
   autosync-status
     Prints provider-live auto-sync status through the control script.
+
+  autosync-preflight
+    Read-only audit of provider-live script syntax, status, logs, and
+    current log-command support.
+
+  refresh-autosync
+    Pauses/stops the loop, backs up current scripts, writes refreshed
+    provider-live loop/control scripts, installs the IceWM startup block, and
+    syntax-checks the installed scripts.
+
+  autosync-validate
+    Resumes, runs one provider-live-group sync through sync-now, starts the
+    loop, checks status/logs/processes, and verifies provider-live tmp
+    directories are empty.
+
+  autosync-log-rotation-proof
+    Creates fake old log files, proves compress/delete/keep behavior, removes
+    fake leftovers, and shows final log/status output.
 
   redact-config
     Prints ~/.config/isyncrc with User and PassCmd redacted.

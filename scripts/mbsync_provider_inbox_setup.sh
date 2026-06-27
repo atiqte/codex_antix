@@ -2,7 +2,13 @@
 set -eu
 
 PROFILE=${MBSYNC_PROFILE:-provider}
-MARKER_PROFILE=${MBSYNC_MARKER_PROFILE:-$PROFILE}
+MARKER_PROFILE=${MBSYNC_MARKER_PROFILE:-}
+if [ -z "$MARKER_PROFILE" ]; then
+  case "$PROFILE" in
+    provider) MARKER_PROFILE=PROVIDER ;;
+    *) MARKER_PROFILE=$PROFILE ;;
+  esac
+fi
 MAIL_ROOT=${MAIL_ROOT:-/mail}
 HOME_DIR=${HOME:?HOME is not set}
 CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME_DIR/.config"}
@@ -62,14 +68,25 @@ Commands:
   install-autosync-startup
                     Add a marked IceWM startup block for provider-live auto-sync.
   autosync-status   Print provider-live auto-sync status through the control script.
+  autosync-preflight
+                    Read-only audit of provider-live scripts, logs, and controls.
+  refresh-autosync  Pause, stop, backup, rewrite, and syntax-check auto-sync scripts.
+  autosync-validate Resume, sync once, start loop, and audit provider-live state.
+  autosync-log-rotation-proof
+                    Prove cleanup compresses, deletes, keeps, and removes test logs.
   redact-config     Print the mbsync config with username and password command redacted.
 
 Environment overrides:
   MBSYNC_PROFILE       Default: provider
+  MBSYNC_MARKER_PROFILE Default: PROVIDER for provider, otherwise profile name
   MAIL_ROOT            Default: /mail
   MBSYNC_CONFIG_FILE   Default: ~/.config/isyncrc
   MBSYNC_LIVE_PATTERNS Default: "INBOX" "Drafts" "Trash" "spam" "Junk" "Archive"
   MBSYNC_SENT_MAILBOX  Default: Sent
+  MBSYNC_AUTO_LOG_COMPRESS_DAYS Default: 2
+  MBSYNC_AUTO_LOG_DELETE_DAYS   Default: 30
+  MBSYNC_MANUAL_LOG_DELETE_DAYS Default: 90
+  MBSYNC_AUTOSYNC_VALIDATE_SLEEP_SECONDS Default: 8
   MBSYNC_OVERWRITE_CONFIG=1 allows replacing a non-Codex existing config.
 
 The generated channel uses Sync PullNew, Create Near, Remove None, and Expunge None.
@@ -396,10 +413,13 @@ remove_live_block() {
   output=$2
   old_begin="# BEGIN CODEX MBSYNC $PROFILE LIVE"
   old_end="# END CODEX MBSYNC $PROFILE LIVE"
+  provider_begin="# BEGIN CODEX MBSYNC PROVIDER LIVE"
+  provider_end="# END CODEX MBSYNC PROVIDER LIVE"
   awk -v begin="$LIVE_BEGIN_MARKER" -v end="$LIVE_END_MARKER" \
-    -v old_begin="$old_begin" -v old_end="$old_end" '
-      $0 == begin || $0 == old_begin { skip = 1; next }
-      $0 == end || $0 == old_end { skip = 0; next }
+    -v old_begin="$old_begin" -v old_end="$old_end" \
+    -v provider_begin="$provider_begin" -v provider_end="$provider_end" '
+      $0 == begin || $0 == old_begin || $0 == provider_begin { skip = 1; next }
+      $0 == end || $0 == old_end || $0 == provider_end { skip = 0; next }
       !skip { print }
     ' "$input" > "$output"
 }
@@ -945,9 +965,15 @@ install_autosync_startup() {
   fi
 
   tmp_startup=$(mktemp)
-  awk -v begin="$STARTUP_BEGIN_MARKER" -v end="$STARTUP_END_MARKER" '
-    $0 == begin { skip = 1; next }
-    $0 == end { skip = 0; next }
+  old_begin="# BEGIN CODEX MBSYNC $PROFILE LIVE AUTOSYNC"
+  old_end="# END CODEX MBSYNC $PROFILE LIVE AUTOSYNC"
+  provider_begin="# BEGIN CODEX MBSYNC PROVIDER LIVE AUTOSYNC"
+  provider_end="# END CODEX MBSYNC PROVIDER LIVE AUTOSYNC"
+  awk -v begin="$STARTUP_BEGIN_MARKER" -v end="$STARTUP_END_MARKER" \
+    -v old_begin="$old_begin" -v old_end="$old_end" \
+    -v provider_begin="$provider_begin" -v provider_end="$provider_end" '
+    $0 == begin || $0 == old_begin || $0 == provider_begin { skip = 1; next }
+    $0 == end || $0 == old_end || $0 == provider_end { skip = 0; next }
     !skip { print }
   ' "$ICEWM_STARTUP" > "$tmp_startup"
 
@@ -976,6 +1002,275 @@ autosync_status() {
   fi
 }
 
+autosync_preflight() {
+  validate_profile
+
+  log "== time =="
+  date
+
+  log "== current auto-sync status =="
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" status || true
+  else
+    log "missing executable control script: $CONTROL_SCRIPT"
+  fi
+
+  log "== current scripts =="
+  ls -l "$LOOP_SCRIPT" "$CONTROL_SCRIPT" 2>/dev/null || true
+
+  log "== syntax check current scripts =="
+  if [ -f "$LOOP_SCRIPT" ]; then
+    if sh -n "$LOOP_SCRIPT"; then
+      log "loop syntax OK"
+    else
+      log "loop syntax FAILED"
+    fi
+  else
+    log "missing loop script: $LOOP_SCRIPT"
+  fi
+
+  if [ -f "$CONTROL_SCRIPT" ]; then
+    if sh -n "$CONTROL_SCRIPT"; then
+      log "control syntax OK"
+    else
+      log "control syntax FAILED"
+    fi
+  else
+    log "missing control script: $CONTROL_SCRIPT"
+  fi
+
+  log "== current log usage =="
+  du -sh "$LIVE_LOG_DIR" 2>/dev/null || true
+  ls -lh "$LIVE_LOG_DIR" 2>/dev/null | tail -20 || true
+
+  log "== current control supports log commands? =="
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" logs 2>&1 || true
+    "$CONTROL_SCRIPT" __codex_usage_probe__ 2>&1 | sed -n '1,4p' || true
+  else
+    log "missing executable control script: $CONTROL_SCRIPT"
+  fi
+}
+
+refresh_autosync() {
+  validate_profile
+
+  log "== time =="
+  date
+
+  log "== pause auto-sync =="
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" pause || true
+  else
+    log "missing executable control script before refresh: $CONTROL_SCRIPT"
+  fi
+
+  log "== stop auto-sync loop =="
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" stop-loop || true
+  else
+    log "missing executable control script before refresh: $CONTROL_SCRIPT"
+  fi
+
+  log "== wait for loop to exit =="
+  sleep 3
+
+  log "== status after stop request =="
+  if [ -x "$CONTROL_SCRIPT" ]; then
+    "$CONTROL_SCRIPT" status || true
+  else
+    log "missing executable control script before refresh: $CONTROL_SCRIPT"
+  fi
+
+  log "== remaining related processes =="
+  if command -v pgrep >/dev/null 2>&1; then
+    if pgrep -af 'mbsync-provider-live-loop|mbsync .*provider-live-group|isync'; then
+      die "related mbsync process is still running; stop it before replacing scripts"
+    fi
+  else
+    log "pgrep unavailable; skipping process audit"
+  fi
+
+  log "== write refreshed auto-sync scripts =="
+  write_autosync
+
+  log "== install IceWM startup block =="
+  install_autosync_startup
+
+  log "== syntax check installed scripts =="
+  sh -n "$LOOP_SCRIPT"
+  sh -n "$CONTROL_SCRIPT"
+  log "installed scripts syntax OK"
+
+  log "== refreshed script commands =="
+  "$CONTROL_SCRIPT" logs || true
+
+  log "== status before restart =="
+  "$CONTROL_SCRIPT" status || true
+}
+
+autosync_validate() {
+  validate_profile
+  [ -x "$CONTROL_SCRIPT" ] || die "missing executable control script: $CONTROL_SCRIPT"
+
+  log "== time =="
+  date
+
+  log "== pre-start status =="
+  "$CONTROL_SCRIPT" status
+
+  log "== resume auto-sync =="
+  "$CONTROL_SCRIPT" resume
+
+  log "== run one manual provider-live-group sync through control script =="
+  if "$CONTROL_SCRIPT" sync-now; then
+    sync_rc=0
+  else
+    sync_rc=$?
+  fi
+  log "sync-now exit code: $sync_rc"
+  [ "$sync_rc" -eq 0 ] || die "sync-now failed"
+
+  log "== status after manual sync =="
+  "$CONTROL_SCRIPT" status
+
+  log "== start auto-sync loop =="
+  "$CONTROL_SCRIPT" start
+
+  sleep_seconds=${MBSYNC_AUTOSYNC_VALIDATE_SLEEP_SECONDS:-8}
+  log "== wait briefly for first loop pass =="
+  sleep "$sleep_seconds"
+
+  log "== final status =="
+  "$CONTROL_SCRIPT" status
+
+  log "== log controls =="
+  "$CONTROL_SCRIPT" logs
+
+  log "== latest auto log tail =="
+  tail -40 "$LIVE_LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log" 2>/dev/null || true
+
+  log "== related processes =="
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -af 'mbsync-provider-live-loop|mbsync .*provider-live-group|isync' || true
+  else
+    log "pgrep unavailable; skipping process audit"
+  fi
+
+  log "== tmp directories should be empty =="
+  [ -d "$LIVE_MAILDIR" ] || die "missing live Maildir: $LIVE_MAILDIR"
+  tmp_report=$(mktemp)
+  if find "$LIVE_MAILDIR" -type d -name tmp -exec sh -c '
+    for d do
+      c=$(find "$d" -type f | wc -l)
+      printf "%s files=%s\n" "$d" "$c"
+      [ "$c" -eq 0 ] || exit 1
+    done
+  ' sh {} + > "$tmp_report"; then
+    tmp_status=0
+  else
+    tmp_status=$?
+  fi
+  cat "$tmp_report"
+  rm -f "$tmp_report"
+  [ "$tmp_status" -eq 0 ] || die "one or more provider-live tmp directories contain files"
+}
+
+autosync_log_rotation_proof() {
+  validate_profile
+  [ -x "$CONTROL_SCRIPT" ] || die "missing executable control script: $CONTROL_SCRIPT"
+
+  mkdir -p "$LIVE_LOG_DIR"
+  chmod 700 "$LIVE_LOG_DIR" 2>/dev/null || true
+
+  auto_compress_test="$LIVE_LOG_DIR/20000101-$PROFILE-live-auto.log"
+  auto_delete_test="$LIVE_LOG_DIR/20000102-$PROFILE-live-auto.log.gz"
+  manual_delete_test="$LIVE_LOG_DIR/20000103-$PROFILE-live-manual-sync-now.log"
+  manual_keep_test="$LIVE_LOG_DIR/20000104-$PROFILE-live-manual-sync-now.log"
+
+  cleanup_fake_logs() {
+    rm -f "$auto_compress_test" "$auto_compress_test.gz" \
+      "$auto_delete_test" "$manual_delete_test" "$manual_keep_test"
+  }
+  trap cleanup_fake_logs EXIT HUP INT TERM
+
+  log "== time =="
+  date
+
+  log "== create fake old test logs =="
+  printf '%s\n' "fake auto compress test" > "$auto_compress_test"
+  printf '%s\n' "fake old compressed auto delete test" > "$auto_delete_test"
+  printf '%s\n' "fake old manual delete test" > "$manual_delete_test"
+  printf '%s\n' "fake recent manual keep test" > "$manual_keep_test"
+
+  touch -d '3 days ago' "$auto_compress_test"
+  touch -d '40 days ago' "$auto_delete_test"
+  touch -d '100 days ago' "$manual_delete_test"
+  touch -d '10 days ago' "$manual_keep_test"
+
+  log "== fake logs before cleanup =="
+  ls -lh "$LIVE_LOG_DIR"/2000010*-"$PROFILE"-live-* 2>/dev/null || true
+
+  log "== run cleanup =="
+  "$CONTROL_SCRIPT" cleanup-logs
+
+  log "== fake logs after cleanup =="
+  ls -lh "$LIVE_LOG_DIR"/2000010*-"$PROFILE"-live-* 2>/dev/null || true
+
+  log "== expected checks =="
+  proof_failed=0
+
+  if command -v gzip >/dev/null 2>&1; then
+    if [ -f "$auto_compress_test.gz" ]; then
+      log "OK: old auto log compressed"
+    else
+      log "FAIL: old auto log was not compressed"
+      proof_failed=1
+    fi
+    if [ ! -e "$auto_compress_test" ]; then
+      log "OK: original old auto log removed after compression"
+    else
+      log "FAIL: original old auto log still exists"
+      proof_failed=1
+    fi
+  else
+    log "SKIP: gzip missing, compression check skipped"
+  fi
+
+  if [ ! -e "$auto_delete_test" ]; then
+    log "OK: expired compressed auto log deleted"
+  else
+    log "FAIL: expired compressed auto log still exists"
+    proof_failed=1
+  fi
+
+  if [ ! -e "$manual_delete_test" ]; then
+    log "OK: expired manual log deleted"
+  else
+    log "FAIL: expired manual log still exists"
+    proof_failed=1
+  fi
+
+  if [ -f "$manual_keep_test" ]; then
+    log "OK: recent manual log kept"
+  else
+    log "FAIL: recent manual log missing"
+    proof_failed=1
+  fi
+
+  log "== remove remaining fake test logs =="
+  cleanup_fake_logs
+  trap - EXIT HUP INT TERM
+
+  log "== final log status =="
+  "$CONTROL_SCRIPT" logs
+
+  log "== final auto-sync status =="
+  "$CONTROL_SCRIPT" status
+
+  [ "$proof_failed" -eq 0 ] || die "log rotation proof failed"
+}
+
 validate_profile
 
 case "${1:-}" in
@@ -995,6 +1290,10 @@ case "${1:-}" in
   write-autosync) write_autosync ;;
   install-autosync-startup) install_autosync_startup ;;
   autosync-status) autosync_status ;;
+  autosync-preflight) autosync_preflight ;;
+  refresh-autosync) refresh_autosync ;;
+  autosync-validate) autosync_validate ;;
+  autosync-log-rotation-proof) autosync_log_rotation_proof ;;
   redact-config) redact_config ;;
   -h|--help|help|'') usage ;;
   *)
