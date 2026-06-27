@@ -6,7 +6,7 @@ Last updated: 2026-06-27
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, a safe Betterbird maildir-lite to Maildir++ conversion script, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, and a validated first mbsync INBOX test path
+- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, a safe Betterbird maildir-lite to Maildir++ conversion script, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, a validated first mbsync INBOX test path, and a validated deletion-safe production mbsync `provider-live` path
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -112,8 +112,12 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The first mbsync test used the isolated target `/mail/Mailstore/mbsync/provider-inbox-test`, with state in `/mail/AppData/isync/state/provider`, logs in `/mail/Logs/mbsync`, and `~/.config/isyncrc` reading `~/.config/isync/provider.pass` via `PassCmd`.
 - antiX validation on 2026-06-27 confirmed `isync 1.5.1`, successful IMAP login to `mail.tagindustries.com.sg`, 144 INBOX messages pulled into `/mail/Mailstore/mbsync/provider-inbox-test`, post-Evolution mbsync succeeded, and Evolution Flatpak created a `BackendName=maildir` source pointing at the test Maildir path.
 - The first mbsync channel is INBOX-only and local-preserving: `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`. `mbsync --dry-run` hit an isync 1.5.1 assertion on the empty test Maildir, so validation proceeded with logged real pulls after confirming the target was empty and deletion-safe policy was intact.
-- The next mbsync expansion must snapshot the working antiX config/logs, list remote folders read-only, and test exactly one small non-INBOX folder in `/mail/Mailstore/mbsync/provider-folder-test` before creating any `provider-live` tree.
-- notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable.
+- The antiX mbsync config/log snapshot was saved under `/mail/Backups/mbsync` before production promotion. Empty remote folders `FARSUK` and `BASUNDHARA` were verified empty and removed from the IMAP server at the owner's request.
+- Production mbsync `provider-live` was validated on 2026-06-27 with the exact remote folders `INBOX`, `Drafts`, `Trash`, `spam`, `Sent`, `Junk`, and `Archive`. It uses `/mail/Mailstore/mbsync/provider-live`, state in `/mail/AppData/isync/state/provider-live`, logs in `/mail/Logs/mbsync-live`, `PipelineDepth 1`, `UseNamespace yes`, explicit `Patterns`, `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`.
+- The first `provider-live` pull downloaded 163 messages: 151 INBOX, 4 Sent, and 8 Trash. A second pull had zero delta and no duplicate flood. After Evolution SMTP testing and Gmail replies, a post-SMTP pull reached 170 messages: 158 INBOX, 4 Sent, and 8 Trash. `tmp` remained empty throughout.
+- Evolution Flatpak reads the production `provider-live` tree as `BackendName=maildir` with path `/mail/Mailstore/mbsync/provider-live`. The owner verified opening/searching production messages and successfully sent two messages by SMTP to Gmail; Gmail replies were pulled back into `provider-live`.
+- The production auto-sync loop uses `~/.local/bin/mbsync-provider-live-loop` and `~/.local/bin/mbsync-provider-live-control`, polls every 180 seconds, writes daily logs under `/mail/Logs/mbsync-live`, supports `status`, `pause`, `resume`, `sync-now`, `stop-loop`, and `start`, and starts from a marked IceWM startup block. Final audit confirmed repeated automatic runs with exit `0`, no lock left behind, and `tmp` still empty.
+- notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
 
@@ -128,20 +132,18 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 ## Next Actions
 
 1. Review the setup and memory files.
-2. Snapshot the validated antiX mbsync config and logs to `/mail/Backups/mbsync` without copying `provider.pass`.
-3. Inventory remote IMAP folders read-only with `mbsync -c ~/.config/isyncrc --list-stores provider-remote`.
-4. Select exactly one small non-INBOX, non-special folder for a second isolated mbsync test.
-5. Test the selected folder under `/mail/Mailstore/mbsync/provider-folder-test` with the same deletion-safe policy before creating `/mail/Mailstore/mbsync/provider-live`.
-6. Create `/mail/Mailstore/mbsync/provider-live` only after the second-folder test passes and the final folder selection is known.
-7. Resume the Betterbird profile transport: pack a representative Fedora Betterbird profile sample with `src/betterbird_profile_transport.py pack`.
-8. Verify transferred parts on antiX with `verify-archive`.
-9. Restore into `/mail/import-staging/betterbird-maildir` with `unpack`.
-10. Verify the restored profile with `verify-tree`.
-11. Run the converter dry-run on antiX against the staged Betterbird profile.
-12. Review conversion logs before any full copy.
-13. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
-14. Add the validated production Maildir++ tree to Evolution using `Maildir-format mail directories`.
-15. Decide broader project type and future packaging only if needed.
+2. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+3. Resume the Betterbird profile transport: pack a representative Fedora Betterbird profile sample with `src/betterbird_profile_transport.py pack`.
+4. Verify transferred parts on antiX with `verify-archive`.
+5. Restore into `/mail/import-staging/betterbird-maildir` with `unpack`.
+6. Verify the restored profile with `verify-tree`.
+7. Run the converter dry-run on antiX against the staged Betterbird profile.
+8. Review conversion logs before any full copy.
+9. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
+10. Add the validated Betterbird archive Maildir++ tree to Evolution using `Maildir-format mail directories`.
+11. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+12. Consider later `PullFlags`, Sent upload, or notmuch/Astroid only as separate controlled changes.
+13. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

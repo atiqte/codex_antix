@@ -4,12 +4,19 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
-### 2026-06-27: Promote mbsync Through One Folder Before Live Tree
+### 2026-06-27: Use Deletion-Safe Production mbsync Provider-Live
 
 - Status: accepted
+- Context: The first INBOX test and Evolution validation succeeded. Remote folder inventory later showed only seven desired folders after the owner deleted the empty `FARSUK` and `BASUNDHARA` folders. The owner requested production mbsync setup for `INBOX`, `Drafts`, `Trash`, `spam`, `Sent`, `Junk`, and `Archive`.
+- Decision: Create `/mail/Mailstore/mbsync/provider-live` with state in `/mail/AppData/isync/state/provider-live`, logs in `/mail/Logs/mbsync-live`, exact `Patterns` for the seven folders, `PipelineDepth 1`, `UseNamespace yes`, `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`. Keep SMTP sending in Evolution and keep Sent upload, flag sync, GPG password migration, and notmuch/Astroid as later controlled changes.
+- Consequence: The antiX VM now has a validated production receive-only mbsync tree that Evolution reads as `BackendName=maildir`, plus a 180-second user-level polling loop launched from IceWM startup. The earlier second-folder-before-live approach is superseded by the observed server cleanup and exact seven-folder production validation.
+
+### 2026-06-27: Promote mbsync Through One Folder Before Live Tree
+
+- Status: superseded by "Use Deletion-Safe Production mbsync Provider-Live"
 - Context: The first antiX mbsync INBOX test succeeded with 144 messages pulled into `/mail/Mailstore/mbsync/provider-inbox-test`, Evolution Flatpak reading the tree as `BackendName=maildir`, and a post-Evolution mbsync run succeeding without duplicate flood or unexpected deletions.
 - Decision: Treat the INBOX test tree as a validated test account, snapshot the working antiX config/logs, list remote IMAP folders read-only, test exactly one small non-INBOX folder in `/mail/Mailstore/mbsync/provider-folder-test`, and only then create `/mail/Mailstore/mbsync/provider-live`.
-- Consequence: The migration avoids a blind all-folder mirror, keeps Betterbird archive migration separate from live IMAP ingestion, preserves the explicit no-delete policy, and defers notmuch/Astroid until the final Maildir layout is stable.
+- Consequence: This was the conservative path before remote folder cleanup. It was superseded after the server contained only seven explicitly desired folders and the owner requested direct production promotion with exact `Patterns`.
 
 ### 2026-06-26: Use APT mbsync for First IMAP INBOX Test
 

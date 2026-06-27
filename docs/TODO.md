@@ -14,20 +14,16 @@
 - [ ] Review converter logs: `conversion.jsonl`, `folder-map.tsv`, `summary.tsv`, `duplicates.tsv`, `errors.tsv`, and `skipped.tsv`.
 - [ ] Run a small antiX copy test and verify byte/hash preservation before full migration.
 - [ ] Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` after staging and dry-run checks pass.
-- [ ] Add the validated production Maildir++ tree to Evolution with `Maildir-format mail directories`.
-- [ ] On antiX, snapshot the validated mbsync config and logs to `/mail/Backups/mbsync` without copying `provider.pass`.
-- [ ] On antiX, inventory remote IMAP folders read-only with `mbsync -c ~/.config/isyncrc --list-stores provider-remote`.
-- [ ] Choose exactly one small non-INBOX, non-special folder for the second isolated mbsync test.
-- [ ] On antiX, create `/mail/Mailstore/mbsync/provider-folder-test` and `/mail/AppData/isync/state/provider-folder-test`.
-- [ ] Add one second-folder mbsync channel using `Sync PullNew`, `Create Near`, `Remove None`, and `Expunge None`.
-- [ ] Run the second-folder sync twice, confirm no duplicate flood, and verify `tmp` remains empty.
-- [ ] Add the second-folder test tree to Evolution as `Maildir-format mail directories` only after mbsync exits, if GUI validation is needed.
-- [ ] Create `/mail/Mailstore/mbsync/provider-live` only after the second-folder test passes.
+- [ ] Add the validated Betterbird archive Maildir++ tree to Evolution with `Maildir-format mail directories`.
+- [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Decide broader project type beyond the approved mail migration utility.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
 ## Later
 
+- [ ] Consider moving the mbsync `PassCmd` from the current chmod `600` password file to GPG after unattended polling remains stable.
+- [ ] Consider `PullFlags`, Sent upload, or broader IMAP two-way behavior only as separate controlled changes.
+- [ ] Configure notmuch/Astroid only after the Betterbird archive and live Maildir layout are stable.
 - [ ] Define the first implementation milestone.
 - [ ] Choose language, runtime, and tooling only after the project type is explicit.
 - [ ] Add project-specific setup instructions after tooling is selected.
@@ -55,3 +51,12 @@
 - [x] Pull 144 provider INBOX messages into `/mail/Mailstore/mbsync/provider-inbox-test` with deletion-safe policy.
 - [x] Validate Evolution Flatpak reads the mbsync INBOX test Maildir with `BackendName=maildir`.
 - [x] Run post-Evolution mbsync and confirm no duplicate flood or unexpected deletions.
+- [x] Snapshot the validated antiX mbsync config and logs to `/mail/Backups/mbsync` without copying `provider.pass`.
+- [x] Inventory remote IMAP folders read-only with `mbsync -c ~/.config/isyncrc --list-stores provider-remote`.
+- [x] Verify empty `FARSUK` and `BASUNDHARA` folders and remove them from the IMAP server at the owner's request.
+- [x] Create the deletion-safe production `/mail/Mailstore/mbsync/provider-live` tree for `INBOX`, `Drafts`, `Trash`, `spam`, `Sent`, `Junk`, and `Archive`.
+- [x] Run first and second `provider-live` pulls, confirm no duplicate flood, and verify `tmp` remains empty.
+- [x] Validate Evolution Flatpak reads the production `provider-live` Maildir with `BackendName=maildir`.
+- [x] Validate Evolution SMTP by sending two test messages to Gmail and pulling Gmail replies back into `provider-live`.
+- [x] Create and validate the 180-second `provider-live` auto-sync loop with pause, resume, status, sync-now, stop-loop, and start controls.
+- [x] Add the `provider-live` auto-sync loop to IceWM startup with a marked block.

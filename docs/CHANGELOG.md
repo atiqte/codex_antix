@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-27
 
+- Recorded the validated production mbsync `provider-live` setup on antiX: seven exact IMAP folders, deletion-safe `Sync PullNew`, Evolution `BackendName=maildir`, SMTP send test, Gmail replies pulled back, and a 180-second IceWM-started auto-sync loop with pause/resume controls.
+- Marked the earlier second-folder-before-live decision as superseded after empty `FARSUK` and `BASUNDHARA` folders were removed and the seven-folder `provider-live` tree passed production validation.
 - Recorded the successful antiX mbsync INBOX validation: `isync 1.5.1`, 144 messages pulled, Evolution Flatpak reads the test tree as `BackendName=maildir`, and post-Evolution mbsync succeeds without duplicate flood or unexpected deletions.
 - Updated the mbsync guide with the next controlled promotion path: snapshot config/logs, inventory remote folders read-only, test exactly one second folder, then create a separate live tree only after validation.
 - Marked the first mbsync INBOX setup tasks complete and added active tasks for the second-folder mbsync test.
