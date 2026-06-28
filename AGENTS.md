@@ -11,6 +11,7 @@ Before making changes, future Codex sessions must read:
 - `docs/PROJECT_STATE.md`
 - `docs/TODO.md`
 - `docs/DECISIONS.md`
+- `docs/WORK_VALIDATION_LEDGER.md`
 
 Use these files as the project memory source of truth.
 
@@ -22,6 +23,7 @@ Use these files as the project memory source of truth.
 - Update `docs/PROJECT_STATE.md` after meaningful work changes the repository state.
 - Update `docs/DECISIONS.md` when an architectural, tooling, language, framework, hosting, or workflow choice is made.
 - Update `docs/TODO.md` when tasks are added, completed, removed, or reprioritized.
+- Update `docs/WORK_VALIDATION_LEDGER.md` after terminal-guided command chunks, validation-heavy work, or operator-run steps whose output is reviewed through pasted logs.
 - Do not install dependencies unless the owner explicitly approves.
 - Do not delete files unless the owner explicitly approves.
 - The owner has approved end-of-session commit and push. After each working session, run `git add .`, commit with a clear self-explanatory message, and run `git push`.

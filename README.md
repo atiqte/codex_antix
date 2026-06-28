@@ -9,6 +9,7 @@ No broader application type, framework, package manager, or deployment target ha
 - Git repository initialized.
 - Project memory documents live in `docs/`.
 - `AGENTS.md` defines rules for future Codex sessions.
+- `docs/WORK_VALIDATION_LEDGER.md` records topic-neutral command-chunk validation outcomes for future terminal-guided work.
 - Approved mail migration utilities live in `src/`.
 - Offline DIY guides now cover Betterbird profile transport, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, and the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls.
 - AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration, the first mbsync INBOX test setup, and the validated production `provider-live`/Sent-upload workflow.
@@ -22,7 +23,8 @@ Before doing project work, read these files:
 2. `docs/PROJECT_STATE.md`
 3. `docs/TODO.md`
 4. `docs/DECISIONS.md`
-5. `docs/WORKFLOW.md`
+5. `docs/WORK_VALIDATION_LEDGER.md`
+6. `docs/WORKFLOW.md`
 
 ## Repository Layout
 
@@ -41,6 +43,7 @@ Before doing project work, read these files:
 │   ├── MBSYNC_ANTIX_GUIDE.html
 │   ├── MBSYNC_ANTIX_GUIDE.txt
 │   ├── TODO.md
+│   ├── WORK_VALIDATION_LEDGER.md
 │   └── WORKFLOW.md
 ├── scripts/
 │   ├── evolution_flatpak_icewm_launcher_setup.sh

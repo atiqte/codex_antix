@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-06-28: Use a General Work Validation Ledger
+
+- Status: accepted
+- Context: Terminal-guided work often happens through command chunks that the owner runs in antiX, Fedora, or Windows, with output returned through `codex-input/pasted-text.txt`. Earlier mbsync work preserved important validated outcomes, but not every exact command-output pair.
+- Decision: Maintain `docs/WORK_VALIDATION_LEDGER.md` as a topic-neutral durable ledger for future command chunks, pasted-output review, validation outcomes, failures, fixes, skipped steps, and superseded paths. The ledger must reference output/log sources and summarize key results without storing secrets or massive raw logs.
+- Consequence: Future work on any topic can be audited by chunk/step and result, while historical work is backfilled only as honest summaries from confirmed project memory.
+
 ### 2026-06-27: Protect Provider-Live Controls from Stale Loop PID Files
 
 - Status: accepted

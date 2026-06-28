@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-06-28
 
+- Added `docs/WORK_VALIDATION_LEDGER.md` as a topic-neutral ledger for future command chunks and pasted-output validation, wired it into required reading/workflow docs, and backfilled confirmed historical milestones without raw secrets or massive logs.
 - Clarified the mbsync HTML and text guides with a `Start Here: Fresh Setup` sequence, exact command order for INBOX validation, production promotion, Evolution checks, and auto-sync validation, plus reference-only labels for the production config block.
 
 ## 2026-06-27

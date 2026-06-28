@@ -11,6 +11,7 @@ This repository currently uses a language-neutral Git workflow. Do not add runti
    - `docs/PROJECT_STATE.md`
    - `docs/TODO.md`
    - `docs/DECISIONS.md`
+   - `docs/WORK_VALIDATION_LEDGER.md`
 3. Check repository state:
 
 ```powershell
@@ -35,8 +36,22 @@ Update memory files as part of meaningful work:
 - `docs/TODO.md`: update when tasks are added, completed, removed, or reprioritized.
 - `docs/IDEAS.md`: add uncommitted possibilities that are not yet decisions.
 - `docs/CHANGELOG.md`: add user-visible or repository-level changes after meaningful updates.
+- `docs/WORK_VALIDATION_LEDGER.md`: update after terminal-guided command chunks, pasted terminal-output review, validation-heavy work, or operator-run steps.
 
 Keep entries concise, dated when useful, and easy to scan.
+
+## Record Command-Chunk Validation
+
+When Codex gives command chunks for the owner to run outside this repository, especially on antiX, Fedora, or Windows, record the outcome in `docs/WORK_VALIDATION_LEDGER.md`.
+
+Use the ledger for:
+
+- command chunks copied into another terminal;
+- terminal output returned through `codex-input/pasted-text.txt`;
+- validation steps that prove a setup is safe or complete;
+- failed, partial, skipped, or superseded steps that future sessions should not rediscover.
+
+Do not store secrets or massive raw logs in the ledger. Reference the source path or log path and summarize the key result.
 
 ## Commit Changes
 
@@ -115,7 +130,7 @@ git clone <remote-url>
 cd <repo-folder>
 ```
 
-3. Read the required memory files from the start of this workflow.
+3. Read the required memory files from the start of this workflow, including `docs/WORK_VALIDATION_LEDGER.md`.
 4. Run:
 
 ```powershell

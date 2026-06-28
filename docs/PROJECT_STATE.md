@@ -32,6 +32,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
+- `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.
 - `src/` placeholder folder for future implementation work.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
 - `.gitattributes` enforcing LF line endings for shell and Python scripts.
@@ -75,6 +76,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/PROJECT_STATE.md`
   - `docs/DECISIONS.md`
   - `docs/TODO.md`
+  - `docs/WORK_VALIDATION_LEDGER.md`
   - `docs/IDEAS.md`
   - `docs/WORKFLOW.md`
   - `docs/CHANGELOG.md`
@@ -126,6 +128,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The generated provider-live control script now verifies that a saved loop PID belongs to `mbsync-provider-live-loop` before reporting the loop as running or sending a stop signal. Stale loop PID files are shown as `stale_loop_pid` and ignored for process killing. The timeout wrapper uses GNU `timeout --kill-after=60s` when supported and falls back to plain `timeout` otherwise.
 - `scripts/mbsync_provider_inbox_setup.sh` now includes production helper commands for the validated setup: `production-layout`, `write-production-config`, `production-list`, `production-sync`, `production-status`, `write-autosync`, `install-autosync-startup`, `autosync-status`, `autosync-preflight`, `refresh-autosync`, `autosync-stale-lock-proof`, `autosync-validate`, and `autosync-log-rotation-proof`.
 - `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt` now include a clear `Start Here: Fresh Setup` sequence before the production reference material. Fresh antiX runs start with the INBOX validation helper sequence, then production `provider-live`, then Evolution GUI checks, then auto-sync validation. The production mbsync config block is explicitly labeled reference-only so it is not mistaken for a terminal command.
+- `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
@@ -163,7 +166,7 @@ General restore flow:
 1. Install Git on the target Windows 11 or Debian Linux machine.
 2. Clone the repository from the chosen remote.
 3. Open the repository root.
-4. Read `AGENTS.md`, `README.md`, `docs/PROJECT_STATE.md`, `docs/TODO.md`, and `docs/DECISIONS.md`.
+4. Read `AGENTS.md`, `README.md`, `docs/PROJECT_STATE.md`, `docs/TODO.md`, `docs/DECISIONS.md`, and `docs/WORK_VALIDATION_LEDGER.md`.
 5. Run `git status --short --branch` before making changes.
 6. Do not install dependencies until the project type and dependency policy are decided.
 
@@ -171,6 +174,7 @@ General restore flow:
 
 - Start by reading the required memory files listed in `AGENTS.md`.
 - Treat this file as the high-level state snapshot.
+- Use `docs/WORK_VALIDATION_LEDGER.md` as the durable per-step record when reviewing command chunks or pasted terminal output.
 - Keep documentation current as work proceeds.
 - Prefer small, reviewable changes.
 - Ask before dependency installation, deletion, or remote pushes.
