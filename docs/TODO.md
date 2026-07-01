@@ -4,8 +4,7 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] On Fedora, stop Evolution and background services before packing the converted archive.
-- [ ] On Fedora, inspect `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` with `src/maildirpp_transport.py inspect`.
+- [ ] Before the Fedora pack run, confirm Evolution and Evolution Data Server mail services remain stopped.
 - [ ] Pack the converted Maildir++ archive with `src/maildirpp_transport.py pack --source /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp --out <transfer-dir>`.
 - [ ] Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
 - [ ] On antiX, run `src/maildirpp_transport.py verify-archive --manifest <transfer-dir>/manifest.json`.
@@ -44,6 +43,8 @@
 - [x] Implement Python standard-library converted Maildir++ archive transport utility with layout inspection and split archive verification.
 - [x] Add portable unit tests for converted Maildir++ archive transport safety.
 - [x] Create converted Maildir++ archive transport DIY guide in HTML and plain text formats.
+- [x] Verify manually copied Fedora transport scripts in `~/codex-runs` by SHA256, compile, help, and import-location checks.
+- [x] Run Fedora source inspection for `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`: 48,720 `cur`, 0 `new`, 0 `tmp`, no symlinks, no special files, and `status=ok`.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
 - [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.

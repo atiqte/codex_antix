@@ -117,6 +117,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The full Betterbird maildir-lite archive was converted on Fedora into canonical Maildir++ at `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`. Converter copy and full hash verification succeeded with 48,720 copied `cur` messages, 0 `new` messages, 0 target `tmp` files, and 0 verify errors.
 - The owner reported Fedora Evolution GUI validation of the converted archive: `mail_tagindustries_com_sg.Inbox` opens with 14,279 emails, messages open, HTML renders correctly, and no error popup is shown.
 - `src/maildirpp_transport.py` is the next transport path for the already-converted archive. It defaults to source `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`, destination `/mail/Mailstore/evolution/local-maildir`, split gzip tar parts named `maildirpp-archive.tar.gz.partNNNN`, and Maildir++ layout checks before pack and after restore.
+- Fedora manual transport preflight on 2026-07-01 validated the copied scripts in `~/codex-runs` by SHA256, compile, help, and import-location checks. It also stopped Evolution mail services and inspected `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` successfully: 29 Maildir folders, 28 dot folders, 48,720 `cur`, 0 `new`, 0 `tmp`, no symlinks, no special files, and `status=ok`.
 - The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
 - Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The validated setup creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `~/.icewm/personal` and `~/.icewm/toolbar` entries, adds a marked keyring startup block to `~/.icewm/startup`, and keeps wrapper-level keyring fallback.
@@ -143,7 +144,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next validation must be run on Fedora/antiX with the converted Maildir++ archive transport: inspect, pack, transfer, verify-archive, unpack, verify-tree, inspect, then add to Evolution as `Maildir-format mail directories`.
+- Next validation must pack the converted Maildir++ archive on Fedora, verify the archive, transfer it to antiX, verify-archive, unpack, verify-tree, inspect, then add to Evolution as `Maildir-format mail directories`.
 
 ## Open Questions
 
@@ -157,17 +158,18 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 1. Review the setup and memory files.
 2. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-3. Stop Evolution on Fedora and inspect `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` with `src/maildirpp_transport.py inspect`.
-4. Pack the converted Maildir++ archive with `src/maildirpp_transport.py pack`.
-5. Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
-6. On antiX, run `verify-archive`, unpack into `/mail/Mailstore/evolution/local-maildir`, run `verify-tree`, and run `inspect`.
-7. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
-8. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
-9. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
-10. Retain the split archive export until antiX Evolution validation is complete.
-11. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-12. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
-13. Decide broader project type and future packaging only if needed.
+3. Reconfirm Evolution mail services are stopped on Fedora immediately before packing.
+4. Pack the converted Maildir++ archive with `src/maildirpp_transport.py pack` or the verified manual copy at `~/codex-runs/maildirpp_transport.py`.
+5. Run Fedora-side `verify-archive` before transferring.
+6. Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
+7. On antiX, run `verify-archive`, unpack into `/mail/Mailstore/evolution/local-maildir`, run `verify-tree`, and run `inspect`.
+8. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
+9. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
+10. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
+11. Retain the split archive export until antiX Evolution validation is complete.
+12. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+13. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
+14. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 
