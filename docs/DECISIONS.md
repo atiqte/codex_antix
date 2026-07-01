@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-01: Use Dedicated Maildir++ Archive Transport for Converted Betterbird Archive
+
+- Status: accepted
+- Context: The Betterbird maildir-lite archive was converted on Fedora into canonical Maildir++ at `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`, hash verification passed, and the owner reported Evolution GUI validation including `mail_tagindustries_com_sg.Inbox` opening with 14,279 emails, successful HTML rendering, and no error popup.
+- Decision: Implement `src/maildirpp_transport.py` as the official Python 3 standard-library-only transport for already-converted canonical Maildir++ archives. It uses split gzip tar parts, `manifest.json`, `inventory.jsonl`, per-part and whole-archive SHA256 verification, restored-tree hash verification, and Maildir++ layout inspection before packing and after restore.
+- Consequence: The converted archive can be transferred to antiX directly into `/mail/Mailstore/evolution/local-maildir` without rerunning the maildir-lite converter on antiX. This archive remains separate from the live mbsync tree at `/mail/Mailstore/mbsync/provider-live`.
+
 ### 2026-06-28: Use a General Work Validation Ledger
 
 - Status: accepted

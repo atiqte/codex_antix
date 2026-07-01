@@ -1,0 +1,376 @@
+Converted Maildir++ Archive Transport Guide
+===========================================
+
+Purpose
+-------
+
+This guide moves the already-converted canonical Maildir++ Betterbird archive
+from Fedora to antiX.
+
+It does not rerun the maildir-lite converter.
+It does not use the mbsync live tree.
+It keeps the converted archive separate from provider-live.
+
+Confirmed Fedora status:
+
+- Converter hash verification previously passed.
+- Owner reported Evolution GUI validation on Fedora:
+  - mail_tagindustries_com_sg.Inbox opens.
+  - The folder shows 14,279 emails.
+  - Messages open.
+  - HTML renders correctly.
+  - No error popup is shown.
+
+
+Important Paths
+---------------
+
+Fedora converted source:
+
+  /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp
+
+antiX final target:
+
+  /mail/Mailstore/evolution/local-maildir
+
+Keep separate from:
+
+  /mail/Mailstore/mbsync/provider-live
+
+
+Tool
+----
+
+Use:
+
+  src/maildirpp_transport.py
+
+The tool creates:
+
+  manifest.json
+  inventory.jsonl
+  maildirpp-archive.tar.gz.part0001
+  maildirpp-archive.tar.gz.part0002
+  ...
+
+Every --manifest option points to:
+
+  manifest.json
+
+inventory.jsonl must stay beside manifest.json, but it is read automatically.
+
+
+Safety Rules
+------------
+
+- Stop Evolution on Fedora before packing.
+- Pack only the converted Maildir++ tree.
+- Do not pack the original Betterbird profile for this step.
+- Do not unpack over an existing non-empty antiX target.
+- A clean converted archive should have empty tmp directories.
+- Symlinks and special files are refused by default.
+- Do not choose MH-format mail directories in Evolution.
+- Add the restored archive as Maildir-format mail directories.
+
+
+Fedora Workflow
+===============
+
+Step 1 - Set paths
+------------------
+
+COPY COMMAND:
+
+  export REPO="$HOME/antiX_VM_Laptop"
+  export SOURCE="/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp"
+  export EXPORT="$HOME/maildirpp-archive-export-$(date +%Y%m%d-%H%M%S)"
+
+
+Step 2 - Stop Evolution and background services
+-----------------------------------------------
+
+COPY COMMAND:
+
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  pkill -u "$USER" -f 'evolution|evolution-source-registry|evolution-addressbook-factory|evolution-calendar-factory' 2>/dev/null || true
+  sleep 3
+  pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true
+
+If Evolution processes remain, stop them before continuing.
+
+
+Step 3 - Inspect the converted Maildir++ source
+-----------------------------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/maildirpp_transport.py inspect \
+    --source "$SOURCE"
+
+Expected:
+
+  mode=inspect
+  tmp_files=0
+  status=ok
+
+If tmp_files is not 0, stop and inspect. A finished converted archive should
+not have payload files in tmp directories.
+
+
+Step 4 - Pack the converted Maildir++ archive
+---------------------------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/maildirpp_transport.py pack \
+    --source "$SOURCE" \
+    --out "$EXPORT"
+
+Expected:
+
+  mode=pack
+  parts=...
+  cur_files=...
+  new_files=...
+  tmp_files=0
+  status=ok
+
+
+Step 5 - Confirm export files
+-----------------------------
+
+COPY COMMAND:
+
+  ls -lh "$EXPORT"
+  test -f "$EXPORT/manifest.json"
+  test -f "$EXPORT/inventory.jsonl"
+  ls "$EXPORT"/maildirpp-archive.tar.gz.part*
+
+Transfer the whole export folder to antiX. Keep all filenames unchanged.
+
+
+antiX Workflow
+==============
+
+Step 1 - Set paths
+------------------
+
+Set TRANSFER to the folder containing manifest.json, inventory.jsonl, and all
+maildirpp-archive part files.
+
+COPY COMMAND:
+
+  export REPO="$HOME/antiX_VM_Laptop"
+  export TRANSFER="/path/to/maildirpp-archive-export"
+  export DEST="/mail/Mailstore/evolution/local-maildir"
+
+
+Step 2 - Verify archive parts
+-----------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/maildirpp_transport.py verify-archive \
+    --manifest "$TRANSFER/manifest.json"
+
+Expected:
+
+  mode=verify-archive
+  status=ok
+
+
+Step 3 - Confirm destination is empty
+-------------------------------------
+
+COPY COMMAND:
+
+  if [ -e "$DEST" ]; then
+    find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
+  else
+    echo "Destination does not exist yet; unpack can create it."
+  fi
+
+If this prints a file or folder, do not unpack there. Choose a fresh empty
+destination or review the existing path manually.
+
+
+Step 4 - Unpack to antiX
+------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/maildirpp_transport.py unpack \
+    --manifest "$TRANSFER/manifest.json" \
+    --dest "$DEST"
+
+Expected:
+
+  mode=unpack
+  status=ok
+
+
+Step 5 - Verify restored bytes and layout
+-----------------------------------------
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/maildirpp_transport.py verify-tree \
+    --manifest "$TRANSFER/manifest.json" \
+    --dest "$DEST"
+
+Expected:
+
+  mode=verify-tree
+  status=ok
+
+Run a final layout inspection:
+
+COPY COMMAND:
+
+  cd "$REPO"
+  python3 src/maildirpp_transport.py inspect \
+    --source "$DEST"
+
+Expected:
+
+  mode=inspect
+  tmp_files=0
+  status=ok
+
+
+Add to Evolution on antiX
+=========================
+
+Launch Evolution:
+
+COPY COMMAND:
+
+  ~/.local/bin/evolution-flatpak-mail
+
+In the Evolution GUI:
+
+1. Add a new local receiving account.
+2. Choose exactly:
+
+   Maildir-format mail directories
+
+3. Do not choose:
+
+   MH-format mail directories
+
+4. Use this path:
+
+   /mail/Mailstore/evolution/local-maildir
+
+5. Validate the key folder:
+
+   mail_tagindustries_com_sg.Inbox
+
+6. Confirm:
+
+   - folder opens;
+   - message count is reasonable compared with Fedora validation;
+   - messages open;
+   - HTML renders correctly;
+   - no error popup appears.
+
+
+Troubleshooting
+===============
+
+Problem: tmp-files-present
+
+Meaning:
+
+  A Maildir tmp directory contains payload files.
+
+Action:
+
+  Stop. A clean converted archive should have empty tmp directories. Inspect
+  why the tmp file exists before packing.
+
+
+Problem: missing cur/new/tmp
+
+Meaning:
+
+  The root or a Maildir++ dot folder is incomplete.
+
+Action:
+
+  Do not pack. Recheck the source path and conversion output.
+
+
+Problem: SHA256 mismatch
+
+Meaning:
+
+  A transferred part or restored file changed.
+
+Action:
+
+  Re-transfer the affected part. If mismatch remains, repack on Fedora after
+  confirming Evolution is stopped.
+
+
+Problem: destination is not empty
+
+Meaning:
+
+  /mail/Mailstore/evolution/local-maildir already contains files.
+
+Action:
+
+  Do not merge by unpacking over it. Use a fresh destination or manually review
+  and clear the path outside the script.
+
+
+Problem: Evolution shows folders but no messages
+
+Likely cause:
+
+  The account was created as MH-format mail directories.
+
+Action:
+
+  Remove the account and recreate it as Maildir-format mail directories.
+
+
+Quick Commands
+==============
+
+Fedora:
+
+COPY COMMAND:
+
+  cd "$HOME/antiX_VM_Laptop"
+  export SOURCE="/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp"
+  export EXPORT="$HOME/maildirpp-archive-export-$(date +%Y%m%d-%H%M%S)"
+  python3 src/maildirpp_transport.py inspect --source "$SOURCE"
+  python3 src/maildirpp_transport.py pack --source "$SOURCE" --out "$EXPORT"
+
+
+antiX:
+
+COPY COMMAND:
+
+  cd "$HOME/antiX_VM_Laptop"
+  export TRANSFER="/path/to/maildirpp-archive-export"
+  export DEST="/mail/Mailstore/evolution/local-maildir"
+  python3 src/maildirpp_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
+  python3 src/maildirpp_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+  python3 src/maildirpp_transport.py verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+
+
+Final Rule
+==========
+
+This archive is a local read/archive Maildir++ account. Keep it separate from
+the live mbsync account at:
+
+  /mail/Mailstore/mbsync/provider-live

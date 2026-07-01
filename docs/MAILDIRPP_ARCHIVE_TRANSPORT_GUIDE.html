@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Converted Maildir++ Archive Transport Guide</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #536274;
+      --line: #d8e0ea;
+      --accent: #155f9b;
+      --code-bg: #101827;
+      --code-ink: #eef5ff;
+      --warn-bg: #fff7e6;
+      --danger-bg: #fff0f0;
+      --ok-bg: #ecf8f1;
+      --note-bg: #eef6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+    h1 {
+      max-width: 1140px;
+      margin: 0 auto 8px;
+      font-size: 32px;
+      line-height: 1.2;
+    }
+    .subtitle {
+      max-width: 1140px;
+      margin: 0 auto;
+      color: var(--muted);
+    }
+    main {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 24px;
+    }
+    nav {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    nav h2 { font-size: 15px; margin: 0 0 10px; }
+    nav a {
+      display: block;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+    h2, h3 { line-height: 1.25; margin-top: 0; }
+    .callout {
+      border-left: 5px solid var(--accent);
+      background: var(--note-bg);
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin: 14px 0;
+    }
+    .callout.warning { border-left-color: #9a5b00; background: var(--warn-bg); }
+    .callout.danger { border-left-color: #a63232; background: var(--danger-bg); }
+    .callout.ok { border-left-color: #13734b; background: var(--ok-bg); }
+    .command {
+      border: 1px solid #293449;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--code-bg);
+      margin: 14px 0;
+    }
+    .command-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #172237;
+      color: #dce8ff;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    button.copy {
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow-x: auto;
+      color: var(--code-ink);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    code {
+      font-family: Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    p code, li code, td code {
+      color: #12365c;
+      background: #eef3f8;
+      border: 1px solid #d7e1ec;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #edf2f8; }
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      nav { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Converted Maildir++ Archive Transport Guide</h1>
+    <p class="subtitle">Safe Fedora-to-antiX workflow for the already-converted Betterbird archive Maildir++ tree.</p>
+  </header>
+
+  <main>
+    <nav>
+      <h2>Contents</h2>
+      <a href="#status">Confirmed Status</a>
+      <a href="#paths">Source and Target</a>
+      <a href="#files">Export Files</a>
+      <a href="#fedora">Fedora Pack</a>
+      <a href="#antix">antiX Restore</a>
+      <a href="#evolution">Evolution Add</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#quick">Quick Commands</a>
+    </nav>
+
+    <div>
+      <section id="status">
+        <h2>1. Confirmed Status</h2>
+        <p>
+          The Fedora conversion is treated as successful based on recorded converter verification and owner-reported
+          Evolution GUI validation. The owner reported that <code>mail_tagindustries_com_sg.Inbox</code> opens with
+          14,279 emails, messages open, HTML renders correctly, and no error popup is shown.
+        </p>
+        <div class="callout ok">
+          This guide transports the converted canonical Maildir++ tree. It does not rerun the maildir-lite converter.
+        </div>
+      </section>
+
+      <section id="paths">
+        <h2>2. Source and Target</h2>
+        <table>
+          <tr><th>Purpose</th><th>Path</th></tr>
+          <tr><td>Fedora converted source</td><td><code>/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp</code></td></tr>
+          <tr><td>antiX final archive target</td><td><code>/mail/Mailstore/evolution/local-maildir</code></td></tr>
+          <tr><td>Live mbsync tree to keep separate</td><td><code>/mail/Mailstore/mbsync/provider-live</code></td></tr>
+        </table>
+        <div class="callout danger">
+          Do not mix the converted archive with <code>provider-live</code>. The archive is local read/archive mail;
+          <code>provider-live</code> is the live mbsync-managed IMAP tree.
+        </div>
+      </section>
+
+      <section id="files">
+        <h2>3. Export Files</h2>
+        <p>The pack command creates one export folder containing:</p>
+        <ul>
+          <li><code>manifest.json</code>: the control file passed to every <code>--manifest</code> option.</li>
+          <li><code>inventory.jsonl</code>: the per-file hash inventory, read automatically through the manifest.</li>
+          <li><code>maildirpp-archive.tar.gz.part0001</code>, <code>part0002</code>, and so on.</li>
+        </ul>
+        <div class="callout warning">
+          Always pass <code>manifest.json</code> to <code>--manifest</code>.
+          Keep <code>inventory.jsonl</code> beside it.
+        </div>
+      </section>
+
+      <section id="fedora">
+        <h2>4. Fedora Pack Workflow</h2>
+        <div class="step">
+          <h3>Step 4.1 - Set paths</h3>
+          <div class="command"><div class="command-title"><span>Fedora variables</span><button class="copy" data-target="cmd-fedora-vars">Copy</button></div><pre id="cmd-fedora-vars"><code>export REPO="$HOME/antiX_VM_Laptop"
+export SOURCE="/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp"
+export EXPORT="$HOME/maildirpp-archive-export-$(date +%Y%m%d-%H%M%S)"</code></pre></div>
+        </div>
+
+        <div class="step">
+          <h3>Step 4.2 - Stop Evolution before packing</h3>
+          <div class="command"><div class="command-title"><span>Stop Evolution services</span><button class="copy" data-target="cmd-stop-evo">Copy</button></div><pre id="cmd-stop-evo"><code>flatpak kill org.gnome.Evolution 2>/dev/null || true
+pkill -u "$USER" -f 'evolution|evolution-source-registry|evolution-addressbook-factory|evolution-calendar-factory' 2>/dev/null || true
+sleep 3
+pgrep -fa 'evolution|org.gnome.Evolution|bwrap' || true</code></pre></div>
+        </div>
+
+        <div class="step">
+          <h3>Step 4.3 - Inspect the converted Maildir++ tree</h3>
+          <div class="command"><div class="command-title"><span>Maildir++ preflight</span><button class="copy" data-target="cmd-inspect-src">Copy</button></div><pre id="cmd-inspect-src"><code>cd "$REPO"
+python3 src/maildirpp_transport.py inspect \
+  --source "$SOURCE"</code></pre></div>
+          <p>Expected: <code>status=ok</code>, <code>tmp_files=0</code>, and message counts that match the verified converted tree.</p>
+        </div>
+
+        <div class="step">
+          <h3>Step 4.4 - Pack the converted archive</h3>
+          <div class="command"><div class="command-title"><span>Pack Maildir++ archive</span><button class="copy" data-target="cmd-pack">Copy</button></div><pre id="cmd-pack"><code>cd "$REPO"
+python3 src/maildirpp_transport.py pack \
+  --source "$SOURCE" \
+  --out "$EXPORT"</code></pre></div>
+        </div>
+
+        <div class="step">
+          <h3>Step 4.5 - Confirm export files</h3>
+          <div class="command"><div class="command-title"><span>Check export folder</span><button class="copy" data-target="cmd-check-export">Copy</button></div><pre id="cmd-check-export"><code>ls -lh "$EXPORT"
+test -f "$EXPORT/manifest.json"
+test -f "$EXPORT/inventory.jsonl"
+ls "$EXPORT"/maildirpp-archive.tar.gz.part*</code></pre></div>
+        </div>
+      </section>
+
+      <section id="antix">
+        <h2>5. antiX Restore Workflow</h2>
+        <div class="step">
+          <h3>Step 5.1 - Set paths</h3>
+          <div class="command"><div class="command-title"><span>antiX variables</span><button class="copy" data-target="cmd-antix-vars">Copy</button></div><pre id="cmd-antix-vars"><code>export REPO="$HOME/antiX_VM_Laptop"
+export TRANSFER="/path/to/maildirpp-archive-export"
+export DEST="/mail/Mailstore/evolution/local-maildir"</code></pre></div>
+        </div>
+
+        <div class="step">
+          <h3>Step 5.2 - Verify archive parts</h3>
+          <div class="command"><div class="command-title"><span>Verify archive</span><button class="copy" data-target="cmd-verify-archive">Copy</button></div><pre id="cmd-verify-archive"><code>cd "$REPO"
+python3 src/maildirpp_transport.py verify-archive \
+  --manifest "$TRANSFER/manifest.json"</code></pre></div>
+        </div>
+
+        <div class="step">
+          <h3>Step 5.3 - Confirm destination is empty</h3>
+          <div class="command"><div class="command-title"><span>Check destination</span><button class="copy" data-target="cmd-check-dest">Copy</button></div><pre id="cmd-check-dest"><code>if [ -e "$DEST" ]; then
+  find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
+else
+  echo "Destination does not exist yet; unpack can create it."
+fi</code></pre></div>
+          <div class="callout danger">If this prints a path, stop and choose a clean destination or review the existing data manually.</div>
+        </div>
+
+        <div class="step">
+          <h3>Step 5.4 - Unpack into antiX archive target</h3>
+          <div class="command"><div class="command-title"><span>Unpack archive</span><button class="copy" data-target="cmd-unpack">Copy</button></div><pre id="cmd-unpack"><code>cd "$REPO"
+python3 src/maildirpp_transport.py unpack \
+  --manifest "$TRANSFER/manifest.json" \
+  --dest "$DEST"</code></pre></div>
+        </div>
+
+        <div class="step">
+          <h3>Step 5.5 - Verify restored tree and layout</h3>
+          <div class="command"><div class="command-title"><span>Verify restored tree</span><button class="copy" data-target="cmd-verify-tree">Copy</button></div><pre id="cmd-verify-tree"><code>cd "$REPO"
+python3 src/maildirpp_transport.py verify-tree \
+  --manifest "$TRANSFER/manifest.json" \
+  --dest "$DEST"</code></pre></div>
+          <div class="command"><div class="command-title"><span>Inspect restored Maildir++</span><button class="copy" data-target="cmd-inspect-dest">Copy</button></div><pre id="cmd-inspect-dest"><code>cd "$REPO"
+python3 src/maildirpp_transport.py inspect \
+  --source "$DEST"</code></pre></div>
+        </div>
+      </section>
+
+      <section id="evolution">
+        <h2>6. Add to Evolution on antiX</h2>
+        <ol>
+          <li>Launch Evolution Flatpak with <code>~/.local/bin/evolution-flatpak-mail</code>.</li>
+          <li>Add a new receiving account using exactly <strong>Maildir-format mail directories</strong>.</li>
+          <li>Do not choose <strong>MH-format mail directories</strong>.</li>
+          <li>Use path <code>/mail/Mailstore/evolution/local-maildir</code>.</li>
+          <li>Validate <code>mail_tagindustries_com_sg.Inbox</code>, message count, message open behavior, and HTML rendering.</li>
+        </ol>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>7. Troubleshooting</h2>
+        <table>
+          <tr><th>Problem</th><th>Action</th></tr>
+          <tr><td><code>tmp-files-present</code></td><td>Stop and inspect. A clean converted archive should have empty <code>tmp/</code> directories.</td></tr>
+          <tr><td>Missing <code>cur/new/tmp</code></td><td>The source is not a complete Maildir++ root or dot folder. Do not pack until fixed.</td></tr>
+          <tr><td>SHA256 mismatch</td><td>Re-transfer the affected part or repack from Fedora if the source changed.</td></tr>
+          <tr><td>Destination not empty</td><td>Use a fresh destination. Do not merge archive trees by unpacking over old data.</td></tr>
+          <tr><td>Folders visible but no messages</td><td>Remove the Evolution account and recreate it as <code>Maildir-format mail directories</code>, not MH.</td></tr>
+        </table>
+      </section>
+
+      <section id="quick">
+        <h2>8. Quick Commands</h2>
+        <div class="command"><div class="command-title"><span>Fedora pack summary</span><button class="copy" data-target="cmd-quick-pack">Copy</button></div><pre id="cmd-quick-pack"><code>cd "$HOME/antiX_VM_Laptop"
+export SOURCE="/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp"
+export EXPORT="$HOME/maildirpp-archive-export-$(date +%Y%m%d-%H%M%S)"
+python3 src/maildirpp_transport.py inspect --source "$SOURCE"
+python3 src/maildirpp_transport.py pack --source "$SOURCE" --out "$EXPORT"</code></pre></div>
+        <div class="command"><div class="command-title"><span>antiX restore summary</span><button class="copy" data-target="cmd-quick-restore">Copy</button></div><pre id="cmd-quick-restore"><code>cd "$HOME/antiX_VM_Laptop"
+export TRANSFER="/path/to/maildirpp-archive-export"
+export DEST="/mail/Mailstore/evolution/local-maildir"
+python3 src/maildirpp_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
+python3 src/maildirpp_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+python3 src/maildirpp_transport.py verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"</code></pre></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      function setStatus(button, text) {
+        var old = button.getAttribute("data-old") || button.textContent;
+        button.setAttribute("data-old", old);
+        button.textContent = text;
+        window.setTimeout(function () { button.textContent = old; }, 1400);
+      }
+      function fallback(text, button) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.style.position = "fixed";
+        area.style.left = "-9999px";
+        document.body.appendChild(area);
+        area.select();
+        try {
+          document.execCommand("copy");
+          setStatus(button, "Copied");
+        } catch (err) {
+          setStatus(button, "Select");
+        }
+        document.body.removeChild(area);
+      }
+      document.querySelectorAll("button.copy").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var target = document.getElementById(button.getAttribute("data-target"));
+          if (!target) {
+            setStatus(button, "Missing");
+            return;
+          }
+          var text = target.innerText.trim();
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+              setStatus(button, "Copied");
+            }).catch(function () {
+              fallback(text, button);
+            });
+          } else {
+            fallback(text, button);
+          }
+        });
+      });
+    }());
+  </script>
+</body>
+</html>

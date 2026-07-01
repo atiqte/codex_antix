@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-06-28
+Last updated: 2026-07-01
 
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, a safe Betterbird profile transport utility, a safe Betterbird maildir-lite to Maildir++ conversion script, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -14,7 +14,7 @@ Last updated: 2026-06-28
 
 Planning/setup with approved local mail migration utility implementations.
 
-The owner approved Python standard-library utilities for transporting a full Betterbird profile tree from Fedora to antiX staging and converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. Other application direction remains undecided.
+The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, and transporting the already-converted Maildir++ archive from Fedora to antiX, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. Other application direction remains undecided.
 
 ## Current Objective
 
@@ -28,17 +28,21 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/` project memory folder.
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for the full Fedora-to-antiX transport and conversion flow.
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
+- `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the already-converted Fedora Maildir++ archive to antiX.
+- `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same converted Maildir++ archive guide.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for installing and preparing Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
 - `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.
-- `src/` placeholder folder for future implementation work.
+- `src/` utility folder for approved Python standard-library mail migration tools.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
 - `.gitattributes` enforcing LF line endings for shell and Python scripts.
 - `src/betterbird_profile_transport.py`, a Python standard-library tool to pack, split, verify, unpack, and verify a whole Betterbird profile tree for transfer.
+- `src/maildirpp_transport.py`, a Python standard-library tool to inspect, pack, split, verify, unpack, and verify an already-converted canonical Maildir++ archive.
 - `src/betterbird_maildirlite_to_maildirpp.py`, a dry-run-first Python converter for staged Betterbird maildir-lite profiles.
 - `tests/test_betterbird_profile_transport.py`, standard-library tests for split archive transport safety.
+- `tests/test_maildirpp_transport.py`, standard-library tests for converted Maildir++ transport safety.
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`, standard-library tests for folder mapping and portable validation.
 - `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for adding Evolution Flatpak to IceWM menu/taskbar launch surfaces and starting `gnome-keyring-daemon`.
 - `scripts/mbsync_provider_inbox_setup.sh`, an antiX helper for inspecting package/layout state, installing isync/mbsync, creating the isolated `/mail` mbsync test layout, writing a pull-only INBOX config, production `provider-live` layout/config/status, Sent-only upload channel setup, and provider-live auto-sync loop/startup setup with log retention, timeout wrapping, stale-lock proofing, and stale loop PID protection.
@@ -82,6 +86,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/CHANGELOG.md`
   - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`
   - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`
+  - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`
+  - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`
   - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`
   - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`
   - `docs/MBSYNC_ANTIX_GUIDE.html`
@@ -89,10 +95,12 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `.gitignore`
 - `.gitattributes`
 - `src/betterbird_profile_transport.py`
+- `src/maildirpp_transport.py`
 - `src/betterbird_maildirlite_to_maildirpp.py`
 - `scripts/evolution_flatpak_icewm_launcher_setup.sh`
 - `scripts/mbsync_provider_inbox_setup.sh`
 - `tests/test_betterbird_profile_transport.py`
+- `tests/test_maildirpp_transport.py`
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`
 
 ## Current Implementation Notes
@@ -106,6 +114,10 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The converter is designed to run on antiX after the Fedora Betterbird profile is restored to `/mail/import-staging/betterbird-maildir`.
 - Default mode is `--dry-run`; `--copy` refuses unmarked or unsafe sources and writes through Maildir `tmp` before atomic rename.
 - Duplicates are kept, but duplicate `Message-ID` and content hashes are logged.
+- The full Betterbird maildir-lite archive was converted on Fedora into canonical Maildir++ at `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`. Converter copy and full hash verification succeeded with 48,720 copied `cur` messages, 0 `new` messages, 0 target `tmp` files, and 0 verify errors.
+- The owner reported Fedora Evolution GUI validation of the converted archive: `mail_tagindustries_com_sg.Inbox` opens with 14,279 emails, messages open, HTML renders correctly, and no error popup is shown.
+- `src/maildirpp_transport.py` is the next transport path for the already-converted archive. It defaults to source `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`, destination `/mail/Mailstore/evolution/local-maildir`, split gzip tar parts named `maildirpp-archive.tar.gz.partNNNN`, and Maildir++ layout checks before pack and after restore.
+- The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
 - Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The validated setup creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `~/.icewm/personal` and `~/.icewm/toolbar` entries, adds a marked keyring startup block to `~/.icewm/startup`, and keeps wrapper-level keyring fallback.
 - The validated IceWM launcher uses the official Flatpak-exported icon at `~/.local/share/flatpak/exports/share/icons/hicolor/scalable/apps/org.gnome.Evolution.svg`. The tested antiX VM showed SHA256 `dcda7580deebec635ff3d560795a45dd41e62ce3e7d311a170b46b4cf2a0cbb2`.
@@ -131,7 +143,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next validation must be run on Fedora/antiX with a real or representative Betterbird profile transfer before the full migration.
+- Next validation must be run on Fedora/antiX with the converted Maildir++ archive transport: inspect, pack, transfer, verify-archive, unpack, verify-tree, inspect, then add to Evolution as `Maildir-format mail directories`.
 
 ## Open Questions
 
@@ -145,14 +157,14 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 1. Review the setup and memory files.
 2. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-3. Resume the Betterbird profile transport: pack a representative Fedora Betterbird profile sample with `src/betterbird_profile_transport.py pack`.
-4. Verify transferred parts on antiX with `verify-archive`.
-5. Restore into `/mail/import-staging/betterbird-maildir` with `unpack`.
-6. Verify the restored profile with `verify-tree`.
-7. Run the converter dry-run on antiX against the staged Betterbird profile.
-8. Review conversion logs before any full copy.
-9. Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` only after staging and dry-run checks pass.
-10. Add the validated Betterbird archive Maildir++ tree to Evolution using `Maildir-format mail directories`.
+3. Stop Evolution on Fedora and inspect `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` with `src/maildirpp_transport.py inspect`.
+4. Pack the converted Maildir++ archive with `src/maildirpp_transport.py pack`.
+5. Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
+6. On antiX, run `verify-archive`, unpack into `/mail/Mailstore/evolution/local-maildir`, run `verify-tree`, and run `inspect`.
+7. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
+8. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
+9. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
+10. Retain the split archive export until antiX Evolution validation is complete.
 11. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
 12. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
 13. Decide broader project type and future packaging only if needed.

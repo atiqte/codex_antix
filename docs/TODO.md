@@ -4,17 +4,16 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] On Fedora, stop Betterbird fully and confirm no profile lock markers remain.
-- [ ] Pack the full Betterbird profile with `src/betterbird_profile_transport.py pack --source ~/Betterbird-Email --out <transfer-dir>`.
-- [ ] Transfer `manifest.json`, `inventory.jsonl`, and all `betterbird-profile.tar.gz.partNNNN` files to antiX.
-- [ ] On antiX, run `src/betterbird_profile_transport.py verify-archive --manifest <transfer-dir>/manifest.json`.
-- [ ] On antiX, restore the profile with `src/betterbird_profile_transport.py unpack --manifest <transfer-dir>/manifest.json --dest /mail/import-staging/betterbird-maildir`.
-- [ ] On antiX, run `src/betterbird_profile_transport.py verify-tree --manifest <transfer-dir>/manifest.json --dest /mail/import-staging/betterbird-maildir`.
-- [ ] Run `src/betterbird_maildirlite_to_maildirpp.py --dry-run` on antiX against a staged Betterbird sample profile.
-- [ ] Review converter logs: `conversion.jsonl`, `folder-map.tsv`, `summary.tsv`, `duplicates.tsv`, `errors.tsv`, and `skipped.tsv`.
-- [ ] Run a small antiX copy test and verify byte/hash preservation before full migration.
-- [ ] Convert validated Betterbird mail into `/mail/Mailstore/evolution/local-maildir` after staging and dry-run checks pass.
-- [ ] Add the validated Betterbird archive Maildir++ tree to Evolution with `Maildir-format mail directories`.
+- [ ] On Fedora, stop Evolution and background services before packing the converted archive.
+- [ ] On Fedora, inspect `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` with `src/maildirpp_transport.py inspect`.
+- [ ] Pack the converted Maildir++ archive with `src/maildirpp_transport.py pack --source /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp --out <transfer-dir>`.
+- [ ] Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
+- [ ] On antiX, run `src/maildirpp_transport.py verify-archive --manifest <transfer-dir>/manifest.json`.
+- [ ] On antiX, restore into `/mail/Mailstore/evolution/local-maildir` with `src/maildirpp_transport.py unpack --manifest <transfer-dir>/manifest.json --dest /mail/Mailstore/evolution/local-maildir`.
+- [ ] On antiX, run `src/maildirpp_transport.py verify-tree --manifest <transfer-dir>/manifest.json --dest /mail/Mailstore/evolution/local-maildir`.
+- [ ] On antiX, run `src/maildirpp_transport.py inspect --source /mail/Mailstore/evolution/local-maildir`.
+- [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
+- [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Decide broader project type beyond the approved mail migration utility.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
@@ -40,6 +39,11 @@
 - [x] Implement Python standard-library Betterbird profile transport utility with split archive verification.
 - [x] Add portable unit tests for profile transport pack, verify, unpack, and safety failures.
 - [x] Create Betterbird profile transport DIY guide in HTML and plain text formats.
+- [x] Convert the full Betterbird maildir-lite archive on Fedora into canonical Maildir++ and verify copied hashes.
+- [x] Record owner-reported Fedora Evolution GUI validation of the converted Maildir++ archive.
+- [x] Implement Python standard-library converted Maildir++ archive transport utility with layout inspection and split archive verification.
+- [x] Add portable unit tests for converted Maildir++ archive transport safety.
+- [x] Create converted Maildir++ archive transport DIY guide in HTML and plain text formats.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
 - [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.

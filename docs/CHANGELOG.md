@@ -2,6 +2,13 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-01
+
+- Added `src/maildirpp_transport.py`, a standard-library transport utility for already-converted canonical Maildir++ archives with Maildir++ preflight, split archive verification, restore, and restored-tree validation.
+- Added standard-library unit tests for converted Maildir++ archive inspection, split archive round-trip, corruption detection, unsafe extraction, hash mismatch, and non-empty destination refusal.
+- Added `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html` and `.txt`, complete DIY guides for moving `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` to `/mail/Mailstore/evolution/local-maildir`.
+- Recorded the owner-reported Fedora Evolution GUI validation of the converted archive: `mail_tagindustries_com_sg.Inbox` opens with 14,279 emails, HTML renders, and no error popup is shown.
+
 ## 2026-06-28
 
 - Added `docs/WORK_VALIDATION_LEDGER.md` as a topic-neutral ledger for future command chunks and pasted-output validation, wired it into required reading/workflow docs, and backfilled confirmed historical milestones without raw secrets or massive logs.
