@@ -33,6 +33,10 @@ antiX final target:
 
   /mail/Mailstore/evolution/local-maildir
 
+antiX transfer staging folder for the verified export package:
+
+  /mail/import-staging/maildirpp-archive-export-20260701-215204
+
 Keep separate from:
 
   /mail/Mailstore/mbsync/provider-live
@@ -151,6 +155,197 @@ COPY COMMAND:
 Transfer the whole export folder to antiX. Keep all filenames unchanged.
 
 
+USB Transfer Workflow for Verified Export
+=========================================
+
+Use this section after Fedora pack and Fedora verify-archive have already
+passed for:
+
+  /home/atiq/maildirpp-archive-export-20260701-215204
+
+The verified export is about 38G and contains 21 part files. A 64 GB USB drive
+is suitable only if it has enough real free space and can store 1.9 GB files.
+FAT32, exFAT, NTFS, ext4, and XFS are acceptable for these split parts.
+
+Do not unpack from the USB drive. Copy the verified export to antiX staging,
+then run verify-archive from the antiX staging folder.
+
+
+Fedora USB Step - Copy verified export to USB
+---------------------------------------------
+
+Replace only this value with the real mounted USB path:
+
+  USB="/run/media/$USER/YOUR_USB_LABEL"
+
+COPY COMMAND:
+
+  set +e
+
+  export RUN="$HOME/codex-runs"
+  export SRC="/home/atiq/maildirpp-archive-export-20260701-215204"
+  export USB="/run/media/$USER/YOUR_USB_LABEL"
+  export USB_EXPORT="$USB/maildirpp-archive-export-20260701-215204"
+  export USB_SCRIPTS="$USB/codex-runs"
+
+  echo "===== FEDORA USB CHUNK 3A START ====="
+  date
+
+  echo "===== USB / SOURCE CHECK ====="
+  echo "USB=$USB"
+  echo "SRC=$SRC"
+  ls -ld "$USB" "$SRC"
+  df -h "$USB" "$SRC"
+  du -sh "$SRC"
+
+  echo "===== REQUIRED SOURCE FILES ====="
+  test -f "$SRC/manifest.json"; echo "manifest_exit=$?"
+  test -f "$SRC/inventory.jsonl"; echo "inventory_exit=$?"
+  echo "part_count=$(find "$SRC" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+
+  echo "===== COPY SCRIPTS TO USB ====="
+  mkdir -p "$USB_SCRIPTS"
+  cp -av "$RUN/maildirpp_transport.py" "$RUN/betterbird_profile_transport.py" "$USB_SCRIPTS/"
+  sha256sum "$USB_SCRIPTS/maildirpp_transport.py" "$USB_SCRIPTS/betterbird_profile_transport.py"
+
+  echo "===== COPY EXPORT TO USB ====="
+  mkdir -p "$USB_EXPORT"
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -rt --info=progress2 "$SRC/" "$USB_EXPORT/"
+    COPY_EXIT=$?
+  else
+    cp -av "$SRC/." "$USB_EXPORT/"
+    COPY_EXIT=$?
+  fi
+
+  echo "copy_exit=$COPY_EXIT"
+  sync
+
+  echo "===== USB COPY FILE CHECK ====="
+  test -f "$USB_EXPORT/manifest.json"; echo "usb_manifest_exit=$?"
+  test -f "$USB_EXPORT/inventory.jsonl"; echo "usb_inventory_exit=$?"
+  echo "usb_part_count=$(find "$USB_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+  du -sh "$USB_EXPORT"
+
+  echo "===== VERIFY ARCHIVE ON USB ====="
+  python3 "$USB_SCRIPTS/maildirpp_transport.py" verify-archive \
+    --manifest "$USB_EXPORT/manifest.json"
+  echo "usb_verify_archive_exit=$?"
+
+  echo "===== SYNC BEFORE UNPLUG ====="
+  sync
+  echo "If usb_verify_archive_exit=0, unmount/eject the USB safely before removing it."
+
+  echo "===== FEDORA USB CHUNK 3A DONE ====="
+
+Expected success:
+
+  copy_exit=0
+  usb_manifest_exit=0
+  usb_inventory_exit=0
+  usb_part_count=21
+  usb_verify_archive_exit=0
+  mode=verify-archive
+  status=ok
+
+
+antiX USB Step - Copy USB export to /mail/import-staging
+--------------------------------------------------------
+
+Replace only this value with the real mounted USB path if different:
+
+  USB="/media/$USER/YOUR_USB_LABEL"
+
+COPY COMMAND:
+
+  set +e
+
+  export USB="/media/$USER/YOUR_USB_LABEL"
+  export USB_EXPORT="$USB/maildirpp-archive-export-20260701-215204"
+  export USB_SCRIPTS="$USB/codex-runs"
+
+  export RUN="$HOME/codex-runs"
+  export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
+
+  echo "===== ANTIX USB CHUNK 3B START ====="
+  date
+
+  echo "===== PATH CHECK ====="
+  echo "USB=$USB"
+  echo "USB_EXPORT=$USB_EXPORT"
+  echo "TRANSFER=$TRANSFER"
+  ls -ld "$USB" "$USB_EXPORT"
+  df -h "$USB" /mail
+  du -sh "$USB_EXPORT"
+
+  echo "===== COPY SCRIPTS TO ANTIX ====="
+  mkdir -p "$RUN"
+  cp -av "$USB_SCRIPTS/maildirpp_transport.py" "$USB_SCRIPTS/betterbird_profile_transport.py" "$RUN/"
+  sha256sum "$RUN/maildirpp_transport.py" "$RUN/betterbird_profile_transport.py"
+
+  echo "===== VERIFY USB ARCHIVE BEFORE STAGING COPY ====="
+  python3 "$RUN/maildirpp_transport.py" verify-archive \
+    --manifest "$USB_EXPORT/manifest.json"
+  echo "usb_verify_archive_exit=$?"
+
+  echo "===== PREPARE STAGING DESTINATION ====="
+  mkdir -p /mail/import-staging
+
+  if [ -e "$TRANSFER" ] && [ "$(find "$TRANSFER" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+    echo "ERROR: staging destination is not empty: $TRANSFER"
+    echo "Stop here. Do not merge over an existing transfer folder."
+    exit 50
+  fi
+
+  mkdir -p "$TRANSFER"
+
+  echo "===== COPY USB EXPORT TO ANTIX STAGING ====="
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -rt --info=progress2 "$USB_EXPORT/" "$TRANSFER/"
+    COPY_EXIT=$?
+  else
+    cp -av "$USB_EXPORT/." "$TRANSFER/"
+    COPY_EXIT=$?
+  fi
+
+  echo "copy_exit=$COPY_EXIT"
+  sync
+
+  echo "===== STAGING FILE CHECK ====="
+  test -f "$TRANSFER/manifest.json"; echo "staging_manifest_exit=$?"
+  test -f "$TRANSFER/inventory.jsonl"; echo "staging_inventory_exit=$?"
+  echo "staging_part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+  du -sh "$TRANSFER"
+
+  echo "===== VERIFY ARCHIVE FROM ANTIX STAGING ====="
+  python3 "$RUN/maildirpp_transport.py" verify-archive \
+    --manifest "$TRANSFER/manifest.json"
+  echo "staging_verify_archive_exit=$?"
+
+  echo "===== ANTIX USB CHUNK 3B DONE ====="
+
+Expected success:
+
+  usb_verify_archive_exit=0
+  copy_exit=0
+  staging_manifest_exit=0
+  staging_inventory_exit=0
+  staging_part_count=21
+  staging_verify_archive_exit=0
+  mode=verify-archive
+  status=ok
+
+Do not unpack into:
+
+  /mail/import-staging/maildirpp-archive-export-20260701-215204
+
+That path is only the transfer package. After antiX verify-archive passes,
+the restore target remains:
+
+  /mail/Mailstore/evolution/local-maildir
+
+
 antiX Workflow
 ==============
 
@@ -158,12 +353,13 @@ Step 1 - Set paths
 ------------------
 
 Set TRANSFER to the folder containing manifest.json, inventory.jsonl, and all
-maildirpp-archive part files.
+maildirpp-archive part files. For the verified USB transfer flow, use the
+antiX staging package path shown here.
 
 COPY COMMAND:
 
   export REPO="$HOME/antiX_VM_Laptop"
-  export TRANSFER="/path/to/maildirpp-archive-export"
+  export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
   export DEST="/mail/Mailstore/evolution/local-maildir"
 
 
@@ -360,7 +556,7 @@ antiX:
 COPY COMMAND:
 
   cd "$HOME/antiX_VM_Laptop"
-  export TRANSFER="/path/to/maildirpp-archive-export"
+  export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
   export DEST="/mail/Mailstore/evolution/local-maildir"
   python3 src/maildirpp_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
   python3 src/maildirpp_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"

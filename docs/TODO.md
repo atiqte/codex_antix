@@ -4,7 +4,7 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
+- [ ] Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX.
 - [ ] On antiX, run `src/maildirpp_transport.py verify-archive --manifest <transfer-dir>/manifest.json`.
 - [ ] On antiX, restore into `/mail/Mailstore/evolution/local-maildir` with `src/maildirpp_transport.py unpack --manifest <transfer-dir>/manifest.json --dest /mail/Mailstore/evolution/local-maildir`.
 - [ ] On antiX, run `src/maildirpp_transport.py verify-tree --manifest <transfer-dir>/manifest.json --dest /mail/Mailstore/evolution/local-maildir`.
@@ -46,6 +46,7 @@
 - [x] Confirm Evolution mail services were stopped immediately before the Fedora pack run.
 - [x] Pack the converted Maildir++ archive to `/home/atiq/maildirpp-archive-export-20260701-215204`: 21 parts, 38G export, `pack_exit=0`.
 - [x] Verify the Fedora split archive with `verify-archive`: 21 parts, 40,613,836,495 archive bytes, `status=ok`.
+- [x] Add 64 GB USB/thumb-drive transfer workflow to the converted Maildir++ archive HTML and text guides.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
 - [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.

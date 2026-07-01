@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-01
 
+- Expanded the converted Maildir++ archive HTML and text guides with a 64 GB USB/thumb-drive transfer workflow from the verified Fedora export to `/mail/import-staging/maildirpp-archive-export-20260701-215204`, including Fedora USB verification and antiX staging verification commands.
 - Added `src/maildirpp_transport.py`, a standard-library transport utility for already-converted canonical Maildir++ archives with Maildir++ preflight, split archive verification, restore, and restored-tree validation.
 - Added standard-library unit tests for converted Maildir++ archive inspection, split archive round-trip, corruption detection, unsafe extraction, hash mismatch, and non-empty destination refusal.
 - Added `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html` and `.txt`, complete DIY guides for moving `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` to `/mail/Mailstore/evolution/local-maildir`.

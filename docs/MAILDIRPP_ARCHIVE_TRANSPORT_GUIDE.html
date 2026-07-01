@@ -168,6 +168,7 @@
       <a href="#paths">Source and Target</a>
       <a href="#files">Export Files</a>
       <a href="#fedora">Fedora Pack</a>
+      <a href="#usb">USB Transfer</a>
       <a href="#antix">antiX Restore</a>
       <a href="#evolution">Evolution Add</a>
       <a href="#troubleshooting">Troubleshooting</a>
@@ -192,6 +193,7 @@
         <table>
           <tr><th>Purpose</th><th>Path</th></tr>
           <tr><td>Fedora converted source</td><td><code>/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp</code></td></tr>
+          <tr><td>antiX transfer staging package</td><td><code>/mail/import-staging/maildirpp-archive-export-20260701-215204</code></td></tr>
           <tr><td>antiX final archive target</td><td><code>/mail/Mailstore/evolution/local-maildir</code></td></tr>
           <tr><td>Live mbsync tree to keep separate</td><td><code>/mail/Mailstore/mbsync/provider-live</code></td></tr>
         </table>
@@ -257,24 +259,177 @@ ls "$EXPORT"/maildirpp-archive.tar.gz.part*</code></pre></div>
         </div>
       </section>
 
-      <section id="antix">
-        <h2>5. antiX Restore Workflow</h2>
+      <section id="usb">
+        <h2>5. USB Transfer Workflow</h2>
+        <p>
+          Use this section after Fedora <code>pack</code> and Fedora <code>verify-archive</code> have passed for
+          <code>/home/atiq/maildirpp-archive-export-20260701-215204</code>. The verified export is about 38G
+          with 21 part files, so a 64 GB USB drive is suitable only when it has enough real free space.
+        </p>
+        <div class="callout warning">
+          Do not unpack from the USB drive. Copy the verified export to antiX staging, then run
+          <code>verify-archive</code> from the antiX staging folder.
+        </div>
         <div class="step">
-          <h3>Step 5.1 - Set paths</h3>
+          <h3>Step 5.1 - Copy verified Fedora export to USB</h3>
+          <p>Replace only <code>USB="/run/media/$USER/YOUR_USB_LABEL"</code> with the real mounted USB path.</p>
+          <div class="command"><div class="command-title"><span>Fedora USB copy</span><button class="copy" data-target="cmd-fedora-usb-copy">Copy</button></div><pre id="cmd-fedora-usb-copy"><code>set +e
+
+export RUN="$HOME/codex-runs"
+export SRC="/home/atiq/maildirpp-archive-export-20260701-215204"
+export USB="/run/media/$USER/YOUR_USB_LABEL"
+export USB_EXPORT="$USB/maildirpp-archive-export-20260701-215204"
+export USB_SCRIPTS="$USB/codex-runs"
+
+echo "===== FEDORA USB CHUNK 3A START ====="
+date
+
+echo "===== USB / SOURCE CHECK ====="
+echo "USB=$USB"
+echo "SRC=$SRC"
+ls -ld "$USB" "$SRC"
+df -h "$USB" "$SRC"
+du -sh "$SRC"
+
+echo "===== REQUIRED SOURCE FILES ====="
+test -f "$SRC/manifest.json"; echo "manifest_exit=$?"
+test -f "$SRC/inventory.jsonl"; echo "inventory_exit=$?"
+echo "part_count=$(find "$SRC" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+
+echo "===== COPY SCRIPTS TO USB ====="
+mkdir -p "$USB_SCRIPTS"
+cp -av "$RUN/maildirpp_transport.py" "$RUN/betterbird_profile_transport.py" "$USB_SCRIPTS/"
+sha256sum "$USB_SCRIPTS/maildirpp_transport.py" "$USB_SCRIPTS/betterbird_profile_transport.py"
+
+echo "===== COPY EXPORT TO USB ====="
+mkdir -p "$USB_EXPORT"
+
+if command -v rsync >/dev/null 2&gt;&amp;1; then
+  rsync -rt --info=progress2 "$SRC/" "$USB_EXPORT/"
+  COPY_EXIT=$?
+else
+  cp -av "$SRC/." "$USB_EXPORT/"
+  COPY_EXIT=$?
+fi
+
+echo "copy_exit=$COPY_EXIT"
+sync
+
+echo "===== USB COPY FILE CHECK ====="
+test -f "$USB_EXPORT/manifest.json"; echo "usb_manifest_exit=$?"
+test -f "$USB_EXPORT/inventory.jsonl"; echo "usb_inventory_exit=$?"
+echo "usb_part_count=$(find "$USB_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+du -sh "$USB_EXPORT"
+
+echo "===== VERIFY ARCHIVE ON USB ====="
+python3 "$USB_SCRIPTS/maildirpp_transport.py" verify-archive \
+  --manifest "$USB_EXPORT/manifest.json"
+echo "usb_verify_archive_exit=$?"
+
+echo "===== SYNC BEFORE UNPLUG ====="
+sync
+echo "If usb_verify_archive_exit=0, unmount/eject the USB safely before removing it."
+
+echo "===== FEDORA USB CHUNK 3A DONE ====="</code></pre></div>
+          <p>Expected: <code>copy_exit=0</code>, <code>usb_part_count=21</code>, <code>usb_verify_archive_exit=0</code>, and <code>status=ok</code>.</p>
+        </div>
+
+        <div class="step">
+          <h3>Step 5.2 - Copy USB export to antiX staging</h3>
+          <p>Replace only <code>USB="/media/$USER/YOUR_USB_LABEL"</code> with the real mounted USB path if different.</p>
+          <div class="command"><div class="command-title"><span>antiX USB staging copy</span><button class="copy" data-target="cmd-antix-usb-copy">Copy</button></div><pre id="cmd-antix-usb-copy"><code>set +e
+
+export USB="/media/$USER/YOUR_USB_LABEL"
+export USB_EXPORT="$USB/maildirpp-archive-export-20260701-215204"
+export USB_SCRIPTS="$USB/codex-runs"
+
+export RUN="$HOME/codex-runs"
+export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
+
+echo "===== ANTIX USB CHUNK 3B START ====="
+date
+
+echo "===== PATH CHECK ====="
+echo "USB=$USB"
+echo "USB_EXPORT=$USB_EXPORT"
+echo "TRANSFER=$TRANSFER"
+ls -ld "$USB" "$USB_EXPORT"
+df -h "$USB" /mail
+du -sh "$USB_EXPORT"
+
+echo "===== COPY SCRIPTS TO ANTIX ====="
+mkdir -p "$RUN"
+cp -av "$USB_SCRIPTS/maildirpp_transport.py" "$USB_SCRIPTS/betterbird_profile_transport.py" "$RUN/"
+sha256sum "$RUN/maildirpp_transport.py" "$RUN/betterbird_profile_transport.py"
+
+echo "===== VERIFY USB ARCHIVE BEFORE STAGING COPY ====="
+python3 "$RUN/maildirpp_transport.py" verify-archive \
+  --manifest "$USB_EXPORT/manifest.json"
+echo "usb_verify_archive_exit=$?"
+
+echo "===== PREPARE STAGING DESTINATION ====="
+mkdir -p /mail/import-staging
+
+if [ -e "$TRANSFER" ] &amp;&amp; [ "$(find "$TRANSFER" -mindepth 1 -maxdepth 1 -print -quit 2&gt;/dev/null)" ]; then
+  echo "ERROR: staging destination is not empty: $TRANSFER"
+  echo "Stop here. Do not merge over an existing transfer folder."
+  exit 50
+fi
+
+mkdir -p "$TRANSFER"
+
+echo "===== COPY USB EXPORT TO ANTIX STAGING ====="
+if command -v rsync >/dev/null 2&gt;&amp;1; then
+  rsync -rt --info=progress2 "$USB_EXPORT/" "$TRANSFER/"
+  COPY_EXIT=$?
+else
+  cp -av "$USB_EXPORT/." "$TRANSFER/"
+  COPY_EXIT=$?
+fi
+
+echo "copy_exit=$COPY_EXIT"
+sync
+
+echo "===== STAGING FILE CHECK ====="
+test -f "$TRANSFER/manifest.json"; echo "staging_manifest_exit=$?"
+test -f "$TRANSFER/inventory.jsonl"; echo "staging_inventory_exit=$?"
+echo "staging_part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+du -sh "$TRANSFER"
+
+echo "===== VERIFY ARCHIVE FROM ANTIX STAGING ====="
+python3 "$RUN/maildirpp_transport.py" verify-archive \
+  --manifest "$TRANSFER/manifest.json"
+echo "staging_verify_archive_exit=$?"
+
+echo "===== ANTIX USB CHUNK 3B DONE ====="</code></pre></div>
+          <p>Expected: <code>usb_verify_archive_exit=0</code>, <code>copy_exit=0</code>, <code>staging_part_count=21</code>, <code>staging_verify_archive_exit=0</code>, and <code>status=ok</code>.</p>
+        </div>
+
+        <div class="callout danger">
+          Do not unpack into <code>/mail/import-staging/maildirpp-archive-export-20260701-215204</code>.
+          That path is only the transfer package. The restore target remains
+          <code>/mail/Mailstore/evolution/local-maildir</code>.
+        </div>
+      </section>
+
+      <section id="antix">
+        <h2>6. antiX Restore Workflow</h2>
+        <div class="step">
+          <h3>Step 6.1 - Set paths</h3>
           <div class="command"><div class="command-title"><span>antiX variables</span><button class="copy" data-target="cmd-antix-vars">Copy</button></div><pre id="cmd-antix-vars"><code>export REPO="$HOME/antiX_VM_Laptop"
-export TRANSFER="/path/to/maildirpp-archive-export"
+export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
 export DEST="/mail/Mailstore/evolution/local-maildir"</code></pre></div>
         </div>
 
         <div class="step">
-          <h3>Step 5.2 - Verify archive parts</h3>
+          <h3>Step 6.2 - Verify archive parts</h3>
           <div class="command"><div class="command-title"><span>Verify archive</span><button class="copy" data-target="cmd-verify-archive">Copy</button></div><pre id="cmd-verify-archive"><code>cd "$REPO"
 python3 src/maildirpp_transport.py verify-archive \
   --manifest "$TRANSFER/manifest.json"</code></pre></div>
         </div>
 
         <div class="step">
-          <h3>Step 5.3 - Confirm destination is empty</h3>
+          <h3>Step 6.3 - Confirm destination is empty</h3>
           <div class="command"><div class="command-title"><span>Check destination</span><button class="copy" data-target="cmd-check-dest">Copy</button></div><pre id="cmd-check-dest"><code>if [ -e "$DEST" ]; then
   find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
 else
@@ -284,7 +439,7 @@ fi</code></pre></div>
         </div>
 
         <div class="step">
-          <h3>Step 5.4 - Unpack into antiX archive target</h3>
+          <h3>Step 6.4 - Unpack into antiX archive target</h3>
           <div class="command"><div class="command-title"><span>Unpack archive</span><button class="copy" data-target="cmd-unpack">Copy</button></div><pre id="cmd-unpack"><code>cd "$REPO"
 python3 src/maildirpp_transport.py unpack \
   --manifest "$TRANSFER/manifest.json" \
@@ -292,7 +447,7 @@ python3 src/maildirpp_transport.py unpack \
         </div>
 
         <div class="step">
-          <h3>Step 5.5 - Verify restored tree and layout</h3>
+          <h3>Step 6.5 - Verify restored tree and layout</h3>
           <div class="command"><div class="command-title"><span>Verify restored tree</span><button class="copy" data-target="cmd-verify-tree">Copy</button></div><pre id="cmd-verify-tree"><code>cd "$REPO"
 python3 src/maildirpp_transport.py verify-tree \
   --manifest "$TRANSFER/manifest.json" \
@@ -304,7 +459,7 @@ python3 src/maildirpp_transport.py inspect \
       </section>
 
       <section id="evolution">
-        <h2>6. Add to Evolution on antiX</h2>
+        <h2>7. Add to Evolution on antiX</h2>
         <ol>
           <li>Launch Evolution Flatpak with <code>~/.local/bin/evolution-flatpak-mail</code>.</li>
           <li>Add a new receiving account using exactly <strong>Maildir-format mail directories</strong>.</li>
@@ -315,7 +470,7 @@ python3 src/maildirpp_transport.py inspect \
       </section>
 
       <section id="troubleshooting">
-        <h2>7. Troubleshooting</h2>
+        <h2>8. Troubleshooting</h2>
         <table>
           <tr><th>Problem</th><th>Action</th></tr>
           <tr><td><code>tmp-files-present</code></td><td>Stop and inspect. A clean converted archive should have empty <code>tmp/</code> directories.</td></tr>
@@ -327,14 +482,14 @@ python3 src/maildirpp_transport.py inspect \
       </section>
 
       <section id="quick">
-        <h2>8. Quick Commands</h2>
+        <h2>9. Quick Commands</h2>
         <div class="command"><div class="command-title"><span>Fedora pack summary</span><button class="copy" data-target="cmd-quick-pack">Copy</button></div><pre id="cmd-quick-pack"><code>cd "$HOME/antiX_VM_Laptop"
 export SOURCE="/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp"
 export EXPORT="$HOME/maildirpp-archive-export-$(date +%Y%m%d-%H%M%S)"
 python3 src/maildirpp_transport.py inspect --source "$SOURCE"
 python3 src/maildirpp_transport.py pack --source "$SOURCE" --out "$EXPORT"</code></pre></div>
         <div class="command"><div class="command-title"><span>antiX restore summary</span><button class="copy" data-target="cmd-quick-restore">Copy</button></div><pre id="cmd-quick-restore"><code>cd "$HOME/antiX_VM_Laptop"
-export TRANSFER="/path/to/maildirpp-archive-export"
+export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
 export DEST="/mail/Mailstore/evolution/local-maildir"
 python3 src/maildirpp_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
 python3 src/maildirpp_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
