@@ -119,6 +119,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `src/maildirpp_transport.py` is the next transport path for the already-converted archive. It defaults to source `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp`, destination `/mail/Mailstore/evolution/local-maildir`, split gzip tar parts named `maildirpp-archive.tar.gz.partNNNN`, and Maildir++ layout checks before pack and after restore.
 - Fedora manual transport preflight on 2026-07-01 validated the copied scripts in `~/codex-runs` by SHA256, compile, help, and import-location checks. It also stopped Evolution mail services and inspected `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` successfully: 29 Maildir folders, 28 dot folders, 48,720 `cur`, 0 `new`, 0 `tmp`, no symlinks, no special files, and `status=ok`.
 - Fedora pack on 2026-07-01 succeeded using the manually copied transport script. It wrote `/home/atiq/maildirpp-archive-export-20260701-215204` with 21 `maildirpp-archive.tar.gz.partNNNN` files, `manifest.json`, and `inventory.jsonl`; export size was 38G, archive size was 40,613,836,495 bytes, archive SHA256 was `23292983c9ffb3590197a534aeddd03590a2b8d9f913732573fa1637b71045fe`, and `pack_exit=0`.
+- Fedora `verify-archive` on 2026-07-01 succeeded for `/home/atiq/maildirpp-archive-export-20260701-215204/manifest.json`: 21 parts, 40,613,836,495 archive bytes, `status=ok`, and `verify_archive_exit=0`.
 - The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
 - Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The validated setup creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `~/.icewm/personal` and `~/.icewm/toolbar` entries, adds a marked keyring startup block to `~/.icewm/startup`, and keeps wrapper-level keyring fallback.
@@ -145,7 +146,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next validation must run Fedora-side `verify-archive` against `/home/atiq/maildirpp-archive-export-20260701-215204/manifest.json`, then transfer the verified export to antiX, verify-archive, unpack, verify-tree, inspect, then add to Evolution as `Maildir-format mail directories`.
+- Next validation must transfer the verified export `/home/atiq/maildirpp-archive-export-20260701-215204` to antiX, then run antiX-side `verify-archive`, unpack, verify-tree, inspect, and add to Evolution as `Maildir-format mail directories`.
 
 ## Open Questions
 
@@ -159,16 +160,15 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 1. Review the setup and memory files.
 2. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-3. On Fedora, run `verify-archive` against `/home/atiq/maildirpp-archive-export-20260701-215204/manifest.json`.
-4. Transfer `manifest.json`, `inventory.jsonl`, and all `maildirpp-archive.tar.gz.partNNNN` files to antiX.
-5. On antiX, run `verify-archive`, unpack into `/mail/Mailstore/evolution/local-maildir`, run `verify-tree`, and run `inspect`.
-6. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
-7. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
-8. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
-9. Retain the split archive export until antiX Evolution validation is complete.
-10. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-11. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
-12. Decide broader project type and future packaging only if needed.
+3. Transfer `/home/atiq/maildirpp-archive-export-20260701-215204` from Fedora to antiX, preserving `manifest.json`, `inventory.jsonl`, and all 21 `maildirpp-archive.tar.gz.partNNNN` files.
+4. On antiX, run `verify-archive`, unpack into `/mail/Mailstore/evolution/local-maildir`, run `verify-tree`, and run `inspect`.
+5. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
+6. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
+7. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
+8. Retain the split archive export until antiX Evolution validation is complete.
+9. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+10. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
+11. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 
