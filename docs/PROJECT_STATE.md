@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Project Identity
 
@@ -28,8 +28,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/` project memory folder.
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for the full Fedora-to-antiX transport and conversion flow.
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
-- `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the already-converted Fedora Maildir++ archive to antiX, including the 64 GB USB transfer workflow for the verified export.
-- `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same converted Maildir++ archive guide and USB transfer workflow.
+- `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the already-converted Fedora Maildir++ archive to antiX, including the USB transfer workflow and Win11 host-share copy path for the verified export.
+- `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same converted Maildir++ archive guide, USB transfer workflow, and Win11 host-share copy path.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for installing and preparing Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
@@ -120,7 +120,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - Fedora manual transport preflight on 2026-07-01 validated the copied scripts in `~/codex-runs` by SHA256, compile, help, and import-location checks. It also stopped Evolution mail services and inspected `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` successfully: 29 Maildir folders, 28 dot folders, 48,720 `cur`, 0 `new`, 0 `tmp`, no symlinks, no special files, and `status=ok`.
 - Fedora pack on 2026-07-01 succeeded using the manually copied transport script. It wrote `/home/atiq/maildirpp-archive-export-20260701-215204` with 21 `maildirpp-archive.tar.gz.partNNNN` files, `manifest.json`, and `inventory.jsonl`; export size was 38G, archive size was 40,613,836,495 bytes, archive SHA256 was `23292983c9ffb3590197a534aeddd03590a2b8d9f913732573fa1637b71045fe`, and `pack_exit=0`.
 - Fedora `verify-archive` on 2026-07-01 succeeded for `/home/atiq/maildirpp-archive-export-20260701-215204/manifest.json`: 21 parts, 40,613,836,495 archive bytes, `status=ok`, and `verify_archive_exit=0`.
-- The Maildir++ archive guide now documents the USB transfer path for that verified export: copy the export and two transport scripts to a 64 GB USB drive, verify the archive on the USB, copy it to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX, then run antiX-side `verify-archive` before any unpack.
+- The Maildir++ archive guide now documents the transfer path for that verified export: run a Fedora preflight proving the USB and `/mnt/hgfs/Win11Host_Shared4VM` have enough real free space, copy the export and two transport scripts to USB, verify the archive on the USB, optionally copy and verify the same export in the Win11 host share, copy the USB package to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX, then run antiX-side `verify-archive` before any unpack. A 50 GB free USB drive is acceptable for the verified 38G split export if the byte-level preflight passes; it is not acceptable for the original uncompressed 59G Maildir++ tree.
 - The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
 - Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The validated setup creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `~/.icewm/personal` and `~/.icewm/toolbar` entries, adds a marked keyring startup block to `~/.icewm/startup`, and keeps wrapper-level keyring fallback.
@@ -147,7 +147,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next validation must transfer the verified export `/home/atiq/maildirpp-archive-export-20260701-215204` to antiX, then run antiX-side `verify-archive`, unpack, verify-tree, inspect, and add to Evolution as `Maildir-format mail directories`.
+- Next validation must transfer the verified export `/home/atiq/maildirpp-archive-export-20260701-215204` to antiX using the documented USB or Win11 host-share path, then run antiX-side `verify-archive`, unpack, verify-tree, inspect, and add to Evolution as `Maildir-format mail directories`.
 
 ## Open Questions
 
@@ -161,7 +161,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 1. Review the setup and memory files.
 2. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-3. Transfer `/home/atiq/maildirpp-archive-export-20260701-215204` from Fedora to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX, preserving `manifest.json`, `inventory.jsonl`, and all 21 `maildirpp-archive.tar.gz.partNNNN` files.
+3. Run the Fedora transfer preflight, then transfer `/home/atiq/maildirpp-archive-export-20260701-215204` from Fedora to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX by USB or Win11 host-share, preserving `manifest.json`, `inventory.jsonl`, and all 21 `maildirpp-archive.tar.gz.partNNNN` files.
 4. On antiX, run `verify-archive`, unpack into `/mail/Mailstore/evolution/local-maildir`, run `verify-tree`, and run `inspect`.
 5. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
 6. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.

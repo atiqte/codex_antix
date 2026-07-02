@@ -155,20 +155,100 @@ COPY COMMAND:
 Transfer the whole export folder to antiX. Keep all filenames unchanged.
 
 
-USB Transfer Workflow for Verified Export
-=========================================
+USB and Win11 Host-Share Transfer Workflow
+==========================================
 
 Use this section after Fedora pack and Fedora verify-archive have already
 passed for:
 
   /home/atiq/maildirpp-archive-export-20260701-215204
 
-The verified export is about 38G and contains 21 part files. A 64 GB USB drive
-is suitable only if it has enough real free space and can store 1.9 GB files.
-FAT32, exFAT, NTFS, ext4, and XFS are acceptable for these split parts.
+The verified export is about 38G and contains 21 part files. Its reconstructed
+archive stream is 40,613,836,495 bytes, plus small manifest.json and
+inventory.jsonl files.
+
+A flash drive with 50 GB free space is suitable for this verified export folder
+if the preflight space check passes. It is not suitable for the original
+uncompressed 59G Maildir++ tree. Copy only:
+
+  /home/atiq/maildirpp-archive-export-20260701-215204
+
+Do not copy:
+
+  /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp
+
+FAT32, exFAT, NTFS, ext4, and XFS are acceptable for these split parts because
+each part is below 2 GB.
 
 Do not unpack from the USB drive. Copy the verified export to antiX staging,
 then run verify-archive from the antiX staging folder.
+
+
+Fedora Transfer Preflight - Check USB and Win11 host share
+----------------------------------------------------------
+
+Replace only this value with the real mounted USB path:
+
+  USB="/run/media/$USER/YOUR_USB_LABEL"
+
+The Win11 host-share path is expected to be:
+
+  /mnt/hgfs/Win11Host_Shared4VM
+
+COPY COMMAND:
+
+  set +e
+
+  export RUN="$HOME/codex-runs"
+  export SRC="/home/atiq/maildirpp-archive-export-20260701-215204"
+  export USB="/run/media/$USER/YOUR_USB_LABEL"
+  export HOST="/mnt/hgfs/Win11Host_Shared4VM"
+  export NEED_MARGIN_BYTES=$((2 * 1024 * 1024 * 1024))
+
+  echo "===== FEDORA TRANSFER PREFLIGHT START ====="
+  date
+
+  echo "===== PATH CHECK ====="
+  ls -ld "$RUN" "$SRC" "$USB" "$HOST"
+  df -h "$SRC" "$USB" "$HOST"
+  du -sh "$SRC"
+
+  echo "===== EXPORT FILE CHECK ====="
+  test -f "$SRC/manifest.json"; echo "manifest_exit=$?"
+  test -f "$SRC/inventory.jsonl"; echo "inventory_exit=$?"
+  echo "part_count=$(find "$SRC" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+  ls -lh "$SRC"/maildirpp-archive.tar.gz.part0001 "$SRC"/maildirpp-archive.tar.gz.part0021
+
+  echo "===== BYTE SPACE CHECK ====="
+  src_bytes=$(du -sb "$SRC" | awk '{print $1}')
+  need_bytes=$((src_bytes + NEED_MARGIN_BYTES))
+
+  for dst in "$USB" "$HOST"; do
+    avail_bytes=$(df -PB1 "$dst" | awk 'NR==2 {print $4}')
+    echo "dst=$dst"
+    echo "src_bytes=$src_bytes"
+    echo "need_bytes_with_2GiB_margin=$need_bytes"
+    echo "avail_bytes=$avail_bytes"
+    if [ "$avail_bytes" -ge "$need_bytes" ]; then
+      echo "space_ok=yes"
+    else
+      echo "space_ok=no"
+    fi
+  done
+
+  echo "===== SCRIPT CHECK ====="
+  test -f "$RUN/maildirpp_transport.py"; echo "maildirpp_script_exit=$?"
+  python3 -m py_compile "$RUN/maildirpp_transport.py"; echo "compile_exit=$?"
+
+  echo "===== FEDORA TRANSFER PREFLIGHT DONE ====="
+
+Continue only if:
+
+  manifest_exit=0
+  inventory_exit=0
+  part_count=21
+  both destinations show space_ok=yes
+  compile_exit=0
 
 
 Fedora USB Step - Copy verified export to USB
@@ -188,31 +268,16 @@ COPY COMMAND:
   export USB_EXPORT="$USB/maildirpp-archive-export-20260701-215204"
   export USB_SCRIPTS="$USB/codex-runs"
 
-  echo "===== FEDORA USB CHUNK 3A START ====="
+  echo "===== FEDORA USB COPY START ====="
   date
 
-  echo "===== USB / SOURCE CHECK ====="
-  echo "USB=$USB"
-  echo "SRC=$SRC"
-  ls -ld "$USB" "$SRC"
-  df -h "$USB" "$SRC"
-  du -sh "$SRC"
+  mkdir -p "$USB_SCRIPTS" "$USB_EXPORT"
 
-  echo "===== REQUIRED SOURCE FILES ====="
-  test -f "$SRC/manifest.json"; echo "manifest_exit=$?"
-  test -f "$SRC/inventory.jsonl"; echo "inventory_exit=$?"
-  echo "part_count=$(find "$SRC" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
-
-  echo "===== COPY SCRIPTS TO USB ====="
-  mkdir -p "$USB_SCRIPTS"
   cp -av "$RUN/maildirpp_transport.py" "$RUN/betterbird_profile_transport.py" "$USB_SCRIPTS/"
   sha256sum "$USB_SCRIPTS/maildirpp_transport.py" "$USB_SCRIPTS/betterbird_profile_transport.py"
 
-  echo "===== COPY EXPORT TO USB ====="
-  mkdir -p "$USB_EXPORT"
-
   if command -v rsync >/dev/null 2>&1; then
-    rsync -rt --info=progress2 "$SRC/" "$USB_EXPORT/"
+    rsync -rt --partial --info=progress2 "$SRC/" "$USB_EXPORT/"
     COPY_EXIT=$?
   else
     cp -av "$SRC/." "$USB_EXPORT/"
@@ -237,7 +302,7 @@ COPY COMMAND:
   sync
   echo "If usb_verify_archive_exit=0, unmount/eject the USB safely before removing it."
 
-  echo "===== FEDORA USB CHUNK 3A DONE ====="
+  echo "===== FEDORA USB COPY DONE ====="
 
 Expected success:
 
@@ -246,6 +311,69 @@ Expected success:
   usb_inventory_exit=0
   usb_part_count=21
   usb_verify_archive_exit=0
+  mode=verify-archive
+  status=ok
+
+
+Fedora Win11 Host-Share Step - Copy verified export to VMware shared folder
+---------------------------------------------------------------------------
+
+This makes a Win11 host-side backup or alternate transfer package at:
+
+  /mnt/hgfs/Win11Host_Shared4VM/maildirpp-archive-export-20260701-215204
+
+COPY COMMAND:
+
+  set +e
+
+  export RUN="$HOME/codex-runs"
+  export SRC="/home/atiq/maildirpp-archive-export-20260701-215204"
+  export HOST="/mnt/hgfs/Win11Host_Shared4VM"
+  export HOST_EXPORT="$HOST/maildirpp-archive-export-20260701-215204"
+  export HOST_SCRIPTS="$HOST/codex-runs"
+
+  echo "===== FEDORA TO WIN11 HOST SHARE COPY START ====="
+  date
+
+  ls -ld "$HOST"
+  df -h "$HOST"
+
+  mkdir -p "$HOST_SCRIPTS" "$HOST_EXPORT"
+
+  cp -av "$RUN/maildirpp_transport.py" "$RUN/betterbird_profile_transport.py" "$HOST_SCRIPTS/"
+  sha256sum "$HOST_SCRIPTS/maildirpp_transport.py" "$HOST_SCRIPTS/betterbird_profile_transport.py"
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -rt --partial --info=progress2 "$SRC/" "$HOST_EXPORT/"
+    COPY_EXIT=$?
+  else
+    cp -av "$SRC/." "$HOST_EXPORT/"
+    COPY_EXIT=$?
+  fi
+  echo "copy_exit=$COPY_EXIT"
+
+  sync
+
+  echo "===== HOST SHARE FILE CHECK ====="
+  test -f "$HOST_EXPORT/manifest.json"; echo "host_manifest_exit=$?"
+  test -f "$HOST_EXPORT/inventory.jsonl"; echo "host_inventory_exit=$?"
+  echo "host_part_count=$(find "$HOST_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+  du -sh "$HOST_EXPORT"
+
+  echo "===== VERIFY HOST SHARE ARCHIVE ====="
+  python3 "$RUN/maildirpp_transport.py" verify-archive \
+    --manifest "$HOST_EXPORT/manifest.json"
+  echo "host_verify_archive_exit=$?"
+
+  echo "===== FEDORA TO WIN11 HOST SHARE COPY DONE ====="
+
+Expected success:
+
+  copy_exit=0
+  host_manifest_exit=0
+  host_inventory_exit=0
+  host_part_count=21
+  host_verify_archive_exit=0
   mode=verify-archive
   status=ok
 
@@ -268,7 +396,7 @@ COPY COMMAND:
   export RUN="$HOME/codex-runs"
   export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
 
-  echo "===== ANTIX USB CHUNK 3B START ====="
+  echo "===== ANTIX USB TO STAGING START ====="
   date
 
   echo "===== PATH CHECK ====="
@@ -302,7 +430,7 @@ COPY COMMAND:
 
   echo "===== COPY USB EXPORT TO ANTIX STAGING ====="
   if command -v rsync >/dev/null 2>&1; then
-    rsync -rt --info=progress2 "$USB_EXPORT/" "$TRANSFER/"
+    rsync -rt --partial --info=progress2 "$USB_EXPORT/" "$TRANSFER/"
     COPY_EXIT=$?
   else
     cp -av "$USB_EXPORT/." "$TRANSFER/"
@@ -323,7 +451,7 @@ COPY COMMAND:
     --manifest "$TRANSFER/manifest.json"
   echo "staging_verify_archive_exit=$?"
 
-  echo "===== ANTIX USB CHUNK 3B DONE ====="
+  echo "===== ANTIX USB TO STAGING DONE ====="
 
 Expected success:
 

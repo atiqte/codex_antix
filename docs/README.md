@@ -15,8 +15,8 @@ Betterbird mail migration utilities.
 
 - `BETTERBIRD_PROFILE_TRANSPORT_GUIDE.html`: offline browser guide with copy buttons for the Fedora-to-antiX profile transport and post-restore conversion flow.
 - `BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`: terminal-friendly plain text version of the same guide.
-- `MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`: offline browser guide with copy buttons for transporting the already-converted Fedora Maildir++ archive to antiX, including the verified USB transfer workflow.
-- `MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`: terminal-friendly plain text version of the converted Maildir++ archive transport and USB transfer guide.
+- `MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`: offline browser guide with copy buttons for transporting the already-converted Fedora Maildir++ archive to antiX, including the verified USB and Win11 host-share transfer workflow.
+- `MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`: terminal-friendly plain text version of the converted Maildir++ archive transport, USB transfer, and Win11 host-share copy guide.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.html`: offline browser guide with copy buttons for installing and validating Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the Evolution Flatpak guide.
 - `MBSYNC_ANTIX_GUIDE.html`: offline browser guide with copy buttons for the first deletion-safe mbsync INBOX test on antiX.

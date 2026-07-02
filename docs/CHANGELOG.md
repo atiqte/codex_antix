@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-02
+
+- Expanded the converted Maildir++ archive HTML and text guides with a 50 GB USB suitability preflight and a Fedora-to-Win11 VMware shared-folder copy path at `/mnt/hgfs/Win11Host_Shared4VM`.
+
 ## 2026-07-01
 
 - Expanded the converted Maildir++ archive HTML and text guides with a 64 GB USB/thumb-drive transfer workflow from the verified Fedora export to `/mail/import-staging/maildirpp-archive-export-20260701-215204`, including Fedora USB verification and antiX staging verification commands.

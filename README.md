@@ -11,7 +11,7 @@ No broader application type, framework, package manager, or deployment target ha
 - `AGENTS.md` defines rules for future Codex sessions.
 - `docs/WORK_VALIDATION_LEDGER.md` records topic-neutral command-chunk validation outcomes for future terminal-guided work.
 - Approved mail migration utilities live in `src/`.
-- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB transfer, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, and the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls.
+- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, and the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls.
 - AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration, the first mbsync INBOX test setup, and the validated production `provider-live`/Sent-upload workflow.
 - Windows 11 and Debian Linux portability is a project requirement.
 
