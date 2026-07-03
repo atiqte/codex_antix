@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-03
 
+- Added a host-share mount identity guard to the Maildir++ archive transfer guide so `/mnt/hgfs/Win11Host_Shared4VM` must resolve to an HGFS/FUSE VMware shared-folder mount before any Win11 host-share copy.
 - Hardened the Maildir++ archive transfer preflight with write-probe checks after the Fedora VMware host-share copy failed on `/mnt/hgfs/Win11Host_Shared4VM` due to `Permission denied`.
 
 ## 2026-07-02

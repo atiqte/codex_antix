@@ -295,6 +295,21 @@ ls -ld "$RUN" "$SRC" "$USB" "$HOST"
 df -h "$SRC" "$USB" "$HOST"
 du -sh "$SRC"
 
+echo "===== HOST SHARE MOUNT IDENTITY CHECK ====="
+findmnt -T "$HOST" -o TARGET,SOURCE,FSTYPE,OPTIONS 2&gt;/dev/null || true
+host_fstype=$(findmnt -T "$HOST" -n -o FSTYPE 2&gt;/dev/null | head -n 1)
+host_target=$(findmnt -T "$HOST" -n -o TARGET 2&gt;/dev/null | head -n 1)
+echo "host_target=$host_target"
+echo "host_fstype=$host_fstype"
+case "$host_fstype" in
+  fuse.vmhgfs-fuse|fuse.vmhgfs|vmhgfs|hgfs)
+    echo "host_share_mount_ok=yes"
+    ;;
+  *)
+    echo "host_share_mount_ok=no"
+    ;;
+esac
+
 echo "===== EXPORT FILE CHECK ====="
 test -f "$SRC/manifest.json"; echo "manifest_exit=$?"
 test -f "$SRC/inventory.jsonl"; echo "inventory_exit=$?"
@@ -333,7 +348,7 @@ test -f "$RUN/maildirpp_transport.py"; echo "maildirpp_script_exit=$?"
 python3 -m py_compile "$RUN/maildirpp_transport.py"; echo "compile_exit=$?"
 
 echo "===== FEDORA TRANSFER PREFLIGHT DONE ====="</code></pre></div>
-          <p>Continue only if <code>manifest_exit=0</code>, <code>inventory_exit=0</code>, <code>part_count=21</code>, both destinations show <code>space_ok=yes</code>, both destinations show <code>write_probe_exit=0</code> and <code>write_file_exit=0</code>, and <code>compile_exit=0</code>.</p>
+          <p>Continue with USB only if <code>manifest_exit=0</code>, <code>inventory_exit=0</code>, <code>part_count=21</code>, the USB shows <code>space_ok=yes</code>, <code>write_probe_exit=0</code>, and <code>write_file_exit=0</code>, and <code>compile_exit=0</code>. Continue with the Win11 host-share copy only if it also shows <code>host_share_mount_ok=yes</code>, <code>space_ok=yes</code>, <code>write_probe_exit=0</code>, and <code>write_file_exit=0</code>.</p>
         </div>
 
         <div class="step">
@@ -401,6 +416,19 @@ date
 
 ls -ld "$HOST"
 df -h "$HOST"
+findmnt -T "$HOST" -o TARGET,SOURCE,FSTYPE,OPTIONS 2&gt;/dev/null || true
+host_fstype=$(findmnt -T "$HOST" -n -o FSTYPE 2&gt;/dev/null | head -n 1)
+echo "host_fstype=$host_fstype"
+case "$host_fstype" in
+  fuse.vmhgfs-fuse|fuse.vmhgfs|vmhgfs|hgfs)
+    echo "host_share_mount_ok=yes"
+    ;;
+  *)
+    echo "ERROR: $HOST is not mounted as a VMware shared folder."
+    echo "Stop here. Do not copy the export into Fedora root filesystem by mistake."
+    exit 60
+    ;;
+esac
 
 mkdir -p "$HOST_SCRIPTS" "$HOST_EXPORT"
 
