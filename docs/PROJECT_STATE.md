@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
 ## Project Identity
 
@@ -120,7 +120,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - Fedora manual transport preflight on 2026-07-01 validated the copied scripts in `~/codex-runs` by SHA256, compile, help, and import-location checks. It also stopped Evolution mail services and inspected `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp` successfully: 29 Maildir folders, 28 dot folders, 48,720 `cur`, 0 `new`, 0 `tmp`, no symlinks, no special files, and `status=ok`.
 - Fedora pack on 2026-07-01 succeeded using the manually copied transport script. It wrote `/home/atiq/maildirpp-archive-export-20260701-215204` with 21 `maildirpp-archive.tar.gz.partNNNN` files, `manifest.json`, and `inventory.jsonl`; export size was 38G, archive size was 40,613,836,495 bytes, archive SHA256 was `23292983c9ffb3590197a534aeddd03590a2b8d9f913732573fa1637b71045fe`, and `pack_exit=0`.
 - Fedora `verify-archive` on 2026-07-01 succeeded for `/home/atiq/maildirpp-archive-export-20260701-215204/manifest.json`: 21 parts, 40,613,836,495 archive bytes, `status=ok`, and `verify_archive_exit=0`.
-- The Maildir++ archive guide now documents the transfer path for that verified export: run a Fedora preflight proving the USB and `/mnt/hgfs/Win11Host_Shared4VM` have enough real free space, copy the export and two transport scripts to USB, verify the archive on the USB, optionally copy and verify the same export in the Win11 host share, copy the USB package to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX, then run antiX-side `verify-archive` before any unpack. A 50 GB free USB drive is acceptable for the verified 38G split export if the byte-level preflight passes; it is not acceptable for the original uncompressed 59G Maildir++ tree.
+- The Maildir++ archive guide now documents the transfer path for that verified export: run a Fedora preflight proving the USB and `/mnt/hgfs/Win11Host_Shared4VM` have enough real free space and actual write permission, copy the export and two transport scripts to USB, verify the archive on the USB, optionally copy and verify the same export in the Win11 host share, copy the USB package to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX, then run antiX-side `verify-archive` before any unpack. A 50 GB free USB drive is acceptable for the verified 38G split export if the byte-level preflight and write probes pass; it is not acceptable for the original uncompressed 59G Maildir++ tree.
 - The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
 - Evolution Flatpak desktop launching should use `scripts/evolution_flatpak_icewm_launcher_setup.sh` on antiX. The validated setup creates `~/.local/bin/evolution-flatpak-mail`, adds marked IceWM `~/.icewm/personal` and `~/.icewm/toolbar` entries, adds a marked keyring startup block to `~/.icewm/startup`, and keeps wrapper-level keyring fallback.

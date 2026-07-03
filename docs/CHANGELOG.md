@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-03
+
+- Hardened the Maildir++ archive transfer preflight with write-probe checks after the Fedora VMware host-share copy failed on `/mnt/hgfs/Win11Host_Shared4VM` due to `Permission denied`.
+
 ## 2026-07-02
 
 - Expanded the converted Maildir++ archive HTML and text guides with a 50 GB USB suitability preflight and a Fedora-to-Win11 VMware shared-folder copy path at `/mnt/hgfs/Win11Host_Shared4VM`.

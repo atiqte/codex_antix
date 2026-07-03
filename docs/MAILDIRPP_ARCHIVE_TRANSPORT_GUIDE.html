@@ -316,6 +316,16 @@ for dst in "$USB" "$HOST"; do
   else
     echo "space_ok=no"
   fi
+  probe_dir="$dst/.codex-write-test-$(date +%Y%m%d%H%M%S)-$$"
+  mkdir "$probe_dir" 2&gt;/dev/null
+  write_probe_exit=$?
+  echo "write_probe_exit=$write_probe_exit"
+  if [ "$write_probe_exit" -eq 0 ]; then
+    printf 'ok\n' &gt; "$probe_dir/probe.txt"
+    echo "write_file_exit=$?"
+    rm -f "$probe_dir/probe.txt"
+    rmdir "$probe_dir"
+  fi
 done
 
 echo "===== SCRIPT CHECK ====="
@@ -323,7 +333,7 @@ test -f "$RUN/maildirpp_transport.py"; echo "maildirpp_script_exit=$?"
 python3 -m py_compile "$RUN/maildirpp_transport.py"; echo "compile_exit=$?"
 
 echo "===== FEDORA TRANSFER PREFLIGHT DONE ====="</code></pre></div>
-          <p>Continue only if <code>manifest_exit=0</code>, <code>inventory_exit=0</code>, <code>part_count=21</code>, both destinations show <code>space_ok=yes</code>, and <code>compile_exit=0</code>.</p>
+          <p>Continue only if <code>manifest_exit=0</code>, <code>inventory_exit=0</code>, <code>part_count=21</code>, both destinations show <code>space_ok=yes</code>, both destinations show <code>write_probe_exit=0</code> and <code>write_file_exit=0</code>, and <code>compile_exit=0</code>.</p>
         </div>
 
         <div class="step">
