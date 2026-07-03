@@ -48,6 +48,7 @@
 - [x] Verify the Fedora split archive with `verify-archive`: 21 parts, 40,613,836,495 archive bytes, `status=ok`.
 - [x] Add 64 GB USB/thumb-drive transfer workflow to the converted Maildir++ archive HTML and text guides.
 - [x] Add 50 GB USB suitability preflight and `/mnt/hgfs/Win11Host_Shared4VM` host-share copy workflow to the converted Maildir++ archive guides.
+- [x] Copy the verified Maildir++ split archive export to `/mnt/hgfs/Win11Host_Shared4VM` and verify the host-share copy with `verify-archive`.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
 - [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.
