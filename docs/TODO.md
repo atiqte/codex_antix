@@ -90,3 +90,4 @@
 - [x] Validate the restored Betterbird delta Maildir++ archive in antiX Evolution.
 - [x] Create Betterbird delta Maildir++ transfer DIY guide in HTML and plain text formats.
 - [x] Revise the Betterbird delta Maildir++ transfer guides to start from `Batch 1: Fedora VM Terminal` and include the missing early audit, staging, dry-run, copy, and hash-verify batches.
+- [x] Fix Betterbird delta Maildir++ HTML guide code-block CSS so command text is visible in Brave/Chromium.

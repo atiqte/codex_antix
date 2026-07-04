@@ -59,7 +59,7 @@
       margin-bottom: 18px;
     }
     h2, h3 { line-height: 1.25; margin-top: 0; }
-    code { background: #eef2f7; padding: 2px 5px; border-radius: 4px; }
+    code { background: #eef2f7; color: var(--ink); padding: 2px 5px; border-radius: 4px; }
     pre {
       background: var(--code-bg);
       color: var(--code-ink);
@@ -68,6 +68,16 @@
       padding: 14px;
       margin: 0;
       white-space: pre;
+    }
+    pre code {
+      display: block;
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-family: Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.45;
     }
     .codebox { position: relative; margin: 12px 0 18px; }
     button.copy {

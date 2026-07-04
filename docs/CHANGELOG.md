@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-04
 
+- Fixed the Betterbird delta Maildir++ HTML guide code-block CSS so command text is visible in Brave/Chromium instead of inheriting the pale inline-code background.
 - Revised the Betterbird delta Maildir++ HTML and text guides so the operator workflow starts at `Batch 1: Fedora VM Terminal` with read-only source/target audit, then covers mail-process shutdown, delta staging, converter dry-run, copy/hash verification, and the validated transfer phases.
 - Added `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.html` and `.txt`, complete DIY guides for the validated 248-message Betterbird delta Maildir++ transfer from Fedora to antiX Evolution.
 - Recorded the validated Betterbird delta workflow: Fedora conversion and Evolution validation, Fedora pack/verify, HGFS host-share verification, Google Drive ZIP transfer to antiX, antiX staging/restore/verify/inspect, Flatpak visibility, and final antiX Evolution GUI validation.
