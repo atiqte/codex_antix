@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-04
 
+- Added `src/betterbird_post_archive_delta.py`, a dynamic post-main-archive Betterbird delta helper that selects all current source messages absent from the main 48,720-message archive baseline instead of using a fixed 248-message count.
+- Reworked the Betterbird delta Maildir++ HTML and text guides into a RUN_ID-based "Post-Main-Archive Aggregate Delta" workflow with separate copy buttons per batch and dynamic success checks.
 - Split the Betterbird delta Maildir++ HTML guide `Start Here` section so Batch 1 through Batch 5 each have their own copy button that copies only that batch's shell commands.
 - Fixed the Betterbird delta Maildir++ HTML guide code-block CSS so command text is visible in Brave/Chromium instead of inheriting the pale inline-code background.
 - Revised the Betterbird delta Maildir++ HTML and text guides so the operator workflow starts at `Batch 1: Fedora VM Terminal` with read-only source/target audit, then covers mail-process shutdown, delta staging, converter dry-run, copy/hash verification, and the validated transfer phases.

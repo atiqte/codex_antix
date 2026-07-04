@@ -11,7 +11,7 @@ No broader application type, framework, package manager, or deployment target ha
 - `AGENTS.md` defines rules for future Codex sessions.
 - `docs/WORK_VALIDATION_LEDGER.md` records topic-neutral command-chunk validation outcomes for future terminal-guided work.
 - Approved mail migration utilities live in `src/`.
-- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the separate Betterbird delta Maildir++ transfer to antiX Evolution, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, and the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls.
+- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, and the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls.
 - AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration, the first mbsync INBOX test setup, and the validated production `provider-live`/Sent-upload workflow.
 - Windows 11 and Debian Linux portability is a project requirement.
 
@@ -56,7 +56,7 @@ Before doing project work, read these files:
 └── tests/
 ```
 
-`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, and maildir-lite conversion utilities. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, and the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, stale-lock recovery, and stale loop PID protection. Broader application work should remain undecided until the project type is explicitly chosen.
+`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, maildir-lite conversion, and dynamic post-main-archive delta utilities. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, and the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, stale-lock recovery, and stale loop PID protection. Broader application work should remain undecided until the project type is explicitly chosen.
 
 ## Development Policy
 

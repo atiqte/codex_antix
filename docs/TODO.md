@@ -6,6 +6,9 @@
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
+- [ ] Copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs` and run the updated dynamic Batch 1 audit against the live Betterbird source.
+- [ ] If the dynamic audit is sane, stage and convert a new RUN_ID-specific post-main-archive aggregate delta, then validate it in Evolution.
+- [ ] After validating a newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Decide broader project type beyond the approved mail migration utility.
@@ -92,3 +95,6 @@
 - [x] Revise the Betterbird delta Maildir++ transfer guides to start from `Batch 1: Fedora VM Terminal` and include the missing early audit, staging, dry-run, copy, and hash-verify batches.
 - [x] Fix Betterbird delta Maildir++ HTML guide code-block CSS so command text is visible in Brave/Chromium.
 - [x] Split the Betterbird delta Maildir++ HTML guide `Start Here` section into separate Batch 1 through Batch 5 command copy buttons.
+- [x] Implement Python standard-library dynamic post-main-archive Betterbird aggregate delta helper.
+- [x] Add unit tests for dynamic post-main-archive delta selection, fallback matching, large-delta refusal, and staging safety.
+- [x] Replace the fixed 248-message Betterbird delta guide with a dynamic RUN_ID-based aggregate delta workflow.

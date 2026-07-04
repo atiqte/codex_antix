@@ -6,7 +6,7 @@ Last updated: 2026-07-04
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive and delta Maildir++ transfer paths, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -14,7 +14,7 @@ Last updated: 2026-07-04
 
 Planning/setup with approved local mail migration utility implementations.
 
-The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, and transporting the already-converted Maildir++ archive from Fedora to antiX, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. Other application direction remains undecided.
+The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, transporting the already-converted Maildir++ archive from Fedora to antiX, and selecting/staging post-main-archive Betterbird aggregate deltas, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. Other application direction remains undecided.
 
 ## Current Objective
 
@@ -30,8 +30,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
 - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the already-converted Fedora Maildir++ archive to antiX, including the USB transfer workflow, Win11 host-share copy path for the verified export, and the validated all-in-one antiX restore/verify/inspect chunk.
 - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same converted Maildir++ archive guide, USB transfer workflow, Win11 host-share copy path, and validated all-in-one antiX restore/verify/inspect chunk.
-- `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the separate 248-message Betterbird delta Maildir++ archive from Fedora to antiX Evolution. It now starts with Batch 1 from the Fedora Betterbird source audit before the pack/transfer/restore phases.
-- `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.txt`, a terminal-friendly plain text version of the same Betterbird delta Maildir++ transfer guide, including Batch 1 read-only audit, Batch 2 mail-process shutdown, Batch 3 delta staging, Batch 4 dry-run, Batch 5 copy/hash verification, and the validated later transfer phases.
+- `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.html`, an offline browser DIY guide with separate copy buttons for the dynamic post-main-archive Betterbird aggregate delta workflow from Fedora to antiX Evolution.
+- `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.txt`, a terminal-friendly plain text version of the same dynamic post-main-archive aggregate delta workflow, including audit, mail-process shutdown, staging, converter dry-run, copy/hash verification, pack/verify, transfer, antiX restore, and Evolution GUI validation.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for installing and preparing Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
@@ -43,9 +43,11 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `src/betterbird_profile_transport.py`, a Python standard-library tool to pack, split, verify, unpack, and verify a whole Betterbird profile tree for transfer.
 - `src/maildirpp_transport.py`, a Python standard-library tool to inspect, pack, split, verify, unpack, and verify an already-converted canonical Maildir++ archive.
 - `src/betterbird_maildirlite_to_maildirpp.py`, a dry-run-first Python converter for staged Betterbird maildir-lite profiles.
+- `src/betterbird_post_archive_delta.py`, a Python standard-library helper that audits and stages all current Betterbird source messages absent from the main converted archive baseline.
 - `tests/test_betterbird_profile_transport.py`, standard-library tests for split archive transport safety.
 - `tests/test_maildirpp_transport.py`, standard-library tests for converted Maildir++ transport safety.
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`, standard-library tests for folder mapping and portable validation.
+- `tests/test_betterbird_post_archive_delta.py`, standard-library tests for dynamic post-main-archive delta selection, fallback matching, and staging safety.
 - `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for adding Evolution Flatpak to IceWM menu/taskbar launch surfaces and starting `gnome-keyring-daemon`.
 - `scripts/mbsync_provider_inbox_setup.sh`, an antiX helper for inspecting package/layout state, installing isync/mbsync, creating the isolated `/mail` mbsync test layout, writing a pull-only INBOX config, production `provider-live` layout/config/status, Sent-only upload channel setup, and provider-live auto-sync loop/startup setup with log retention, timeout wrapping, stale-lock proofing, and stale loop PID protection.
 
@@ -101,11 +103,13 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `src/betterbird_profile_transport.py`
 - `src/maildirpp_transport.py`
 - `src/betterbird_maildirlite_to_maildirpp.py`
+- `src/betterbird_post_archive_delta.py`
 - `scripts/evolution_flatpak_icewm_launcher_setup.sh`
 - `scripts/mbsync_provider_inbox_setup.sh`
 - `tests/test_betterbird_profile_transport.py`
 - `tests/test_maildirpp_transport.py`
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`
+- `tests/test_betterbird_post_archive_delta.py`
 
 ## Current Implementation Notes
 
@@ -142,9 +146,13 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The antiX delta package was extracted to `/mail/import-staging/maildirpp-delta-export-20260704-151448` and verified with `verify-archive` before unpack. It was restored to `/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704`; `unpack`, `verify-tree`, `inspect`, independent counts, and Evolution Flatpak visibility all succeeded with 248 `cur`, 0 `new`, 0 `tmp`, and folder counts Inbox 241, Sent 4, Local_Folders.November2025 2, Trash 1.
 - The owner validated the restored antiX delta target in Evolution as a separate `Maildir-format mail directories` account: Inbox 241, Sent 4, November2025 2, Trash 1, messages opened, HTML rendered, attachments were visible, and no error popup appeared.
 - The Betterbird delta archive must remain separate from `/mail/Mailstore/evolution/local-maildir` and `/mail/Mailstore/mbsync/provider-live` unless a later merge is explicitly planned, backed up, and tested.
-- The Betterbird delta Maildir++ guide was revised after owner review so it no longer starts at pack/transfer. It now begins at `Batch 1: Fedora VM Terminal - read-only incremental audit` and includes the missing early batches needed to go from Betterbird source to the separate Fedora delta Maildir++ target before transfer to antiX.
+- `src/betterbird_post_archive_delta.py` is the current future-facing delta helper. It uses `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp/.conversion-state.sqlite` as the baseline for the original main archive/export `maildirpp-archive-export-20260701-215204`, expects 48,720 copied baseline rows by default, and never uses email `Date:` headers as the cutoff.
+- The dynamic post-main-archive helper selects every current Betterbird source file absent from the main baseline, whether the current count is 249, 500, or another later value. It first excludes exact `(source_path, size, mtime_ns)` matches, then relative-path matches when the source root changed, then SHA256 matches to avoid falsely selecting old mail after path or mtime changes.
+- The dynamic helper stages selected mail under `/home/atiq/Evolution-Mailstore/post-main-archive-work/RUN_ID/staging-betterbird-maildir`, plans converter targets as `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-RUN_ID`, refuses to overwrite existing staging/target directories, refuses missing baseline state, reports `status=no_post_archive_mail` when there is no delta, and blocks over 10,000 selected messages unless explicitly overridden.
+- The previous 248-message delta remains validated historical data. Future post-main-archive aggregate runs supersede older post-main-archive delta Evolution accounts after the newer aggregate is validated. Disable or remove the older 248-message delta account in Evolution UI to avoid duplicate search results; do not delete old delta files until backup and cleanup are explicitly planned.
+- The Betterbird delta Maildir++ guide now documents the dynamic "Post-Main-Archive Aggregate Delta" workflow. It begins with a RUN_ID-based Fedora audit, then mail-process shutdown, staging, converter dry-run, copy/hash verification, pack/verify, optional Google Drive ZIP, antiX staging, antiX restore/inspect, and Evolution GUI validation.
 - The Betterbird delta Maildir++ HTML guide CSS was corrected after screenshot review so `pre code` command blocks no longer inherit the pale inline-code background. Brave rendering validation confirmed command text is visible on the dark code block and inline code still uses the pale style.
-- The Betterbird delta Maildir++ HTML guide `Start Here` section now renders Batch 1 through Batch 5 as separate command blocks with `Copy Batch 1` through `Copy Batch 5` buttons. Each button copies only the command text inside that batch's shell block, not headings, explanations, or fenced-code markers.
+- The Betterbird delta Maildir++ HTML guide `Start Here` section now renders Batch 1 through Batch 9 as separate command blocks with `Copy Batch 1` through `Copy Batch 9` buttons. Each button copies only the command text inside that batch's shell block, not headings, explanations, or fenced-code markers.
 - The Maildir++ archive guide now uses the validated antiX restore chunk based on `~/codex-runs/maildirpp_transport.py` instead of fragmented repo-relative restore examples. This prevents the earlier variable-only no-op pattern and keeps pre-unpack archive verification, destination-empty refusal, unpack, `verify-tree`, and final `inspect` in one logged operation.
 - The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
@@ -172,7 +180,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next validation must add `/mail/Mailstore/evolution/local-maildir` to Evolution as `Maildir-format mail directories`, then validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, message opening, HTML rendering, and absence of error popups.
+- Next dynamic delta validation must copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs`, run the guide's Batch 1 audit against the live Betterbird source, confirm the selected count, then stage and convert the RUN_ID-specific aggregate only if the audit output is sane.
 
 ## Open Questions
 
@@ -192,10 +200,12 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 6. Keep a note that the restored archive is a local read/archive account and must not be merged into `/mail/Mailstore/mbsync/provider-live`.
 7. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
 8. Retain the main 38G split archive export until antiX Evolution validation is complete.
-9. Keep the delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-10. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-11. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
-12. Decide broader project type and future packaging only if needed.
+9. Copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs`, then run the updated guide's Batch 1 dynamic audit against the live Betterbird source.
+10. If the dynamic audit is sane, stage and convert a new RUN_ID-specific post-main-archive aggregate delta; after Evolution validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
+11. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+12. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+13. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
+14. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

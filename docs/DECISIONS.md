@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-04: Use Dynamic Post-Main-Archive Aggregate Delta for Future Betterbird Runs
+
+- Status: accepted
+- Context: The earlier 248-message delta guard became stale after new mail arrived; a later Fedora audit reported 249 post-main-archive candidates. The owner wants future runs to include every Betterbird source message absent from the original main archive/export, even if the commands are run days later. Email `Date:` headers are not reliable enough for this baseline because headers can be wrong, missing, duplicated, or timezone-shifted.
+- Decision: Use `src/betterbird_post_archive_delta.py` for future delta work. The baseline is `/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp/.conversion-state.sqlite`, corresponding to `maildirpp-archive-export-20260701-215204`, with 48,720 copied rows expected by default. Each run creates a timestamped RUN_ID aggregate snapshot, stages selected files under `post-main-archive-work/RUN_ID`, and converts to `betterbird-post-main-archive-maildirpp-RUN_ID`. Selection excludes baseline messages by exact source path/size/mtime, then relative path/size/mtime, then SHA256 fallback.
+- Consequence: Future aggregate runs are not tied to a fixed count such as 248. A newer aggregate supersedes older post-main-archive delta accounts after validation, so older delta accounts should be disabled or removed from Evolution UI to avoid duplicate search results. Old delta files should not be deleted until backup and cleanup are explicitly planned.
+
 ### 2026-07-04: Keep Betterbird Post-Conversion Delta as a Separate Maildir++ Archive
 
 - Status: accepted

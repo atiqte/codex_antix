@@ -3,315 +3,95 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Betterbird Delta Maildir++ Transfer Guide</title>
+  <title>Betterbird Post-Main-Archive Aggregate Delta Guide</title>
   <style>
-    :root {
-      --bg: #f6f8fb;
-      --panel: #ffffff;
-      --ink: #172033;
-      --muted: #536274;
-      --line: #d8e0ea;
-      --accent: #155f9b;
-      --code-bg: #101827;
-      --code-ink: #eef5ff;
-      --warn-bg: #fff7e6;
-      --ok-bg: #ecf8f1;
-    }
+    :root { --bg:#f6f8fb; --panel:#fff; --ink:#172033; --muted:#536274; --line:#d8e0ea; --accent:#155f9b; --code-bg:#101827; --code-ink:#eef5ff; --warn-bg:#fff7e6; --ok-bg:#ecf8f1; }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--ink);
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.55;
-    }
-    header {
-      background: var(--panel);
-      border-bottom: 1px solid var(--line);
-      padding: 28px 24px;
-    }
-    h1 { max-width: 1120px; margin: 0 auto 8px; font-size: 32px; line-height: 1.2; }
-    .subtitle { max-width: 1120px; margin: 0 auto; color: var(--muted); }
-    main {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 24px;
-      display: grid;
-      grid-template-columns: 260px minmax(0, 1fr);
-      gap: 22px;
-    }
-    nav {
-      position: sticky;
-      top: 16px;
-      align-self: start;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    nav h2 { font-size: 15px; margin: 0 0 10px; }
-    nav a { display: block; color: var(--accent); text-decoration: none; padding: 5px 0; font-size: 14px; }
-    section {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 22px;
-      margin-bottom: 18px;
-    }
-    h2, h3 { line-height: 1.25; margin-top: 0; }
-    code { background: #eef2f7; color: var(--ink); padding: 2px 5px; border-radius: 4px; }
-    pre {
-      background: var(--code-bg);
-      color: var(--code-ink);
-      border-radius: 8px;
-      overflow-x: auto;
-      padding: 14px;
-      margin: 0;
-      white-space: pre;
-    }
-    pre code {
-      display: block;
-      background: transparent;
-      color: inherit;
-      padding: 0;
-      border-radius: 0;
-      font-family: Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 13px;
-      line-height: 1.45;
-    }
-    .codebox { position: relative; margin: 12px 0 18px; }
-    button.copy {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      border: 1px solid #35506f;
-      background: #1f3654;
-      color: white;
-      border-radius: 6px;
-      padding: 5px 9px;
-      cursor: pointer;
-    }
-    .callout { border-left: 5px solid var(--accent); background: #eef6ff; padding: 12px 14px; margin: 12px 0; }
-    .warn { border-left-color: #b26b00; background: var(--warn-bg); }
-    .ok { border-left-color: #16834b; background: var(--ok-bg); }
-    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-    th, td { border: 1px solid var(--line); padding: 8px; text-align: left; }
-    th { background: #eef2f7; }
-    @media (max-width: 840px) {
-      main { display: block; padding: 16px; }
-      nav { position: static; margin-bottom: 18px; }
-    }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Arial, Helvetica, sans-serif; line-height:1.55; }
+    header { background:var(--panel); border-bottom:1px solid var(--line); padding:28px 24px; }
+    h1 { max-width:1120px; margin:0 auto 8px; font-size:32px; line-height:1.2; }
+    .subtitle { max-width:1120px; margin:0 auto; color:var(--muted); }
+    main { max-width:1120px; margin:0 auto; padding:24px; display:grid; grid-template-columns:260px minmax(0,1fr); gap:22px; }
+    nav { position:sticky; top:16px; align-self:start; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
+    nav h2 { font-size:15px; margin:0 0 10px; }
+    nav a { display:block; color:var(--accent); text-decoration:none; padding:5px 0; font-size:14px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:22px; margin-bottom:18px; }
+    h2, h3 { line-height:1.25; margin-top:0; }
+    code { background:#eef2f7; color:var(--ink); padding:2px 5px; border-radius:4px; }
+    pre { background:var(--code-bg); color:var(--code-ink); border-radius:8px; overflow-x:auto; padding:14px; margin:0; white-space:pre; }
+    pre code { display:block; background:transparent; color:inherit; padding:0; border-radius:0; font-family:Consolas,"Liberation Mono",Menlo,monospace; font-size:13px; line-height:1.45; }
+    .codebox { position:relative; margin:12px 0 18px; }
+    button.copy { position:absolute; top:8px; right:8px; border:1px solid #35506f; background:#1f3654; color:#fff; border-radius:6px; padding:5px 9px; cursor:pointer; }
+    .callout { border-left:5px solid var(--accent); background:#eef6ff; padding:12px 14px; margin:12px 0; }
+    .warn { border-left-color:#b26b00; background:var(--warn-bg); }
+    .ok { border-left-color:#16834b; background:var(--ok-bg); }
+    @media (max-width:840px) { main { display:block; padding:16px; } nav { position:static; margin-bottom:18px; } }
   </style>
 </head>
 <body>
   <header>
-    <h1>Betterbird Delta Maildir++ Transfer Guide</h1>
-    <p class="subtitle">Validated workflow for moving the 248-message Betterbird delta archive from Fedora to antiX Evolution.</p>
+    <h1>Betterbird Post-Main-Archive Aggregate Delta Guide</h1>
+    <p class="subtitle">Dynamic workflow for every Betterbird message absent from the main 20260701 converted Maildir++ archive.</p>
   </header>
   <main>
     <nav>
       <h2>Contents</h2>
       <a href="#purpose">Purpose</a>
-      <a href="#validated">Validated Result</a>
+      <a href="#baseline">Baseline Model</a>
       <a href="#safety">Safety Rules</a>
-      <a href="#start-here">Start Here: Batch 1</a>
-      <a href="#fedora-pack">Fedora Pack</a>
-      <a href="#usb">USB Transfer</a>
-      <a href="#hgfs">HGFS Transfer</a>
-      <a href="#zip">Google Drive ZIP</a>
-      <a href="#antix-stage">antiX Staging</a>
-      <a href="#antix-restore">antiX Restore</a>
-      <a href="#evolution">Evolution GUI</a>
-      <a href="#cleanup">Cleanup Notes</a>
+      <a href="#prerequisites">Prerequisites</a>
+      <a href="#start-here">Start Here</a>
+      <a href="#evolution">Evolution Handling</a>
+      <a href="#acceptance">Acceptance Checks</a>
     </nav>
     <div>
       <section id="purpose">
         <h2>Purpose</h2>
-        <p>This guide documents the validated delta workflow for messages that arrived in Betterbird after the first full Betterbird maildir-lite to Maildir++ conversion.</p>
-        <p>It moves the verified 248-message Fedora delta Maildir++ archive to antiX as a separate Evolution Maildir account.</p>
-        <div class="callout warn">Do not merge this delta into the old 59G archive or into the mbsync live tree during this workflow.</div>
+        <p>This guide replaces the old fixed-count Betterbird delta flow with a dynamic post-main-archive aggregate delta. Each run selects every Betterbird source message absent from the main converted archive baseline, even if the command is run days later.</p>
       </section>
-
-      <section id="validated">
-        <h2>Validated Result</h2>
-        <table>
-          <tr><th>Item</th><th>Value</th></tr>
-          <tr><td>Fedora delta source</td><td><code>/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704</code></td></tr>
-          <tr><td>antiX final destination</td><td><code>/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704</code></td></tr>
-          <tr><td>Inbox</td><td>241</td></tr>
-          <tr><td>Sent</td><td>4</td></tr>
-          <tr><td>November2025</td><td>2</td></tr>
-          <tr><td>Trash</td><td>1</td></tr>
-          <tr><td>Total cur/new/tmp</td><td>248 / 0 / 0</td></tr>
-        </table>
-        <div class="callout ok">antiX Evolution validation passed: messages open, HTML renders, attachments are visible, and no error popup appears.</div>
+      <section id="baseline">
+        <h2>Baseline Model</h2>
+        <p>The baseline is the original converter state database at /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp/.conversion-state.sqlite. That state corresponds to the main archive export maildirpp-archive-export-20260701-215204. The workflow does not use email Date headers as the boundary.</p>
       </section>
-
       <section id="safety">
         <h2>Safety Rules</h2>
-        <ul>
-          <li>Close Betterbird and Evolution before conversion, packing, or restore.</li>
-          <li>Keep the delta archive separate from <code>/mail/Mailstore/evolution/local-maildir</code>.</li>
-          <li>Keep the delta archive separate from <code>/mail/Mailstore/mbsync/provider-live</code>.</li>
-          <li>Never unpack over an existing final destination.</li>
-          <li>Verify before transfer, after transfer, and before unpack.</li>
-          <li>Add to Evolution as <strong>Maildir-format mail directories</strong>, not MH-format.</li>
-        </ul>
+        <p class="callout warn">Close Betterbird and Evolution before staging, conversion, packing, or restore. Never overwrite an existing staging, target, export, or antiX destination directory. Keep each aggregate separate from /mail/Mailstore/evolution/local-maildir and /mail/Mailstore/mbsync/provider-live.</p>
       </section>
-
-
-
+      <section id="prerequisites">
+        <h2>Prerequisites</h2>
+        <p>Before Batch 1, copy these three repository scripts to Fedora <code>~/codex-runs</code> with the same filenames: <code>src/betterbird_post_archive_delta.py</code>, <code>src/betterbird_maildirlite_to_maildirpp.py</code>, and <code>src/maildirpp_transport.py</code>. Batch 1 verifies they exist and compile before touching any mail data.</p>
+      </section>
       <section id="start-here">
-        <h2>Start Here - Complete Batch Sequence</h2>
-        <p>Run one batch at a time and stop after each batch until the output matches the expected result. Do not continue if a command reports a blocked status.</p>
-        <h3>Batch 1: Fedora VM Terminal - read-only incremental audit</h3>
-        <p>Where: Fedora VM terminal where Betterbird and Fedora Evolution were used. Privileges: normal user `atiq`; no `sudo`. Purpose: discover first conversion evidence, latest source/target mail dates, and the missing Betterbird candidates. This batch is read-only.</p>
-        <div class="codebox"><button class="copy">Copy Batch 1</button><pre><code>echo &quot;=== Betterbird -&gt; Evolution Maildir++ delta audit: Batch 1 READ-ONLY ===&quot;
+        <h2>Start Here - Dynamic Batches</h2>
+        <p>Run one batch at a time. Batch 1 creates a RUN_ID and writes it to <code>~/codex-runs/post-main-archive-run-id.txt</code>; later Fedora batches reuse that same RUN_ID.</p>
+        <h3>Batch 1: Fedora Audit</h3>
+        <div class="codebox"><button class="copy">Copy Batch 1</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 1 audit ===&quot;
 date -Is
 hostnamectl 2&gt;/dev/null || true
 python3 --version
 
-echo
-echo &quot;=== Mail-related running processes ===&quot;
+RUN=&quot;$HOME/codex-runs&quot;
+POST=&quot;$RUN/betterbird_post_archive_delta.py&quot;
+CONVERTER=&quot;$RUN/betterbird_maildirlite_to_maildirpp.py&quot;
+TRANSPORT=&quot;$RUN/maildirpp_transport.py&quot;
+RUN_ID=&quot;$(date +%Y%m%d-%H%M%S)&quot;
+RUN_ID_FILE=&quot;$RUN/post-main-archive-run-id.txt&quot;
+
+mkdir -p &quot;$RUN&quot;
+printf &#x27;%s
+&#x27; &quot;$RUN_ID&quot; &gt; &quot;$RUN_ID_FILE&quot;
+echo &quot;run_id=$RUN_ID&quot;
+echo &quot;run_id_file=$RUN_ID_FILE&quot;
+
+for script in &quot;$POST&quot; &quot;$CONVERTER&quot; &quot;$TRANSPORT&quot;; do
+  test -f &quot;$script&quot; || { echo &quot;ERROR: missing script $script&quot;; exit 1; }
+done
+python3 -m py_compile &quot;$POST&quot; &quot;$CONVERTER&quot; &quot;$TRANSPORT&quot;
+
 pgrep -a -f &#x27;betterbird|thunderbird|evolution&#x27; || echo &quot;no matching mail processes found&quot;
-
-python3 - &lt;&lt;&#x27;PY&#x27;
-from pathlib import Path
-from collections import Counter
-from email.parser import BytesParser
-from email.policy import default
-from email.utils import parsedate_to_datetime
-import datetime as dt
-import os
-import sqlite3
-import stat
-
-HOME = Path.home()
-SRC = HOME / &quot;Betterbird-Email&quot; / &quot;betterbird-maildir&quot;
-TARGET = HOME / &quot;Evolution-Mailstore&quot; / &quot;betterbird-archive-maildirpp&quot;
-STATE = TARGET / &quot;.conversion-state.sqlite&quot;
-LOGROOT = TARGET.parent / &quot;conversion-logs&quot;
-
-def yn(value):
-    return &quot;yes&quot; if value else &quot;no&quot;
-
-def fmt_ns(ns):
-    return dt.datetime.fromtimestamp(ns / 1_000_000_000).astimezone().isoformat(timespec=&quot;seconds&quot;)
-
-def scan(root):
-    items = []
-    if not root.exists():
-        return items
-    for dirpath, dirnames, filenames in os.walk(root):
-        if os.path.basename(dirpath) not in (&quot;cur&quot;, &quot;new&quot;):
-            continue
-        folder = Path(dirpath).parent
-        state = Path(dirpath).name
-        for name in filenames:
-            if name.endswith(&quot;.msf&quot;):
-                continue
-            path = Path(dirpath) / name
-            try:
-                st = path.stat()
-            except FileNotFoundError:
-                continue
-            if stat.S_ISREG(st.st_mode):
-                items.append((path, folder, state, st.st_size, st.st_mtime_ns))
-    return items
-
-def date_header(path):
-    try:
-        data = path.read_bytes()[:1024 * 1024]
-        msg = BytesParser(policy=default).parsebytes(data)
-        value = msg.get(&quot;Date&quot;)
-        if not value:
-            return None, &quot;NO_DATE_HEADER&quot;
-        parsed = parsedate_to_datetime(str(value))
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=dt.timezone.utc)
-        return parsed.timestamp(), parsed.astimezone().isoformat(timespec=&quot;seconds&quot;)
-    except Exception as exc:
-        return None, &quot;BAD_DATE:&quot; + type(exc).__name__
-
-print(&quot;=== Paths ===&quot;)
-for label, path in ((&quot;source&quot;, SRC), (&quot;target&quot;, TARGET), (&quot;state_db&quot;, STATE), (&quot;conversion_log_root&quot;, LOGROOT)):
-    print(f&quot;{label}={path}&quot;)
-    print(f&quot;{label}_exists={yn(path.exists())}&quot;)
-    if path.exists():
-        st = path.stat()
-        print(f&quot;{label}_mtime={fmt_ns(st.st_mtime_ns)}&quot;)
-        print(f&quot;{label}_size={st.st_size}&quot;)
-
-if LOGROOT.exists():
-    dirs = sorted(p for p in LOGROOT.iterdir() if p.is_dir())
-    print(f&quot;conversion_log_dir_count={len(dirs)}&quot;)
-    for p in dirs[:3]:
-        print(f&quot;conversion_log_first_candidate={p.name} mtime={fmt_ns(p.stat().st_mtime_ns)}&quot;)
-    for p in dirs[-3:]:
-        print(f&quot;conversion_log_latest_candidate={p.name} mtime={fmt_ns(p.stat().st_mtime_ns)}&quot;)
-
-source_items = scan(SRC)
-target_items = scan(TARGET)
-print(&quot;=== Counts ===&quot;)
-print(f&quot;source_candidate_count={len(source_items)}&quot;)
-print(f&quot;target_message_count={len(target_items)}&quot;)
-print(f&quot;source_total_bytes={sum(x[3] for x in source_items)}&quot;)
-print(f&quot;target_total_bytes={sum(x[3] for x in target_items)}&quot;)
-print(f&quot;source_cur={sum(1 for x in source_items if x[2] == &#x27;cur&#x27;)}&quot;)
-print(f&quot;source_new={sum(1 for x in source_items if x[2] == &#x27;new&#x27;)}&quot;)
-print(f&quot;target_cur={sum(1 for x in target_items if x[2] == &#x27;cur&#x27;)}&quot;)
-print(f&quot;target_new={sum(1 for x in target_items if x[2] == &#x27;new&#x27;)}&quot;)
-
-state_keys = set()
-if STATE.exists():
-    con = sqlite3.connect(STATE)
-    cur = con.cursor()
-    row = cur.execute(&quot;select count(*), min(copied_at), max(copied_at) from processed where status=&#x27;copied&#x27;&quot;).fetchone()
-    print(&quot;=== Converter state database ===&quot;)
-    print(f&quot;state_copied_rows={row[0]}&quot;)
-    print(f&quot;state_first_copied_at={row[1]}&quot;)
-    print(f&quot;state_last_copied_at={row[2]}&quot;)
-    for source_path, size, mtime_ns in cur.execute(&quot;select source_path, source_size, source_mtime_ns from processed where status=&#x27;copied&#x27;&quot;):
-        state_keys.add((source_path, int(size), int(mtime_ns)))
-    con.close()
-else:
-    print(&quot;state_missing=yes&quot;)
-
-missing = [x for x in source_items if (str(x[0]), int(x[3]), int(x[4])) not in state_keys]
-print(&quot;=== Missing candidates ===&quot;)
-print(f&quot;missing_candidate_count={len(missing)}&quot;)
-print(f&quot;missing_total_bytes={sum(x[3] for x in missing)}&quot;)
-for folder, count in Counter(str(x[1].relative_to(SRC)) for x in missing).most_common(20):
-    print(f&quot;missing_folder\t{count}\t{folder}&quot;)
-
-print(&quot;=== Latest missing messages by Date header ===&quot;)
-dated = []
-for path, folder, state, size, mtime_ns in missing:
-    ts, text = date_header(path)
-    if ts is not None:
-        dated.append((ts, text, path, folder, state, size, mtime_ns))
-for ts, text, path, folder, state, size, mtime_ns in sorted(dated, reverse=True)[:20]:
-    print(f&quot;{text} | state={state} | size={size} | folder={folder.relative_to(SRC)} | path={path.relative_to(SRC)}&quot;)
-
-print(&quot;=== Batch 1 result ===&quot;)
-if not SRC.exists() or not TARGET.exists() or not STATE.exists():
-    print(&quot;status=blocked_missing_required_path&quot;)
-else:
-    print(&quot;status=read_only_audit_complete&quot;)
-PY</code></pre></div>
-        <p>Successful output should include:</p>
-        <ul>
-          <li>`source_exists=yes`</li>
-          <li>`target_exists=yes`</li>
-          <li>`state_db_exists=yes`</li>
-          <li>`state_copied_rows=48720` or close to the original converted count</li>
-          <li>`missing_candidate_count=248` for the validated 2026-07-04 run</li>
-          <li>`status=read_only_audit_complete`</li>
-        </ul>
-        <p>Report back before continuing if Betterbird/Evolution processes are running, `state_db_exists=no`, `status=blocked_missing_required_path`, a Python traceback appears, or `missing_candidate_count` is unexpectedly very large.</p>
-        <h3>Batch 2: Fedora VM Terminal - stop mail processes</h3>
-        <p>Where: Fedora VM terminal. Privileges: normal user `atiq`; no `sudo`. Purpose: stop Evolution background services and prove Betterbird, Thunderbird, and Evolution are not running before staging/copy work.</p>
-        <div class="codebox"><button class="copy">Copy Batch 2</button><pre><code>echo &quot;=== Betterbird delta import: Batch 2 stop mail processes ===&quot;
+python3 &quot;$POST&quot; audit --run-id &quot;$RUN_ID&quot;</code></pre></div>
+        <h3>Batch 2: Stop Mail Processes</h3>
+        <div class="codebox"><button class="copy">Copy Batch 2</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 2 stop mail processes ===&quot;
 date -Is
 
 flatpak kill org.gnome.Evolution &gt;/dev/null 2&gt;&amp;1 || true
@@ -325,401 +105,224 @@ done
 pkill -TERM -u &quot;$USER&quot; -f &#x27;^/app/libexec/evolution-&#x27; 2&gt;/dev/null || true
 sleep 3
 
-echo &quot;=== Final mail process check ===&quot;
 if pgrep -a -u &quot;$USER&quot; -f &#x27;betterbird|thunderbird|evolution|/app/libexec/evolution|bwrap.*evolution&#x27;; then
   echo &quot;status=blocked_mail_processes_still_running&quot;
-  echo &quot;Close remaining mail programs manually, then rerun Batch 2.&quot;
   exit 1
 else
   echo &quot;status=no_mail_processes_running&quot;
 fi</code></pre></div>
-        <p>Successful output should include `status=no_mail_processes_running`.</p>
-        <h3>Batch 3: Fedora VM Terminal - build delta staging tree</h3>
-        <p>Where: Fedora VM terminal. Privileges: normal user `atiq`; no `sudo`. Purpose: compare the current Betterbird source against the original conversion state database, then copy only the 248 missing source files into a separate Betterbird-shaped staging tree. This does not modify the Betterbird source or the old 59G archive.</p>
-        <div class="codebox"><button class="copy">Copy Batch 3</button><pre><code>echo &quot;=== Betterbird delta import: Batch 3 build staging tree ===&quot;
+        <h3>Batch 3: Stage Dynamic Aggregate</h3>
+        <div class="codebox"><button class="copy">Copy Batch 3</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 3 stage ===&quot;
 date -Is
 
-python3 - &lt;&lt;&#x27;PY&#x27;
-from pathlib import Path
-from collections import Counter
-import hashlib
-import os
-import shutil
-import sqlite3
-import stat
+RUN=&quot;$HOME/codex-runs&quot;
+POST=&quot;$RUN/betterbird_post_archive_delta.py&quot;
+RUN_ID_FILE=&quot;$RUN/post-main-archive-run-id.txt&quot;
+RUN_ID=&quot;$(cat &quot;$RUN_ID_FILE&quot;)&quot;
+echo &quot;run_id=$RUN_ID&quot;
 
-HOME = Path.home()
-SRC = HOME / &quot;Betterbird-Email&quot; / &quot;betterbird-maildir&quot;
-MAIN_TARGET = HOME / &quot;Evolution-Mailstore&quot; / &quot;betterbird-archive-maildirpp&quot;
-STATE = MAIN_TARGET / &quot;.conversion-state.sqlite&quot;
-WORK = HOME / &quot;Evolution-Mailstore&quot; / &quot;delta-work&quot;
-STAGING = WORK / &quot;staging-betterbird-maildir&quot;
-DELTA_TARGET = HOME / &quot;Evolution-Mailstore&quot; / &quot;betterbird-delta-maildirpp-20260704&quot;
-EXPECTED_MISSING = 248
-
-for path in (SRC, MAIN_TARGET, STATE):
-    if not path.exists():
-        print(f&quot;status=blocked_missing_required_path path={path}&quot;)
-        raise SystemExit(1)
-if STAGING.exists():
-    print(&quot;status=blocked_staging_already_exists&quot;)
-    raise SystemExit(2)
-if DELTA_TARGET.exists():
-    print(&quot;status=blocked_delta_target_already_exists&quot;)
-    raise SystemExit(3)
-
-source_items = []
-for dirpath, dirnames, filenames in os.walk(SRC):
-    if os.path.basename(dirpath) not in (&quot;cur&quot;, &quot;new&quot;):
-        continue
-    for name in filenames:
-        if name.endswith(&quot;.msf&quot;):
-            continue
-        path = Path(dirpath) / name
-        st = path.stat()
-        if stat.S_ISREG(st.st_mode):
-            source_items.append((path, st.st_size, st.st_mtime_ns))
-
-state_keys = set()
-con = sqlite3.connect(STATE)
-cur = con.cursor()
-for source_path, size, mtime_ns in cur.execute(&quot;select source_path, source_size, source_mtime_ns from processed where status=&#x27;copied&#x27;&quot;):
-    state_keys.add((source_path, int(size), int(mtime_ns)))
-con.close()
-
-missing = [(p, size, mtime_ns) for p, size, mtime_ns in source_items if (str(p), int(size), int(mtime_ns)) not in state_keys]
-print(f&quot;source_candidate_count={len(source_items)}&quot;)
-print(f&quot;state_copied_key_count={len(state_keys)}&quot;)
-print(f&quot;missing_candidate_count={len(missing)}&quot;)
-print(f&quot;missing_total_bytes={sum(size for _, size, _ in missing)}&quot;)
-
-folder_counts = Counter(str(p.relative_to(SRC).parent.parent) for p, _, _ in missing)
-for folder, count in folder_counts.most_common():
-    print(f&quot;missing_folder\t{count}\t{folder}&quot;)
-
-if len(missing) != EXPECTED_MISSING:
-    print(f&quot;status=blocked_unexpected_missing_count expected={EXPECTED_MISSING} actual={len(missing)}&quot;)
-    raise SystemExit(4)
-
-def sha256(path):
-    h = hashlib.sha256()
-    with path.open(&quot;rb&quot;) as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b&quot;&quot;):
-            h.update(chunk)
-    return h.hexdigest()
-
-WORK.mkdir(parents=True, exist_ok=False)
-(STAGING / &quot;Mail&quot;).mkdir(parents=True, exist_ok=True)
-if (SRC / &quot;prefs.js&quot;).exists():
-    shutil.copy2(SRC / &quot;prefs.js&quot;, STAGING / &quot;prefs.js&quot;)
-else:
-    (STAGING / &quot;prefs.js&quot;).write_text(&quot;// minimal marker for converter safety checks\n&quot;, encoding=&quot;utf-8&quot;)
-
-manifest = WORK / &quot;delta-selected-files.tsv&quot;
-with manifest.open(&quot;w&quot;, encoding=&quot;utf-8&quot;, newline=&quot;\n&quot;) as out:
-    out.write(&quot;sha256\tsize\tmtime_ns\trelative_path\n&quot;)
-    for src_path, size, mtime_ns in sorted(missing, key=lambda row: str(row[0])):
-        rel = src_path.relative_to(SRC)
-        dst = STAGING / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src_path, dst)
-        src_hash = sha256(src_path)
-        dst_hash = sha256(dst)
-        if src_hash != dst_hash:
-            print(f&quot;status=blocked_hash_mismatch source={src_path} target={dst}&quot;)
-            raise SystemExit(5)
-        out.write(f&quot;{src_hash}\t{size}\t{mtime_ns}\t{rel}\n&quot;)
-
-print(f&quot;manifest={manifest}&quot;)
-print(f&quot;staging_cur_count={sum(1 for p in STAGING.glob(&#x27;**/cur/*&#x27;) if p.is_file())}&quot;)
-print(f&quot;staging_new_count={sum(1 for p in STAGING.glob(&#x27;**/new/*&#x27;) if p.is_file())}&quot;)
-print(f&quot;staging_tmp_count={sum(1 for p in STAGING.glob(&#x27;**/tmp/*&#x27;) if p.is_file())}&quot;)
-print(&quot;status=staging_ready&quot;)
-PY</code></pre></div>
-        <p>Successful output should include `missing_candidate_count=248`, `staging_cur_count=248`, `staging_new_count=0`, `staging_tmp_count=0`, and `status=staging_ready`.</p>
-        <h3>Batch 4: Fedora VM Terminal - converter dry-run</h3>
-        <div class="codebox"><button class="copy">Copy Batch 4</button><pre><code>echo &quot;=== Betterbird delta import: Batch 4 converter dry-run ===&quot;
+python3 -m py_compile &quot;$POST&quot;
+python3 &quot;$POST&quot; stage --run-id &quot;$RUN_ID&quot;</code></pre></div>
+        <h3>Batch 4: Converter Dry-Run</h3>
+        <div class="codebox"><button class="copy">Copy Batch 4</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 4 converter dry-run ===&quot;
 date -Is
 
-CONVERTER=&quot;$HOME/codex-runs/betterbird_maildirlite_to_maildirpp.py&quot;
-STAGING=&quot;$HOME/Evolution-Mailstore/delta-work/staging-betterbird-maildir&quot;
-DELTA_TARGET=&quot;$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704&quot;
-LOGDIR=&quot;$HOME/Evolution-Mailstore/conversion-logs/delta-dryrun-$(date +%Y%m%d-%H%M%S)&quot;
+RUN=&quot;$HOME/codex-runs&quot;
+POST=&quot;$RUN/betterbird_post_archive_delta.py&quot;
+CONVERTER=&quot;$RUN/betterbird_maildirlite_to_maildirpp.py&quot;
+RUN_ID=&quot;$(cat &quot;$RUN/post-main-archive-run-id.txt&quot;)&quot;
+STAGING=&quot;$HOME/Evolution-Mailstore/post-main-archive-work/$RUN_ID/staging-betterbird-maildir&quot;
+TARGET=&quot;$HOME/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-$RUN_ID&quot;
+LOGDIR=&quot;$HOME/Evolution-Mailstore/conversion-logs/post-main-archive-$RUN_ID-dryrun&quot;
 
-test -f &quot;$CONVERTER&quot; || { echo &quot;ERROR: converter missing&quot;; exit 1; }
-test -d &quot;$STAGING&quot; || { echo &quot;ERROR: staging missing&quot;; exit 1; }
-test ! -e &quot;$DELTA_TARGET&quot; || { echo &quot;ERROR: delta target already exists&quot;; exit 1; }
+echo &quot;run_id=$RUN_ID&quot;
+python3 &quot;$POST&quot; plan-convert --run-id &quot;$RUN_ID&quot;
+test -d &quot;$STAGING&quot; || { echo &quot;ERROR: staging missing $STAGING&quot;; exit 1; }
+test ! -e &quot;$TARGET&quot; || { echo &quot;ERROR: target already exists $TARGET&quot;; exit 1; }
 python3 -m py_compile &quot;$CONVERTER&quot;
-python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$DELTA_TARGET&quot; --log-dir &quot;$LOGDIR&quot; --dry-run
+python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$TARGET&quot; --log-dir &quot;$LOGDIR&quot; --dry-run
 DRY_EXIT=$?
 echo &quot;dry_run_exit=$DRY_EXIT&quot;
-echo &quot;log_dir=$LOGDIR&quot;
-test ! -e &quot;$DELTA_TARGET&quot;; echo &quot;target_absent_after_dry_run_exit=$?&quot;
+test ! -e &quot;$TARGET&quot;; echo &quot;target_absent_after_dry_run_exit=$?&quot;
 exit &quot;$DRY_EXIT&quot;</code></pre></div>
-        <p>Successful output should include `dry_run_exit=0`, `target_absent_after_dry_run_exit=0`, 248 planned copies, and 0 errors in the converter summary.</p>
-        <h3>Batch 5: Fedora VM Terminal - real copy and full hash verify</h3>
-        <div class="codebox"><button class="copy">Copy Batch 5</button><pre><code>echo &quot;=== Betterbird delta import: Batch 5 copy and verify ===&quot;
+        <h3>Batch 5: Copy And Verify</h3>
+        <div class="codebox"><button class="copy">Copy Batch 5</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 5 copy and verify ===&quot;
 date -Is
 
-CONVERTER=&quot;$HOME/codex-runs/betterbird_maildirlite_to_maildirpp.py&quot;
-STAGING=&quot;$HOME/Evolution-Mailstore/delta-work/staging-betterbird-maildir&quot;
-DELTA_TARGET=&quot;$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704&quot;
-LOGDIR=&quot;$HOME/Evolution-Mailstore/conversion-logs/delta-copy-$(date +%Y%m%d-%H%M%S)&quot;
+RUN=&quot;$HOME/codex-runs&quot;
+CONVERTER=&quot;$RUN/betterbird_maildirlite_to_maildirpp.py&quot;
+RUN_ID=&quot;$(cat &quot;$RUN/post-main-archive-run-id.txt&quot;)&quot;
+STAGING=&quot;$HOME/Evolution-Mailstore/post-main-archive-work/$RUN_ID/staging-betterbird-maildir&quot;
+TARGET=&quot;$HOME/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-$RUN_ID&quot;
+LOGDIR=&quot;$HOME/Evolution-Mailstore/conversion-logs/post-main-archive-$RUN_ID-copy&quot;
 
-test -f &quot;$CONVERTER&quot; || { echo &quot;ERROR: converter missing&quot;; exit 1; }
-test -d &quot;$STAGING&quot; || { echo &quot;ERROR: staging missing&quot;; exit 1; }
-test ! -e &quot;$DELTA_TARGET&quot; || { echo &quot;ERROR: delta target already exists&quot;; exit 1; }
+echo &quot;run_id=$RUN_ID&quot;
+test -d &quot;$STAGING&quot; || { echo &quot;ERROR: staging missing $STAGING&quot;; exit 1; }
+test ! -e &quot;$TARGET&quot; || { echo &quot;ERROR: target already exists $TARGET&quot;; exit 1; }
 python3 -m py_compile &quot;$CONVERTER&quot;
 
-python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$DELTA_TARGET&quot; --log-dir &quot;$LOGDIR&quot; --copy --resume
+python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$TARGET&quot; --log-dir &quot;$LOGDIR&quot; --copy --resume
 COPY_EXIT=$?
 echo &quot;copy_exit=$COPY_EXIT&quot;
 test &quot;$COPY_EXIT&quot; -eq 0 || exit &quot;$COPY_EXIT&quot;
-python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$DELTA_TARGET&quot; --log-dir &quot;$LOGDIR&quot; --verify --verify-hash
+python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$TARGET&quot; --log-dir &quot;$LOGDIR&quot; --verify --verify-hash
 VERIFY_EXIT=$?
 echo &quot;verify_exit=$VERIFY_EXIT&quot;
-
-echo &quot;delta_cur_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/cur/*&#x27; -type f | wc -l)&quot;
-echo &quot;delta_new_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/new/*&#x27; -type f | wc -l)&quot;
-echo &quot;delta_tmp_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/tmp/*&#x27; -type f | wc -l)&quot;
-du -sh &quot;$DELTA_TARGET&quot;
+echo &quot;target_cur_count=$(find &quot;$TARGET&quot; -path &#x27;*/cur/*&#x27; -type f | wc -l)&quot;
+echo &quot;target_new_count=$(find &quot;$TARGET&quot; -path &#x27;*/new/*&#x27; -type f | wc -l)&quot;
+echo &quot;target_tmp_count=$(find &quot;$TARGET&quot; -path &#x27;*/tmp/*&#x27; -type f | wc -l)&quot;
+du -sh &quot;$TARGET&quot;
 exit &quot;$VERIFY_EXIT&quot;</code></pre></div>
-        <p>Successful output should include `copy_exit=0`, `verify_exit=0`, `delta_cur_count=248`, `delta_new_count=0`, and `delta_tmp_count=0`.</p>
-        <h3>Batch 6: Fedora Evolution GUI validation</h3>
-        <p>Add `/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704` to Fedora Evolution as `Maildir-format mail directories`. Do not choose `MH-format mail directories`. Verify Inbox 241, Sent 4, November2025 2, Trash 1, message opening, HTML rendering, attachments, and no error popup.</p>
-        <h3>Batch 7 and later</h3>
-        <p>After Batch 6 passes, continue with Phase 3 below:</p>
-        <ul>
-          <li>Phase 3 is Batch 7: Fedora pack and verify.</li>
-          <li>Phase 4A is Batch 8A: USB transfer path.</li>
-          <li>Phase 4B is Batch 8B: HGFS / Win11 host-share transfer path.</li>
-          <li>Phase 4C is Batch 8C: Google Drive ZIP transfer path.</li>
-          <li>Phase 5 is Batch 9: antiX staging from ZIP. For USB/HGFS, copy the verified export folder to `/mail/import-staging/maildirpp-delta-export-20260704-151448` first, then run `verify-archive` against its `manifest.json`.</li>
-          <li>Phase 6 is Batch 10: antiX restore, verify, and inspect.</li>
-          <li>Phase 7 is Batch 11: antiX Evolution Flatpak visibility.</li>
-          <li>Phase 8 is Batch 12: antiX Evolution GUI validation.</li>
-        </ul>
-      </section>
+        <h3>Batch 6: Fedora Pack And Verify</h3>
+        <div class="codebox"><button class="copy">Copy Batch 6</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 6 pack and verify ===&quot;
+date -Is
 
-      <section id="fedora-pack">
-        <h2>Fedora Pack And Verify</h2>
-        <p>Run this after the Fedora delta Maildir++ tree has been created and validated in Fedora Evolution.</p>
-        <div class="codebox"><button class="copy">Copy</button><pre><code>SOURCE="$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704"
-RUN="$HOME/codex-runs"
-SCRIPT="$RUN/maildirpp_transport.py"
-EXPORT="$HOME/maildirpp-delta-export-20260704-151448"
+RUN=&quot;$HOME/codex-runs&quot;
+TRANSPORT=&quot;$RUN/maildirpp_transport.py&quot;
+RUN_ID=&quot;$(cat &quot;$RUN/post-main-archive-run-id.txt&quot;)&quot;
+SOURCE=&quot;$HOME/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-$RUN_ID&quot;
+EXPORT=&quot;$HOME/maildirpp-post-main-archive-export-$RUN_ID&quot;
 
-flatpak kill org.gnome.Evolution || true
-if pgrep -a -u "$USER" -f 'betterbird|thunderbird|evolution|/app/libexec/evolution|bwrap.*evolution'; then
-  echo "ERROR: mail processes still running"
+echo &quot;run_id=$RUN_ID&quot;
+flatpak kill org.gnome.Evolution &gt;/dev/null 2&gt;&amp;1 || true
+if pgrep -a -u &quot;$USER&quot; -f &#x27;betterbird|thunderbird|evolution|/app/libexec/evolution|bwrap.*evolution&#x27;; then
+  echo &quot;ERROR: mail processes still running&quot;
   exit 1
 fi
 
-python3 -m py_compile "$SCRIPT"
-python3 "$SCRIPT" inspect --source "$SOURCE"
-python3 "$SCRIPT" pack --source "$SOURCE" --out "$EXPORT"
-python3 "$SCRIPT" verify-archive --manifest "$EXPORT/manifest.json"</code></pre></div>
-        <p>Validated export: <code>/home/atiq/maildirpp-delta-export-20260704-151448</code>, 1 part, 286M, archive bytes <code>299189312</code>.</p>
-      </section>
+test -d &quot;$SOURCE&quot; || { echo &quot;ERROR: source missing $SOURCE&quot;; exit 1; }
+test ! -e &quot;$EXPORT&quot; || { echo &quot;ERROR: export already exists $EXPORT&quot;; exit 1; }
+python3 -m py_compile &quot;$TRANSPORT&quot;
+python3 &quot;$TRANSPORT&quot; inspect --source &quot;$SOURCE&quot;
+python3 &quot;$TRANSPORT&quot; pack --source &quot;$SOURCE&quot; --out &quot;$EXPORT&quot;
+python3 &quot;$TRANSPORT&quot; verify-archive --manifest &quot;$EXPORT/manifest.json&quot;
+du -sh &quot;$EXPORT&quot;</code></pre></div>
+        <h3>Batch 7: Optional Google Drive ZIP Package</h3>
+        <div class="codebox"><button class="copy">Copy Batch 7</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 7 optional ZIP package ===&quot;
+date -Is
 
-      <section id="usb">
-        <h2>USB Transfer Path</h2>
-        <p>Use this if a USB drive is mounted and writable on Fedora. Replace <code>YOUR_USB_LABEL</code>.</p>
-        <div class="codebox"><button class="copy">Copy</button><pre><code>USB="/run/media/$USER/YOUR_USB_LABEL"
-SRC="$HOME/maildirpp-delta-export-20260704-151448"
-RUN="$HOME/codex-runs"
-USB_EXPORT="$USB/maildirpp-delta-export-20260704-151448"
-USB_SCRIPTS="$USB/codex-runs"
+RUN_ID=&quot;$(cat &quot;$HOME/codex-runs/post-main-archive-run-id.txt&quot;)&quot;
+EXPORT=&quot;$HOME/maildirpp-post-main-archive-export-$RUN_ID&quot;
+ZIP=&quot;$HOME/maildirpp-post-main-archive-export-$RUN_ID.zip&quot;
 
-ls -ld "$USB" "$SRC"
-df -h "$USB" "$SRC"
-
-PROBE="$USB/codex-delta-transfer-probe-$(date +%Y%m%d-%H%M%S)"
-mkdir "$PROBE"
-printf 'probe\n' > "$PROBE/probe.txt"
-rm -f "$PROBE/probe.txt"
-rmdir "$PROBE"
-
-test ! -e "$USB_EXPORT" || { echo "ERROR: USB export already exists"; exit 1; }
-mkdir -p "$USB_SCRIPTS" "$USB_EXPORT"
-cp -av "$RUN/maildirpp_transport.py" "$USB_SCRIPTS/"
-sha256sum "$RUN/maildirpp_transport.py" "$USB_SCRIPTS/maildirpp_transport.py"
-
-if command -v rsync >/dev/null 2>&1; then
-  rsync -rt --partial --info=progress2 "$SRC/" "$USB_EXPORT/"
-else
-  cp -av "$SRC/." "$USB_EXPORT/"
-fi
-
-test -f "$USB_EXPORT/manifest.json"; echo "usb_manifest_exit=$?"
-test -f "$USB_EXPORT/inventory.jsonl"; echo "usb_inventory_exit=$?"
-echo "usb_part_count=$(find "$USB_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
-python3 "$USB_SCRIPTS/maildirpp_transport.py" verify-archive --manifest "$USB_EXPORT/manifest.json"
-echo "usb_verify_archive_exit=$?"
-sync</code></pre></div>
-      </section>
-
-      <section id="hgfs">
-        <h2>HGFS / Win11 Host-Share Path</h2>
-        <p>This path was validated on Fedora at <code>/mnt/hgfs/Win11Host_Shared4VM</code>.</p>
-        <div class="codebox"><button class="copy">Copy</button><pre><code>SRC="$HOME/maildirpp-delta-export-20260704-151448"
-RUN="$HOME/codex-runs"
-SCRIPT="$RUN/maildirpp_transport.py"
-HOST="/mnt/hgfs/Win11Host_Shared4VM"
-HOST_EXPORT="$HOST/maildirpp-delta-export-20260704-151448"
-HOST_SCRIPTS="$HOST/codex-runs"
-
-host_fstype="$(findmnt -T "$HOST" -no FSTYPE 2>/dev/null || true)"
-echo "host_fstype=$host_fstype"
-case "$host_fstype" in
-  fuse.vmhgfs-fuse|fuse.vmhgfs|vmhgfs|hgfs) echo "host_share_mount_ok=yes" ;;
-  *) echo "ERROR: host share is not HGFS"; exit 1 ;;
-esac
-
-PROBE="$HOST/codex-delta-transfer-probe-$(date +%Y%m%d-%H%M%S)"
-mkdir "$PROBE"
-printf 'probe\n' > "$PROBE/probe.txt"
-rm -f "$PROBE/probe.txt"
-rmdir "$PROBE"
-
-test ! -e "$HOST_EXPORT" || { echo "ERROR: host export already exists"; exit 1; }
-mkdir -p "$HOST_SCRIPTS"
-cp -av "$SCRIPT" "$HOST_SCRIPTS/"
-sha256sum "$SCRIPT" "$HOST_SCRIPTS/maildirpp_transport.py"
-
-mkdir "$HOST_EXPORT"
-if command -v rsync >/dev/null 2>&1; then
-  rsync -rt --partial --info=progress2 "$SRC/" "$HOST_EXPORT/"
-else
-  cp -av "$SRC/." "$HOST_EXPORT/"
-fi
-
-test -f "$HOST_EXPORT/manifest.json"; echo "host_manifest_exit=$?"
-test -f "$HOST_EXPORT/inventory.jsonl"; echo "host_inventory_exit=$?"
-echo "host_part_count=$(find "$HOST_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
-python3 "$HOST_SCRIPTS/maildirpp_transport.py" verify-archive --manifest "$HOST_EXPORT/manifest.json"
-echo "host_verify_archive_exit=$?"
-sync</code></pre></div>
-      </section>
-
-      <section id="zip">
-        <h2>Google Drive ZIP Path</h2>
-        <p>The owner manually transferred this ZIP to antiX:</p>
-        <p><code>/home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip</code></p>
-        <p>Validated ZIP SHA256:</p>
-        <p><code>65ff42dd1897dad29c09a6cb666bd019c917d52031860dc63c729daa431d8f44</code></p>
-      </section>
-
-      <section id="antix-stage">
-        <h2>antiX Staging From ZIP</h2>
-        <div class="codebox"><button class="copy">Copy</button><pre><code>ZIP="$HOME/Downloads/maildirpp-delta-export-20260704-151448.zip"
-RUN="$HOME/codex-runs"
-SCRIPT="$RUN/maildirpp_transport.py"
-STAGING_PARENT="/mail/import-staging"
-TRANSFER="$STAGING_PARENT/maildirpp-delta-export-20260704-151448"
-DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
-
-test -f "$ZIP" || { echo "ERROR: ZIP missing"; exit 1; }
-test -f "$SCRIPT" || { echo "ERROR: transport script missing"; exit 1; }
-python3 -m py_compile "$SCRIPT"
-test ! -e "$TRANSFER" || { echo "ERROR: staging already exists"; exit 1; }
-test ! -e "$DEST" || { echo "ERROR: final destination already exists"; exit 1; }
-
-python3 - <<'PY'
-from pathlib import Path, PurePosixPath
-import shutil
+echo &quot;run_id=$RUN_ID&quot;
+test -d &quot;$EXPORT&quot; || { echo &quot;ERROR: export missing $EXPORT&quot;; exit 1; }
+test ! -e &quot;$ZIP&quot; || { echo &quot;ERROR: ZIP already exists $ZIP&quot;; exit 1; }
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+import os
 import zipfile
-
-zip_path = Path.home() / "Downloads" / "maildirpp-delta-export-20260704-151448.zip"
-staging_parent = Path("/mail/import-staging")
-expected_top = "maildirpp-delta-export-20260704-151448"
-target = staging_parent / expected_top
-if target.exists():
-    raise SystemExit("extract_status=blocked_target_exists")
+run_id = Path.home().joinpath(&#x27;codex-runs/post-main-archive-run-id.txt&#x27;).read_text().strip()
+export = Path.home() / f&#x27;maildirpp-post-main-archive-export-{run_id}&#x27;
+zip_path = Path.home() / f&#x27;maildirpp-post-main-archive-export-{run_id}.zip&#x27;
+with zipfile.ZipFile(zip_path, &#x27;x&#x27;, compression=zipfile.ZIP_STORED) as z:
+    for root, dirs, files in os.walk(export):
+        dirs.sort()
+        for name in sorted(files):
+            path = Path(root) / name
+            z.write(path, path.relative_to(export.parent).as_posix())
+print(f&#x27;zip={zip_path}&#x27;)
+print(&#x27;status=zip_ready&#x27;)
+PY
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+import zipfile
+run_id = Path.home().joinpath(&#x27;codex-runs/post-main-archive-run-id.txt&#x27;).read_text().strip()
+zip_path = Path.home() / f&#x27;maildirpp-post-main-archive-export-{run_id}.zip&#x27;
 with zipfile.ZipFile(zip_path) as z:
     bad = z.testzip()
-    print(f"zip_testzip_bad_entry={bad if bad else 'NONE'}")
-    if bad:
-        raise SystemExit(2)
-    names = [i.filename for i in z.infolist()]
-    top_levels = sorted(set(n.split("/", 1)[0] for n in names if n))
-    print("zip_top_level_entries=" + "|".join(top_levels))
-    if top_levels != [expected_top]:
-        raise SystemExit("extract_status=blocked_unexpected_top_level")
+print(f&#x27;zip_test_bad_member={bad}&#x27;)
+print(&#x27;status=zip_verified&#x27; if bad is None else &#x27;status=zip_failed&#x27;)
+PY</code></pre></div>
+        <h3>Batch 8: antiX Stage From ZIP</h3>
+        <div class="codebox"><button class="copy">Copy Batch 8</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 8 antiX stage from ZIP ===&quot;
+date -Is
+
+export RUN_ID=&quot;PASTE_RUN_ID_HERE&quot;
+ZIP=&quot;$HOME/Downloads/maildirpp-post-main-archive-export-$RUN_ID.zip&quot;
+RUN=&quot;$HOME/codex-runs&quot;
+TRANSPORT=&quot;$RUN/maildirpp_transport.py&quot;
+STAGING_PARENT=&quot;/mail/import-staging&quot;
+TRANSFER=&quot;$STAGING_PARENT/maildirpp-post-main-archive-export-$RUN_ID&quot;
+DEST=&quot;/mail/Mailstore/evolution/betterbird-post-main-archive-maildirpp-$RUN_ID&quot;
+
+echo &quot;run_id=$RUN_ID&quot;
+test -f &quot;$ZIP&quot; || { echo &quot;ERROR: ZIP missing $ZIP&quot;; exit 1; }
+test -f &quot;$TRANSPORT&quot; || { echo &quot;ERROR: transport script missing $TRANSPORT&quot;; exit 1; }
+test ! -e &quot;$TRANSFER&quot; || { echo &quot;ERROR: transfer staging exists $TRANSFER&quot;; exit 1; }
+test ! -e &quot;$DEST&quot; || { echo &quot;ERROR: destination exists $DEST&quot;; exit 1; }
+python3 -m py_compile &quot;$TRANSPORT&quot;
+mkdir -p &quot;$STAGING_PARENT&quot;
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+import os
+import sys
+import zipfile
+run_id = os.environ.get(&#x27;RUN_ID&#x27;, &#x27;PASTE_RUN_ID_HERE&#x27;)
+zip_path = Path.home() / &#x27;Downloads&#x27; / f&#x27;maildirpp-post-main-archive-export-{run_id}.zip&#x27;
+staging_parent = Path(&#x27;/mail/import-staging&#x27;)
+expected_top = f&#x27;maildirpp-post-main-archive-export-{run_id}&#x27;
+target = staging_parent / expected_top
+with zipfile.ZipFile(zip_path) as z:
+    bad = z.testzip()
+    if bad is not None:
+        raise SystemExit(f&#x27;bad_zip_member={bad}&#x27;)
+    names = [name for name in z.namelist() if name and not name.endswith(&#x27;/&#x27;)]
+    tops = {name.split(&#x27;/&#x27;, 1)[0] for name in names}
+    if tops != {expected_top}:
+        raise SystemExit(f&#x27;unexpected_zip_top={tops}&#x27;)
     for info in z.infolist():
-        pp = PurePosixPath(info.filename)
-        if pp.is_absolute() or ".." in pp.parts:
-            raise SystemExit(f"extract_status=blocked_unsafe_path:{info.filename}")
-    for info in z.infolist():
-        pp = PurePosixPath(info.filename)
-        out_path = staging_parent.joinpath(*pp.parts)
         if info.is_dir():
-            out_path.mkdir(parents=True, exist_ok=True)
             continue
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with z.open(info, "r") as src, out_path.open("xb") as dst:
+        out = staging_parent / info.filename
+        if target not in out.parents:
+            raise SystemExit(f&#x27;unsafe_zip_path={info.filename}&#x27;)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with z.open(info, &#x27;r&#x27;) as src, out.open(&#x27;xb&#x27;) as dst:
+            import shutil
             shutil.copyfileobj(src, dst, length=1024 * 1024)
-print(f"extracted_to={target}")
-print("extract_status=ok")
+print(f&#x27;extracted_to={target}&#x27;)
+print(&#x27;status=extract_ok&#x27;)
 PY
+python3 &quot;$TRANSPORT&quot; verify-archive --manifest &quot;$TRANSFER/manifest.json&quot;</code></pre></div>
+        <h3>Batch 9: antiX Restore And Inspect</h3>
+        <div class="codebox"><button class="copy">Copy Batch 9</button><pre><code>echo &quot;=== Post-main-archive aggregate delta: Batch 9 antiX restore and inspect ===&quot;
+date -Is
 
-test -f "$TRANSFER/manifest.json"; echo "staging_manifest_exit=$?"
-test -f "$TRANSFER/inventory.jsonl"; echo "staging_inventory_exit=$?"
-echo "staging_part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
-python3 "$SCRIPT" verify-archive --manifest "$TRANSFER/manifest.json"
-echo "staging_verify_archive_exit=$?"</code></pre></div>
-      </section>
+RUN_ID=&quot;PASTE_RUN_ID_HERE&quot;
+RUN=&quot;$HOME/codex-runs&quot;
+TRANSPORT=&quot;$RUN/maildirpp_transport.py&quot;
+TRANSFER=&quot;/mail/import-staging/maildirpp-post-main-archive-export-$RUN_ID&quot;
+DEST=&quot;/mail/Mailstore/evolution/betterbird-post-main-archive-maildirpp-$RUN_ID&quot;
 
-      <section id="antix-restore">
-        <h2>antiX Restore, Verify, Inspect</h2>
-        <div class="codebox"><button class="copy">Copy</button><pre><code>RUN="$HOME/codex-runs"
-SCRIPT="$RUN/maildirpp_transport.py"
-TRANSFER="/mail/import-staging/maildirpp-delta-export-20260704-151448"
-MANIFEST="$TRANSFER/manifest.json"
-DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
-
-flatpak kill org.gnome.Evolution || true
-if pgrep -a -u "$USER" -f 'evolution|/app/libexec/evolution|bwrap.*evolution'; then
-  echo "ERROR: Evolution still running"
+echo &quot;run_id=$RUN_ID&quot;
+flatpak kill org.gnome.Evolution &gt;/dev/null 2&gt;&amp;1 || true
+if pgrep -a -u &quot;$USER&quot; -f &#x27;evolution|/app/libexec/evolution|bwrap.*evolution&#x27;; then
+  echo &quot;ERROR: Evolution still running&quot;
   exit 1
 fi
 
-test -f "$SCRIPT" || { echo "ERROR: transport script missing"; exit 1; }
-python3 -m py_compile "$SCRIPT"
-test -f "$MANIFEST" || { echo "ERROR: manifest missing"; exit 1; }
-test ! -e "$DEST" || { echo "ERROR: final destination already exists"; exit 1; }
-
-python3 "$SCRIPT" verify-archive --manifest "$MANIFEST"
-python3 "$SCRIPT" unpack --manifest "$MANIFEST" --dest "$DEST"
-python3 "$SCRIPT" verify-tree --manifest "$MANIFEST" --dest "$DEST"
-python3 "$SCRIPT" inspect --source "$DEST"
-
-find "$DEST" -path '*/cur/*' -type f | wc -l | awk '{print "dest_cur_count="$1}'
-find "$DEST" -path '*/new/*' -type f | wc -l | awk '{print "dest_new_count="$1}'
-find "$DEST" -path '*/tmp/*' -type f | wc -l | awk '{print "dest_tmp_count="$1}'</code></pre></div>
+test -f &quot;$TRANSFER/manifest.json&quot; || { echo &quot;ERROR: manifest missing&quot;; exit 1; }
+test ! -e &quot;$DEST&quot; || { echo &quot;ERROR: destination exists $DEST&quot;; exit 1; }
+python3 -m py_compile &quot;$TRANSPORT&quot;
+python3 &quot;$TRANSPORT&quot; verify-archive --manifest &quot;$TRANSFER/manifest.json&quot;
+python3 &quot;$TRANSPORT&quot; unpack --manifest &quot;$TRANSFER/manifest.json&quot; --dest &quot;$DEST&quot;
+python3 &quot;$TRANSPORT&quot; verify-tree --manifest &quot;$TRANSFER/manifest.json&quot; --dest &quot;$DEST&quot;
+python3 &quot;$TRANSPORT&quot; inspect --source &quot;$DEST&quot;
+echo &quot;restore_target=$DEST&quot;</code></pre></div>
       </section>
-
       <section id="evolution">
-        <h2>Evolution GUI Validation</h2>
-        <p>Add this directory as <strong>Maildir-format mail directories</strong>:</p>
-        <p><code>/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704</code></p>
-        <p>Name it <code>Betterbird Delta 2026-07-04</code>.</p>
-        <table>
-          <tr><th>Folder</th><th>Expected Count</th></tr>
-          <tr><td>Local_Folders.November2025</td><td>2</td></tr>
-          <tr><td>mail_tagindustries_com_sg.Inbox</td><td>241</td></tr>
-          <tr><td>mail_tagindustries_com_sg.Sent</td><td>4</td></tr>
-          <tr><td>mail_tagindustries_com_sg.Trash</td><td>1</td></tr>
-        </table>
+        <h2>Evolution Handling</h2>
+        <p>Add the new aggregate target as Maildir-format mail directories. After the newer aggregate is validated, disable or remove older post-main-archive delta accounts from Evolution to avoid duplicate search results. Do not delete old delta files until backup and cleanup are explicitly planned.</p>
       </section>
-
-      <section id="cleanup">
-        <h2>Cleanup Notes</h2>
-        <p>Keep the export ZIP and staging package until the antiX GUI validation is complete and backed up. Cleanup should be a separate explicit step.</p>
+      <section id="acceptance">
+        <h2>Acceptance Checks</h2>
         <ul>
-          <li><code>/home/atiq/maildirpp-delta-export-20260704-151448</code></li>
-          <li><code>/home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip</code></li>
-          <li><code>/mail/import-staging/maildirpp-delta-export-20260704-151448</code></li>
+          <li>Batch 1 reports <code>baseline_copied_rows=48720</code> and a dynamic <code>post_archive_candidate_count</code>.</li>
+          <li>Batch 3 reports <code>status=staging_ready</code>, with staged cur/new counts matching Batch 1.</li>
+          <li>Batch 5 reports <code>copy_exit=0</code>, <code>verify_exit=0</code>, and <code>target_tmp_count=0</code>.</li>
+          <li>Batch 6 verifies the portable export before any transfer.</li>
+          <li>Batch 9 verifies archive, restored tree, and Maildir++ inspection on antiX before Evolution is opened.</li>
         </ul>
       </section>
     </div>
