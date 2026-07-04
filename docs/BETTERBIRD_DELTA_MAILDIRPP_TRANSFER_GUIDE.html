@@ -104,6 +104,7 @@
       <a href="#purpose">Purpose</a>
       <a href="#validated">Validated Result</a>
       <a href="#safety">Safety Rules</a>
+      <a href="#start-here">Start Here: Batch 1</a>
       <a href="#fedora-pack">Fedora Pack</a>
       <a href="#usb">USB Transfer</a>
       <a href="#hgfs">HGFS Transfer</a>
@@ -146,6 +147,415 @@
           <li>Verify before transfer, after transfer, and before unpack.</li>
           <li>Add to Evolution as <strong>Maildir-format mail directories</strong>, not MH-format.</li>
         </ul>
+      </section>
+
+
+
+      <section id="start-here">
+        <h2>Start Here - Complete Batch Sequence</h2>
+        <p>This section is intentionally placed before the pack and transfer phases. It starts from Batch 1 in Fedora, audits the Betterbird source, creates the delta staging tree, runs converter dry-run and copy verification, and only then continues to the validated transfer phases.</p>
+        <div class="callout warn">Run one batch at a time. Do not continue if a batch reports a blocked status or if counts differ from the expected values.</div>
+        <div class="codebox"><button class="copy">Copy</button><pre><code>Start Here - Complete Batch Sequence
+------------------------------------
+
+Run one batch at a time and stop after each batch until the output matches the
+expected result. Do not continue if a command reports a blocked status.
+
+Batch 1: Fedora VM Terminal - read-only incremental audit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Where: Fedora VM terminal where Betterbird and Fedora Evolution were used.
+Privileges: normal user `atiq`; no `sudo`.
+Purpose: discover first conversion evidence, latest source/target mail dates,
+and the missing Betterbird candidates. This batch is read-only.
+
+```bash
+echo &quot;=== Betterbird -&gt; Evolution Maildir++ delta audit: Batch 1 READ-ONLY ===&quot;
+date -Is
+hostnamectl 2&gt;/dev/null || true
+python3 --version
+
+echo
+echo &quot;=== Mail-related running processes ===&quot;
+pgrep -a -f &#x27;betterbird|thunderbird|evolution&#x27; || echo &quot;no matching mail processes found&quot;
+
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+from collections import Counter
+from email.parser import BytesParser
+from email.policy import default
+from email.utils import parsedate_to_datetime
+import datetime as dt
+import os
+import sqlite3
+import stat
+
+HOME = Path.home()
+SRC = HOME / &quot;Betterbird-Email&quot; / &quot;betterbird-maildir&quot;
+TARGET = HOME / &quot;Evolution-Mailstore&quot; / &quot;betterbird-archive-maildirpp&quot;
+STATE = TARGET / &quot;.conversion-state.sqlite&quot;
+LOGROOT = TARGET.parent / &quot;conversion-logs&quot;
+
+def yn(value):
+    return &quot;yes&quot; if value else &quot;no&quot;
+
+def fmt_ns(ns):
+    return dt.datetime.fromtimestamp(ns / 1_000_000_000).astimezone().isoformat(timespec=&quot;seconds&quot;)
+
+def scan(root):
+    items = []
+    if not root.exists():
+        return items
+    for dirpath, dirnames, filenames in os.walk(root):
+        if os.path.basename(dirpath) not in (&quot;cur&quot;, &quot;new&quot;):
+            continue
+        folder = Path(dirpath).parent
+        state = Path(dirpath).name
+        for name in filenames:
+            if name.endswith(&quot;.msf&quot;):
+                continue
+            path = Path(dirpath) / name
+            try:
+                st = path.stat()
+            except FileNotFoundError:
+                continue
+            if stat.S_ISREG(st.st_mode):
+                items.append((path, folder, state, st.st_size, st.st_mtime_ns))
+    return items
+
+def date_header(path):
+    try:
+        data = path.read_bytes()[:1024 * 1024]
+        msg = BytesParser(policy=default).parsebytes(data)
+        value = msg.get(&quot;Date&quot;)
+        if not value:
+            return None, &quot;NO_DATE_HEADER&quot;
+        parsed = parsedate_to_datetime(str(value))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=dt.timezone.utc)
+        return parsed.timestamp(), parsed.astimezone().isoformat(timespec=&quot;seconds&quot;)
+    except Exception as exc:
+        return None, &quot;BAD_DATE:&quot; + type(exc).__name__
+
+print(&quot;=== Paths ===&quot;)
+for label, path in ((&quot;source&quot;, SRC), (&quot;target&quot;, TARGET), (&quot;state_db&quot;, STATE), (&quot;conversion_log_root&quot;, LOGROOT)):
+    print(f&quot;{label}={path}&quot;)
+    print(f&quot;{label}_exists={yn(path.exists())}&quot;)
+    if path.exists():
+        st = path.stat()
+        print(f&quot;{label}_mtime={fmt_ns(st.st_mtime_ns)}&quot;)
+        print(f&quot;{label}_size={st.st_size}&quot;)
+
+if LOGROOT.exists():
+    dirs = sorted(p for p in LOGROOT.iterdir() if p.is_dir())
+    print(f&quot;conversion_log_dir_count={len(dirs)}&quot;)
+    for p in dirs[:3]:
+        print(f&quot;conversion_log_first_candidate={p.name} mtime={fmt_ns(p.stat().st_mtime_ns)}&quot;)
+    for p in dirs[-3:]:
+        print(f&quot;conversion_log_latest_candidate={p.name} mtime={fmt_ns(p.stat().st_mtime_ns)}&quot;)
+
+source_items = scan(SRC)
+target_items = scan(TARGET)
+print(&quot;=== Counts ===&quot;)
+print(f&quot;source_candidate_count={len(source_items)}&quot;)
+print(f&quot;target_message_count={len(target_items)}&quot;)
+print(f&quot;source_total_bytes={sum(x[3] for x in source_items)}&quot;)
+print(f&quot;target_total_bytes={sum(x[3] for x in target_items)}&quot;)
+print(f&quot;source_cur={sum(1 for x in source_items if x[2] == &#x27;cur&#x27;)}&quot;)
+print(f&quot;source_new={sum(1 for x in source_items if x[2] == &#x27;new&#x27;)}&quot;)
+print(f&quot;target_cur={sum(1 for x in target_items if x[2] == &#x27;cur&#x27;)}&quot;)
+print(f&quot;target_new={sum(1 for x in target_items if x[2] == &#x27;new&#x27;)}&quot;)
+
+state_keys = set()
+if STATE.exists():
+    con = sqlite3.connect(STATE)
+    cur = con.cursor()
+    row = cur.execute(&quot;select count(*), min(copied_at), max(copied_at) from processed where status=&#x27;copied&#x27;&quot;).fetchone()
+    print(&quot;=== Converter state database ===&quot;)
+    print(f&quot;state_copied_rows={row[0]}&quot;)
+    print(f&quot;state_first_copied_at={row[1]}&quot;)
+    print(f&quot;state_last_copied_at={row[2]}&quot;)
+    for source_path, size, mtime_ns in cur.execute(&quot;select source_path, source_size, source_mtime_ns from processed where status=&#x27;copied&#x27;&quot;):
+        state_keys.add((source_path, int(size), int(mtime_ns)))
+    con.close()
+else:
+    print(&quot;state_missing=yes&quot;)
+
+missing = [x for x in source_items if (str(x[0]), int(x[3]), int(x[4])) not in state_keys]
+print(&quot;=== Missing candidates ===&quot;)
+print(f&quot;missing_candidate_count={len(missing)}&quot;)
+print(f&quot;missing_total_bytes={sum(x[3] for x in missing)}&quot;)
+for folder, count in Counter(str(x[1].relative_to(SRC)) for x in missing).most_common(20):
+    print(f&quot;missing_folder\t{count}\t{folder}&quot;)
+
+print(&quot;=== Latest missing messages by Date header ===&quot;)
+dated = []
+for path, folder, state, size, mtime_ns in missing:
+    ts, text = date_header(path)
+    if ts is not None:
+        dated.append((ts, text, path, folder, state, size, mtime_ns))
+for ts, text, path, folder, state, size, mtime_ns in sorted(dated, reverse=True)[:20]:
+    print(f&quot;{text} | state={state} | size={size} | folder={folder.relative_to(SRC)} | path={path.relative_to(SRC)}&quot;)
+
+print(&quot;=== Batch 1 result ===&quot;)
+if not SRC.exists() or not TARGET.exists() or not STATE.exists():
+    print(&quot;status=blocked_missing_required_path&quot;)
+else:
+    print(&quot;status=read_only_audit_complete&quot;)
+PY
+```
+
+Successful output should include:
+
+- `source_exists=yes`
+- `target_exists=yes`
+- `state_db_exists=yes`
+- `state_copied_rows=48720` or close to the original converted count
+- `missing_candidate_count=248` for the validated 2026-07-04 run
+- `status=read_only_audit_complete`
+
+Report back before continuing if Betterbird/Evolution processes are running,
+`state_db_exists=no`, `status=blocked_missing_required_path`, a Python traceback
+appears, or `missing_candidate_count` is unexpectedly very large.
+
+Batch 2: Fedora VM Terminal - stop mail processes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Where: Fedora VM terminal.
+Privileges: normal user `atiq`; no `sudo`.
+Purpose: stop Evolution background services and prove Betterbird, Thunderbird,
+and Evolution are not running before staging/copy work.
+
+```bash
+echo &quot;=== Betterbird delta import: Batch 2 stop mail processes ===&quot;
+date -Is
+
+flatpak kill org.gnome.Evolution &gt;/dev/null 2&gt;&amp;1 || true
+if command -v evolution &gt;/dev/null 2&gt;&amp;1; then
+  evolution --force-shutdown &gt;/dev/null 2&gt;&amp;1 || true
+fi
+
+for name in evolution-source-registry evolution-alarm-notify evolution-calendar-factory evolution-addressbook-factory; do
+  pkill -TERM -u &quot;$USER&quot; -x &quot;$name&quot; 2&gt;/dev/null || true
+done
+pkill -TERM -u &quot;$USER&quot; -f &#x27;^/app/libexec/evolution-&#x27; 2&gt;/dev/null || true
+sleep 3
+
+echo &quot;=== Final mail process check ===&quot;
+if pgrep -a -u &quot;$USER&quot; -f &#x27;betterbird|thunderbird|evolution|/app/libexec/evolution|bwrap.*evolution&#x27;; then
+  echo &quot;status=blocked_mail_processes_still_running&quot;
+  echo &quot;Close remaining mail programs manually, then rerun Batch 2.&quot;
+  exit 1
+else
+  echo &quot;status=no_mail_processes_running&quot;
+fi
+```
+
+Successful output should include `status=no_mail_processes_running`.
+
+Batch 3: Fedora VM Terminal - build delta staging tree
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Where: Fedora VM terminal.
+Privileges: normal user `atiq`; no `sudo`.
+Purpose: compare the current Betterbird source against the original conversion
+state database, then copy only the 248 missing source files into a separate
+Betterbird-shaped staging tree. This does not modify the Betterbird source or
+the old 59G archive.
+
+```bash
+echo &quot;=== Betterbird delta import: Batch 3 build staging tree ===&quot;
+date -Is
+
+python3 - &lt;&lt;&#x27;PY&#x27;
+from pathlib import Path
+from collections import Counter
+import hashlib
+import os
+import shutil
+import sqlite3
+import stat
+
+HOME = Path.home()
+SRC = HOME / &quot;Betterbird-Email&quot; / &quot;betterbird-maildir&quot;
+MAIN_TARGET = HOME / &quot;Evolution-Mailstore&quot; / &quot;betterbird-archive-maildirpp&quot;
+STATE = MAIN_TARGET / &quot;.conversion-state.sqlite&quot;
+WORK = HOME / &quot;Evolution-Mailstore&quot; / &quot;delta-work&quot;
+STAGING = WORK / &quot;staging-betterbird-maildir&quot;
+DELTA_TARGET = HOME / &quot;Evolution-Mailstore&quot; / &quot;betterbird-delta-maildirpp-20260704&quot;
+EXPECTED_MISSING = 248
+
+for path in (SRC, MAIN_TARGET, STATE):
+    if not path.exists():
+        print(f&quot;status=blocked_missing_required_path path={path}&quot;)
+        raise SystemExit(1)
+if STAGING.exists():
+    print(&quot;status=blocked_staging_already_exists&quot;)
+    raise SystemExit(2)
+if DELTA_TARGET.exists():
+    print(&quot;status=blocked_delta_target_already_exists&quot;)
+    raise SystemExit(3)
+
+source_items = []
+for dirpath, dirnames, filenames in os.walk(SRC):
+    if os.path.basename(dirpath) not in (&quot;cur&quot;, &quot;new&quot;):
+        continue
+    for name in filenames:
+        if name.endswith(&quot;.msf&quot;):
+            continue
+        path = Path(dirpath) / name
+        st = path.stat()
+        if stat.S_ISREG(st.st_mode):
+            source_items.append((path, st.st_size, st.st_mtime_ns))
+
+state_keys = set()
+con = sqlite3.connect(STATE)
+cur = con.cursor()
+for source_path, size, mtime_ns in cur.execute(&quot;select source_path, source_size, source_mtime_ns from processed where status=&#x27;copied&#x27;&quot;):
+    state_keys.add((source_path, int(size), int(mtime_ns)))
+con.close()
+
+missing = [(p, size, mtime_ns) for p, size, mtime_ns in source_items if (str(p), int(size), int(mtime_ns)) not in state_keys]
+print(f&quot;source_candidate_count={len(source_items)}&quot;)
+print(f&quot;state_copied_key_count={len(state_keys)}&quot;)
+print(f&quot;missing_candidate_count={len(missing)}&quot;)
+print(f&quot;missing_total_bytes={sum(size for _, size, _ in missing)}&quot;)
+
+folder_counts = Counter(str(p.relative_to(SRC).parent.parent) for p, _, _ in missing)
+for folder, count in folder_counts.most_common():
+    print(f&quot;missing_folder\t{count}\t{folder}&quot;)
+
+if len(missing) != EXPECTED_MISSING:
+    print(f&quot;status=blocked_unexpected_missing_count expected={EXPECTED_MISSING} actual={len(missing)}&quot;)
+    raise SystemExit(4)
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open(&quot;rb&quot;) as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b&quot;&quot;):
+            h.update(chunk)
+    return h.hexdigest()
+
+WORK.mkdir(parents=True, exist_ok=False)
+(STAGING / &quot;Mail&quot;).mkdir(parents=True, exist_ok=True)
+if (SRC / &quot;prefs.js&quot;).exists():
+    shutil.copy2(SRC / &quot;prefs.js&quot;, STAGING / &quot;prefs.js&quot;)
+else:
+    (STAGING / &quot;prefs.js&quot;).write_text(&quot;// minimal marker for converter safety checks\n&quot;, encoding=&quot;utf-8&quot;)
+
+manifest = WORK / &quot;delta-selected-files.tsv&quot;
+with manifest.open(&quot;w&quot;, encoding=&quot;utf-8&quot;, newline=&quot;\n&quot;) as out:
+    out.write(&quot;sha256\tsize\tmtime_ns\trelative_path\n&quot;)
+    for src_path, size, mtime_ns in sorted(missing, key=lambda row: str(row[0])):
+        rel = src_path.relative_to(SRC)
+        dst = STAGING / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_path, dst)
+        src_hash = sha256(src_path)
+        dst_hash = sha256(dst)
+        if src_hash != dst_hash:
+            print(f&quot;status=blocked_hash_mismatch source={src_path} target={dst}&quot;)
+            raise SystemExit(5)
+        out.write(f&quot;{src_hash}\t{size}\t{mtime_ns}\t{rel}\n&quot;)
+
+print(f&quot;manifest={manifest}&quot;)
+print(f&quot;staging_cur_count={sum(1 for p in STAGING.glob(&#x27;**/cur/*&#x27;) if p.is_file())}&quot;)
+print(f&quot;staging_new_count={sum(1 for p in STAGING.glob(&#x27;**/new/*&#x27;) if p.is_file())}&quot;)
+print(f&quot;staging_tmp_count={sum(1 for p in STAGING.glob(&#x27;**/tmp/*&#x27;) if p.is_file())}&quot;)
+print(&quot;status=staging_ready&quot;)
+PY
+```
+
+Successful output should include `missing_candidate_count=248`,
+`staging_cur_count=248`, `staging_new_count=0`, `staging_tmp_count=0`, and
+`status=staging_ready`.
+
+Batch 4: Fedora VM Terminal - converter dry-run
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+```bash
+echo &quot;=== Betterbird delta import: Batch 4 converter dry-run ===&quot;
+date -Is
+
+CONVERTER=&quot;$HOME/codex-runs/betterbird_maildirlite_to_maildirpp.py&quot;
+STAGING=&quot;$HOME/Evolution-Mailstore/delta-work/staging-betterbird-maildir&quot;
+DELTA_TARGET=&quot;$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704&quot;
+LOGDIR=&quot;$HOME/Evolution-Mailstore/conversion-logs/delta-dryrun-$(date +%Y%m%d-%H%M%S)&quot;
+
+test -f &quot;$CONVERTER&quot; || { echo &quot;ERROR: converter missing&quot;; exit 1; }
+test -d &quot;$STAGING&quot; || { echo &quot;ERROR: staging missing&quot;; exit 1; }
+test ! -e &quot;$DELTA_TARGET&quot; || { echo &quot;ERROR: delta target already exists&quot;; exit 1; }
+python3 -m py_compile &quot;$CONVERTER&quot;
+python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$DELTA_TARGET&quot; --log-dir &quot;$LOGDIR&quot; --dry-run
+DRY_EXIT=$?
+echo &quot;dry_run_exit=$DRY_EXIT&quot;
+echo &quot;log_dir=$LOGDIR&quot;
+test ! -e &quot;$DELTA_TARGET&quot;; echo &quot;target_absent_after_dry_run_exit=$?&quot;
+exit &quot;$DRY_EXIT&quot;
+```
+
+Successful output should include `dry_run_exit=0`,
+`target_absent_after_dry_run_exit=0`, 248 planned copies, and 0 errors in the
+converter summary.
+
+Batch 5: Fedora VM Terminal - real copy and full hash verify
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+```bash
+echo &quot;=== Betterbird delta import: Batch 5 copy and verify ===&quot;
+date -Is
+
+CONVERTER=&quot;$HOME/codex-runs/betterbird_maildirlite_to_maildirpp.py&quot;
+STAGING=&quot;$HOME/Evolution-Mailstore/delta-work/staging-betterbird-maildir&quot;
+DELTA_TARGET=&quot;$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704&quot;
+LOGDIR=&quot;$HOME/Evolution-Mailstore/conversion-logs/delta-copy-$(date +%Y%m%d-%H%M%S)&quot;
+
+test -f &quot;$CONVERTER&quot; || { echo &quot;ERROR: converter missing&quot;; exit 1; }
+test -d &quot;$STAGING&quot; || { echo &quot;ERROR: staging missing&quot;; exit 1; }
+test ! -e &quot;$DELTA_TARGET&quot; || { echo &quot;ERROR: delta target already exists&quot;; exit 1; }
+python3 -m py_compile &quot;$CONVERTER&quot;
+
+python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$DELTA_TARGET&quot; --log-dir &quot;$LOGDIR&quot; --copy --resume
+COPY_EXIT=$?
+echo &quot;copy_exit=$COPY_EXIT&quot;
+test &quot;$COPY_EXIT&quot; -eq 0 || exit &quot;$COPY_EXIT&quot;
+python3 &quot;$CONVERTER&quot; --source &quot;$STAGING&quot; --target &quot;$DELTA_TARGET&quot; --log-dir &quot;$LOGDIR&quot; --verify --verify-hash
+VERIFY_EXIT=$?
+echo &quot;verify_exit=$VERIFY_EXIT&quot;
+
+echo &quot;delta_cur_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/cur/*&#x27; -type f | wc -l)&quot;
+echo &quot;delta_new_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/new/*&#x27; -type f | wc -l)&quot;
+echo &quot;delta_tmp_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/tmp/*&#x27; -type f | wc -l)&quot;
+du -sh &quot;$DELTA_TARGET&quot;
+exit &quot;$VERIFY_EXIT&quot;
+```
+
+Successful output should include `copy_exit=0`, `verify_exit=0`,
+`delta_cur_count=248`, `delta_new_count=0`, and `delta_tmp_count=0`.
+
+Batch 6: Fedora Evolution GUI validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add `/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704` to
+Fedora Evolution as `Maildir-format mail directories`. Do not choose
+`MH-format mail directories`. Verify Inbox 241, Sent 4, November2025 2,
+Trash 1, message opening, HTML rendering, attachments, and no error popup.
+
+Batch 7 and later
+~~~~~~~~~~~~~~~~~
+
+After Batch 6 passes, continue with Phase 3 below:
+
+- Phase 3 is Batch 7: Fedora pack and verify.
+- Phase 4A is Batch 8A: USB transfer path.
+- Phase 4B is Batch 8B: HGFS / Win11 host-share transfer path.
+- Phase 4C is Batch 8C: Google Drive ZIP transfer path.
+- Phase 5 is Batch 9: antiX staging from ZIP. For USB/HGFS, copy the verified
+  export folder to `/mail/import-staging/maildirpp-delta-export-20260704-151448`
+  first, then run `verify-archive` against its `manifest.json`.
+- Phase 6 is Batch 10: antiX restore, verify, and inspect.
+- Phase 7 is Batch 11: antiX Evolution Flatpak visibility.
+- Phase 8 is Batch 12: antiX Evolution GUI validation.</code></pre></div>
       </section>
 
       <section id="fedora-pack">
