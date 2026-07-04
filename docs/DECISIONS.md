@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-04: Keep Betterbird Post-Conversion Delta as a Separate Maildir++ Archive
+
+- Status: accepted
+- Context: After the first full Betterbird conversion, 248 newer Betterbird source messages were found outside the original conversion state. The owner chose to include all 248 candidates, including 8 same-Message-ID but different-content variants, to avoid losing potentially meaningful message variants. The original converted archive and the production mbsync `provider-live` tree were already separate validated objects.
+- Decision: Convert the 248-message delta into its own canonical Maildir++ tree, transfer it independently with `maildirpp_transport.py`, restore it on antiX at `/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704`, and add it to Evolution as a separate `Maildir-format mail directories` account. Do not merge it into `/mail/Mailstore/evolution/local-maildir` or `/mail/Mailstore/mbsync/provider-live` during this phase.
+- Consequence: The delta is usable in Evolution and fully reversible without modifying the 59G archive or live IMAP sync tree. Duplicate Message-ID variants may appear in search or folder views, but data preservation is prioritized. Any future merge must be a separate backed-up and tested task.
+
 ### 2026-07-01: Use Dedicated Maildir++ Archive Transport for Converted Betterbird Archive
 
 - Status: accepted

@@ -1,0 +1,515 @@
+Betterbird Delta Maildir++ Transfer Guide
+=========================================
+
+Purpose
+-------
+
+This guide documents the validated delta workflow for messages that arrived in
+Betterbird after the first full Betterbird maildir-lite to Maildir++ conversion.
+
+It moves the verified 248-message Fedora delta Maildir++ archive to antiX as a
+separate Evolution Maildir account.
+
+It does not modify:
+
+  /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp
+  /mail/Mailstore/evolution/local-maildir
+  /mail/Mailstore/mbsync/provider-live
+
+
+Validated Result
+----------------
+
+Fedora delta source:
+
+  /home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704
+
+antiX final destination:
+
+  /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+
+Final validated counts:
+
+  Inbox:        241
+  Sent:           4
+  November2025:   2
+  Trash:          1
+  Total cur:    248
+  Total new:      0
+  Total tmp:      0
+
+The owner validated in antiX Evolution:
+
+  Messages open:      yes
+  HTML renders:       yes
+  Attachments visible: yes
+  Error popup:        no
+
+
+Tools
+-----
+
+Use the existing transport utility:
+
+  /home/atiq/codex-runs/maildirpp_transport.py
+
+Expected script SHA256:
+
+  7af4d83d25556a39623d06d0d8de321b9569748e6da3cbe2b90d050dce3189e3
+
+The transport package contains:
+
+  manifest.json
+  inventory.jsonl
+  maildirpp-archive.tar.gz.part0001
+
+Every verify/unpack command uses manifest.json.
+
+
+Safety Rules
+------------
+
+- Close Betterbird and Evolution before conversion, packing, or restore.
+- Keep the delta archive separate from the old 59G archive.
+- Keep the delta archive separate from mbsync provider-live.
+- Never unpack over an existing final destination.
+- Verify the archive before transfer, after transfer, and before unpack.
+- Run verify-tree and inspect after unpack.
+- Add the final directory to Evolution as Maildir-format mail directories.
+- Do not choose MH-format mail directories.
+
+
+Phase 1 - Fedora Delta Detection and Conversion
+-----------------------------------------------
+
+The validated delta was built from Betterbird source:
+
+  /home/atiq/Betterbird-Email/betterbird-maildir
+
+Original conversion state database:
+
+  /home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp/.conversion-state.sqlite
+
+The delta selection compared current Betterbird source files against the
+original converter state and selected 248 source files missing from the original
+conversion state.
+
+The owner chose to include all 248 files, including 8 same-Message-ID but
+different-content variants.
+
+The selected files were staged under:
+
+  /home/atiq/Evolution-Mailstore/delta-work/staging-betterbird-maildir
+
+Then converted with:
+
+  python3 /home/atiq/codex-runs/betterbird_maildirlite_to_maildirpp.py \
+    --source /home/atiq/Evolution-Mailstore/delta-work/staging-betterbird-maildir \
+    --target /home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704 \
+    --copy
+
+Full hash verification was run with:
+
+  python3 /home/atiq/codex-runs/betterbird_maildirlite_to_maildirpp.py \
+    --source /home/atiq/Evolution-Mailstore/delta-work/staging-betterbird-maildir \
+    --target /home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704 \
+    --verify \
+    --verify-hash
+
+Validated Fedora conversion result:
+
+  copied: 248
+  verified: 248
+  errors: 0
+  skipped: 0
+  target size: 418M
+
+
+Phase 2 - Fedora Evolution Validation
+-------------------------------------
+
+Add the Fedora delta target to Evolution as:
+
+  Maildir-format mail directories
+
+Directory:
+
+  /home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704
+
+Expected folder counts:
+
+  Local_Folders.November2025: 2
+  mail_tagindustries_com_sg.Inbox: 241
+  mail_tagindustries_com_sg.Sent: 4
+  mail_tagindustries_com_sg.Trash: 1
+
+Only continue after messages open, HTML renders, attachments are visible, and
+no popup errors appear.
+
+
+Phase 3 - Fedora Pack and Verify
+--------------------------------
+
+Run in Fedora terminal:
+
+  SOURCE="$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704"
+  RUN="$HOME/codex-runs"
+  SCRIPT="$RUN/maildirpp_transport.py"
+  EXPORT="$HOME/maildirpp-delta-export-20260704-151448"
+
+  flatpak kill org.gnome.Evolution || true
+  if pgrep -a -u "$USER" -f 'betterbird|thunderbird|evolution|/app/libexec/evolution|bwrap.*evolution'; then
+    echo "ERROR: mail processes still running"
+    exit 1
+  fi
+
+  python3 -m py_compile "$SCRIPT"
+  python3 "$SCRIPT" inspect --source "$SOURCE"
+  python3 "$SCRIPT" pack --source "$SOURCE" --out "$EXPORT"
+  python3 "$SCRIPT" verify-archive --manifest "$EXPORT/manifest.json"
+
+Validated result:
+
+  EXPORT=/home/atiq/maildirpp-delta-export-20260704-151448
+  parts=1
+  archive_bytes=299189312
+  export_size=286M
+  status=ok
+
+
+Phase 4A - USB Transfer Path
+----------------------------
+
+Use this if a USB drive is mounted and writable on Fedora.
+
+Replace YOUR_USB_LABEL with the real mount label:
+
+  USB="/run/media/$USER/YOUR_USB_LABEL"
+  SRC="$HOME/maildirpp-delta-export-20260704-151448"
+  RUN="$HOME/codex-runs"
+  USB_EXPORT="$USB/maildirpp-delta-export-20260704-151448"
+  USB_SCRIPTS="$USB/codex-runs"
+
+  ls -ld "$USB" "$SRC"
+  df -h "$USB" "$SRC"
+
+  PROBE="$USB/codex-delta-transfer-probe-$(date +%Y%m%d-%H%M%S)"
+  mkdir "$PROBE"
+  printf 'probe\n' > "$PROBE/probe.txt"
+  rm -f "$PROBE/probe.txt"
+  rmdir "$PROBE"
+
+  test ! -e "$USB_EXPORT" || { echo "ERROR: USB export already exists"; exit 1; }
+
+  mkdir -p "$USB_SCRIPTS" "$USB_EXPORT"
+  cp -av "$RUN/maildirpp_transport.py" "$USB_SCRIPTS/"
+  sha256sum "$RUN/maildirpp_transport.py" "$USB_SCRIPTS/maildirpp_transport.py"
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -rt --partial --info=progress2 "$SRC/" "$USB_EXPORT/"
+  else
+    cp -av "$SRC/." "$USB_EXPORT/"
+  fi
+
+  test -f "$USB_EXPORT/manifest.json"; echo "usb_manifest_exit=$?"
+  test -f "$USB_EXPORT/inventory.jsonl"; echo "usb_inventory_exit=$?"
+  echo "usb_part_count=$(find "$USB_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+
+  python3 "$USB_SCRIPTS/maildirpp_transport.py" verify-archive \
+    --manifest "$USB_EXPORT/manifest.json"
+  echo "usb_verify_archive_exit=$?"
+
+  sync
+
+Expected success:
+
+  usb_manifest_exit=0
+  usb_inventory_exit=0
+  usb_part_count=1
+  usb_verify_archive_exit=0
+  status=ok
+
+Safely eject/unmount the USB before removing it.
+
+
+Phase 4B - HGFS / Win11 Host-Share Transfer Path
+------------------------------------------------
+
+This path was validated on Fedora.
+
+HGFS path:
+
+  /mnt/hgfs/Win11Host_Shared4VM
+
+Run in Fedora terminal:
+
+  SRC="$HOME/maildirpp-delta-export-20260704-151448"
+  RUN="$HOME/codex-runs"
+  SCRIPT="$RUN/maildirpp_transport.py"
+  HOST="/mnt/hgfs/Win11Host_Shared4VM"
+  HOST_EXPORT="$HOST/maildirpp-delta-export-20260704-151448"
+  HOST_SCRIPTS="$HOST/codex-runs"
+
+  host_fstype="$(findmnt -T "$HOST" -no FSTYPE 2>/dev/null || true)"
+  echo "host_fstype=$host_fstype"
+  case "$host_fstype" in
+    fuse.vmhgfs-fuse|fuse.vmhgfs|vmhgfs|hgfs) echo "host_share_mount_ok=yes" ;;
+    *) echo "ERROR: host share is not HGFS"; exit 1 ;;
+  esac
+
+  PROBE="$HOST/codex-delta-transfer-probe-$(date +%Y%m%d-%H%M%S)"
+  mkdir "$PROBE"
+  printf 'probe\n' > "$PROBE/probe.txt"
+  rm -f "$PROBE/probe.txt"
+  rmdir "$PROBE"
+
+  test ! -e "$HOST_EXPORT" || { echo "ERROR: host export already exists"; exit 1; }
+
+  mkdir -p "$HOST_SCRIPTS"
+  cp -av "$SCRIPT" "$HOST_SCRIPTS/"
+  sha256sum "$SCRIPT" "$HOST_SCRIPTS/maildirpp_transport.py"
+
+  mkdir "$HOST_EXPORT"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -rt --partial --info=progress2 "$SRC/" "$HOST_EXPORT/"
+  else
+    cp -av "$SRC/." "$HOST_EXPORT/"
+  fi
+
+  test -f "$HOST_EXPORT/manifest.json"; echo "host_manifest_exit=$?"
+  test -f "$HOST_EXPORT/inventory.jsonl"; echo "host_inventory_exit=$?"
+  echo "host_part_count=$(find "$HOST_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+
+  python3 "$HOST_SCRIPTS/maildirpp_transport.py" verify-archive \
+    --manifest "$HOST_EXPORT/manifest.json"
+  echo "host_verify_archive_exit=$?"
+
+  sync
+
+Validated result:
+
+  host_share_mount_ok=yes
+  host_manifest_exit=0
+  host_inventory_exit=0
+  host_part_count=1
+  host_verify_archive_exit=0
+  status=ok
+
+
+Phase 4C - Google Drive ZIP Transfer Path
+-----------------------------------------
+
+This one-off path was validated after the owner manually uploaded the Fedora
+export folder to Google Drive and downloaded it to antiX:
+
+  /home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip
+
+Validated antiX ZIP SHA256:
+
+  65ff42dd1897dad29c09a6cb666bd019c917d52031860dc63c729daa431d8f44
+
+The ZIP contained exactly one top-level folder:
+
+  maildirpp-delta-export-20260704-151448/
+
+with:
+
+  manifest.json
+  inventory.jsonl
+  maildirpp-archive.tar.gz.part0001
+
+
+Phase 5 - antiX Staging From ZIP
+--------------------------------
+
+Run in antiX terminal:
+
+  ZIP="$HOME/Downloads/maildirpp-delta-export-20260704-151448.zip"
+  RUN="$HOME/codex-runs"
+  SCRIPT="$RUN/maildirpp_transport.py"
+  STAGING_PARENT="/mail/import-staging"
+  TRANSFER="$STAGING_PARENT/maildirpp-delta-export-20260704-151448"
+  DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
+
+  test -f "$ZIP" || { echo "ERROR: ZIP missing"; exit 1; }
+  test -f "$SCRIPT" || { echo "ERROR: transport script missing"; exit 1; }
+  python3 -m py_compile "$SCRIPT"
+  test ! -e "$TRANSFER" || { echo "ERROR: staging already exists"; exit 1; }
+  test ! -e "$DEST" || { echo "ERROR: final destination already exists"; exit 1; }
+
+  python3 - <<'PY'
+from pathlib import Path, PurePosixPath
+import shutil
+import zipfile
+
+zip_path = Path.home() / "Downloads" / "maildirpp-delta-export-20260704-151448.zip"
+staging_parent = Path("/mail/import-staging")
+expected_top = "maildirpp-delta-export-20260704-151448"
+target = staging_parent / expected_top
+
+if target.exists():
+    print("extract_status=blocked_target_exists")
+    raise SystemExit(1)
+
+with zipfile.ZipFile(zip_path) as z:
+    bad = z.testzip()
+    print(f"zip_testzip_bad_entry={bad if bad else 'NONE'}")
+    if bad:
+        raise SystemExit(2)
+    names = [i.filename for i in z.infolist()]
+    top_levels = sorted(set(n.split("/", 1)[0] for n in names if n))
+    print("zip_top_level_entries=" + "|".join(top_levels))
+    if top_levels != [expected_top]:
+        print("extract_status=blocked_unexpected_top_level")
+        raise SystemExit(3)
+    for info in z.infolist():
+        pp = PurePosixPath(info.filename)
+        if pp.is_absolute() or ".." in pp.parts:
+            print(f"extract_status=blocked_unsafe_path:{info.filename}")
+            raise SystemExit(4)
+    for info in z.infolist():
+        pp = PurePosixPath(info.filename)
+        out_path = staging_parent.joinpath(*pp.parts)
+        if info.is_dir():
+            out_path.mkdir(parents=True, exist_ok=True)
+            continue
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with z.open(info, "r") as src, out_path.open("xb") as dst:
+            shutil.copyfileobj(src, dst, length=1024 * 1024)
+
+print(f"extracted_to={target}")
+print("extract_status=ok")
+PY
+
+  test -f "$TRANSFER/manifest.json"; echo "staging_manifest_exit=$?"
+  test -f "$TRANSFER/inventory.jsonl"; echo "staging_inventory_exit=$?"
+  echo "staging_part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+
+  python3 "$SCRIPT" verify-archive --manifest "$TRANSFER/manifest.json"
+  echo "staging_verify_archive_exit=$?"
+
+Validated result:
+
+  extract_status=ok
+  staging_manifest_exit=0
+  staging_inventory_exit=0
+  staging_part_count=1
+  staging_verify_archive_exit=0
+  status=ok
+
+
+Phase 6 - antiX Restore, Verify, and Inspect
+--------------------------------------------
+
+Run in antiX terminal:
+
+  RUN="$HOME/codex-runs"
+  SCRIPT="$RUN/maildirpp_transport.py"
+  TRANSFER="/mail/import-staging/maildirpp-delta-export-20260704-151448"
+  MANIFEST="$TRANSFER/manifest.json"
+  DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
+
+  flatpak kill org.gnome.Evolution || true
+  if pgrep -a -u "$USER" -f 'evolution|/app/libexec/evolution|bwrap.*evolution'; then
+    echo "ERROR: Evolution still running"
+    exit 1
+  fi
+
+  test -f "$SCRIPT" || { echo "ERROR: transport script missing"; exit 1; }
+  python3 -m py_compile "$SCRIPT"
+  test -f "$MANIFEST" || { echo "ERROR: manifest missing"; exit 1; }
+  test ! -e "$DEST" || { echo "ERROR: final destination already exists"; exit 1; }
+
+  python3 "$SCRIPT" verify-archive --manifest "$MANIFEST"
+  python3 "$SCRIPT" unpack --manifest "$MANIFEST" --dest "$DEST"
+  python3 "$SCRIPT" verify-tree --manifest "$MANIFEST" --dest "$DEST"
+  python3 "$SCRIPT" inspect --source "$DEST"
+
+  find "$DEST" -path '*/cur/*' -type f | wc -l | awk '{print "dest_cur_count="$1}'
+  find "$DEST" -path '*/new/*' -type f | wc -l | awk '{print "dest_new_count="$1}'
+  find "$DEST" -path '*/tmp/*' -type f | wc -l | awk '{print "dest_tmp_count="$1}'
+
+Validated result:
+
+  pre-unpack verify-archive: status=ok
+  unpack: status=ok
+  verify-tree: status=ok
+  inspect: status=ok
+  dest_cur_count=248
+  dest_new_count=0
+  dest_tmp_count=0
+
+
+Phase 7 - antiX Evolution Flatpak Visibility
+--------------------------------------------
+
+Run in antiX terminal:
+
+  DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
+
+  flatpak info org.gnome.Evolution
+  flatpak run --command=sh org.gnome.Evolution -lc '
+DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
+test -d "$DEST" || exit 1
+find "$DEST" -path "*/cur/*" -type f | wc -l | awk "{print \"flatpak_cur_count=\"\$1}"
+find "$DEST" -path "*/new/*" -type f | wc -l | awk "{print \"flatpak_new_count=\"\$1}"
+find "$DEST" -path "*/tmp/*" -type f | wc -l | awk "{print \"flatpak_tmp_count=\"\$1}"
+'
+
+Validated result:
+
+  flatpak_cur_count=248
+  flatpak_new_count=0
+  flatpak_tmp_count=0
+
+
+Phase 8 - Add To antiX Evolution GUI
+------------------------------------
+
+In Evolution:
+
+1. Open Evolution.
+2. Go to Edit -> Accounts.
+3. Click Add.
+4. Add a local mail account.
+5. Choose Maildir-format mail directories.
+6. Do not choose MH-format mail directories.
+7. Set the directory to:
+
+     /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+
+8. Name it:
+
+     Betterbird Delta 2026-07-04
+
+Expected folder counts:
+
+  Local_Folders.November2025: 2
+  mail_tagindustries_com_sg.Inbox: 241
+  mail_tagindustries_com_sg.Sent: 4
+  mail_tagindustries_com_sg.Trash: 1
+
+Validated GUI result:
+
+  Inbox count: 241
+  Sent count: 4
+  November2025 count: 2
+  Trash count: 1
+  Messages open: yes
+  HTML renders: yes
+  Attachments visible: yes
+  Error popup: no
+
+
+Cleanup Notes
+-------------
+
+Keep these until the antiX GUI validation is complete and backed up:
+
+  /home/atiq/maildirpp-delta-export-20260704-151448
+  /home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip
+  /mail/import-staging/maildirpp-delta-export-20260704-151448
+
+After a backup exists and restore drills are complete, cleanup can be planned as
+a separate explicit step. Do not delete them casually.
+

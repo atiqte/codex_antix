@@ -6,6 +6,7 @@
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
+- [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Decide broader project type beyond the approved mail migration utility.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
@@ -80,3 +81,11 @@
 - [x] Add and validate provider-live auto-sync timeout wrapping, sync-age status, stale-lock clearing, and stale loop PID protection.
 - [x] Add a clear Start Here sequence to the mbsync HTML/text guides and label production config snippets as reference-only.
 - [x] Add a topic-neutral work validation ledger for future command chunks and pasted-output review.
+- [x] Create the separate Betterbird delta Maildir++ archive on Fedora with all 248 selected messages.
+- [x] Validate the Betterbird delta Maildir++ archive in Fedora Evolution.
+- [x] Pack and verify the Betterbird delta Maildir++ export on Fedora.
+- [x] Copy and verify the Betterbird delta export through the Fedora HGFS/Win11 host-share path.
+- [x] Transfer the Betterbird delta export ZIP to antiX through Google Drive and verify the staged archive.
+- [x] Restore the Betterbird delta Maildir++ archive on antiX and verify with `verify-tree`, `inspect`, independent counts, and Flatpak visibility.
+- [x] Validate the restored Betterbird delta Maildir++ archive in antiX Evolution.
+- [x] Create Betterbird delta Maildir++ transfer DIY guide in HTML and plain text formats.

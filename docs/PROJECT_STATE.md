@@ -6,7 +6,7 @@ Last updated: 2026-07-04
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive and delta Maildir++ transfer paths, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -30,6 +30,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same guide.
 - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the already-converted Fedora Maildir++ archive to antiX, including the USB transfer workflow, Win11 host-share copy path for the verified export, and the validated all-in-one antiX restore/verify/inspect chunk.
 - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`, a terminal-friendly plain text version of the same converted Maildir++ archive guide, USB transfer workflow, Win11 host-share copy path, and validated all-in-one antiX restore/verify/inspect chunk.
+- `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.html`, an offline browser DIY guide with copy buttons for transferring the separate 248-message Betterbird delta Maildir++ archive from Fedora to antiX Evolution.
+- `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.txt`, a terminal-friendly plain text version of the same Betterbird delta Maildir++ transfer guide.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for installing and preparing Evolution Flatpak 3.60.2 on antiX runit/IceWM.
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
@@ -88,6 +90,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/BETTERBIRD_PROFILE_TRANSPORT_GUIDE.txt`
   - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.html`
   - `docs/MAILDIRPP_ARCHIVE_TRANSPORT_GUIDE.txt`
+  - `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.html`
+  - `docs/BETTERBIRD_DELTA_MAILDIRPP_TRANSFER_GUIDE.txt`
   - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.html`
   - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`
   - `docs/MBSYNC_ANTIX_GUIDE.html`
@@ -129,6 +133,15 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - Fedora-to-Win11 host-share copy on 2026-07-03 succeeded for `/mnt/hgfs/Win11Host_Shared4VM/maildirpp-archive-export-20260701-215204`: scripts were copied with expected SHA256 values, `rsync` transferred 40,626,264,258 bytes, `copy_exit=0`, `host_manifest_exit=0`, `host_inventory_exit=0`, `host_part_count=21`, export size was 38G, and host-share `verify-archive` returned `status=ok` with 21 parts and 40,613,836,495 archive bytes. This is now a verified Win11 host-side backup or alternate transfer package; it has not yet been copied into antiX staging.
 - antiX USB-to-staging transfer finished successfully across 2026-07-03 and 2026-07-04. The USB was mounted at `/media/atiq/New Volume`, `/mail` had 200G available, the transport scripts copied into `~/codex-runs` with expected SHA256 values, USB-side `verify-archive` returned `status=ok`, `rsync` copied 40,626,264,258 bytes into `/mail/import-staging/maildirpp-archive-export-20260701-215204`, `copy_exit=0`, `staging_manifest_exit=0`, `staging_inventory_exit=0`, `staging_part_count=21`, staging size was 38G, and antiX staging `verify-archive` returned `status=ok` with 21 parts, 40,613,836,495 archive bytes, and `staging_verify_archive_exit=0`.
 - antiX restore of the converted Maildir++ archive succeeded on 2026-07-04. The staged archive was reverified before unpack with `status=ok`, then unpacked into `/mail/Mailstore/evolution/local-maildir` with `unpack_exit=0`, 115 directories, 48,721 regular files, 62,430,783,277 regular bytes, 29 Maildir folders, 48,720 `cur` files, 0 `new` files, and 0 `tmp` files. Restored-tree `verify-tree` returned `status=ok` and `verify_tree_exit=0`; final `inspect` returned 29 Maildir folders, 28 dot folders, 48,720 `cur`, 0 `new`, 0 `tmp`, 1 metadata file, 62,430,783,277 regular bytes, `status=ok`, and `inspect_exit=0`.
+- A separate Betterbird post-conversion delta was selected on Fedora on 2026-07-04 by comparing the current Betterbird source against the original conversion state. The owner chose to include all 248 candidates, including 8 same-Message-ID but different-content variants, to prioritize data preservation over deduplication.
+- The Fedora delta conversion target `/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704` was created as canonical Maildir++ and validated with converter SHA256 verification: 248 copied messages, 248 verified messages, 0 skipped/errors, 248 `cur`, 0 `new`, 0 `tmp`, 418M apparent target size, and folder counts Inbox 241, Sent 4, Local_Folders.November2025 2, Trash 1.
+- The owner validated the Fedora delta target in Evolution Flatpak as a separate `Maildir-format mail directories` account: Inbox 241, Sent 4, November2025 2, Trash 1, messages opened, HTML rendered, attachments were visible, and no error popup appeared.
+- The Fedora delta target was packed with `maildirpp_transport.py` into `/home/atiq/maildirpp-delta-export-20260704-151448`. Fedora `pack` and `verify-archive` succeeded with 1 part, export size 286M, archive bytes 299,189,312, and `status=ok`.
+- The delta export was copied to the Fedora HGFS/Win11 host share at `/mnt/hgfs/Win11Host_Shared4VM/maildirpp-delta-export-20260704-151448` after the share resolved to `fuse.vmhgfs-fuse` and normal-user write probes passed. Host-share `verify-archive` succeeded with 1 part, 299,189,312 archive bytes, and `status=ok`.
+- The owner then manually transferred the delta export to antiX through Google Drive as `/home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip`; antiX ZIP inspection succeeded with SHA256 `65ff42dd1897dad29c09a6cb666bd019c917d52031860dc63c729daa431d8f44`, exactly one top-level export folder, and expected `manifest.json`, `inventory.jsonl`, and `maildirpp-archive.tar.gz.part0001`.
+- The antiX delta package was extracted to `/mail/import-staging/maildirpp-delta-export-20260704-151448` and verified with `verify-archive` before unpack. It was restored to `/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704`; `unpack`, `verify-tree`, `inspect`, independent counts, and Evolution Flatpak visibility all succeeded with 248 `cur`, 0 `new`, 0 `tmp`, and folder counts Inbox 241, Sent 4, Local_Folders.November2025 2, Trash 1.
+- The owner validated the restored antiX delta target in Evolution as a separate `Maildir-format mail directories` account: Inbox 241, Sent 4, November2025 2, Trash 1, messages opened, HTML rendered, attachments were visible, and no error popup appeared.
+- The Betterbird delta archive must remain separate from `/mail/Mailstore/evolution/local-maildir` and `/mail/Mailstore/mbsync/provider-live` unless a later merge is explicitly planned, backed up, and tested.
 - The Maildir++ archive guide now uses the validated antiX restore chunk based on `~/codex-runs/maildirpp_transport.py` instead of fragmented repo-relative restore examples. This prevents the earlier variable-only no-op pattern and keeps pre-unpack archive verification, destination-empty refusal, unpack, `verify-tree`, and final `inspect` in one logged operation.
 - The converted Betterbird archive must stay separate from mbsync `provider-live`; it is a local read/archive Maildir++ account, not a live IMAP sync tree.
 - Evolution Flatpak 3.60.2 from Flathub was validated on antiX 26 runit with zzzFM/IceWM. It is installed as a user Flatpak, granted `/mail:create`, and its app directory is symlinked from `~/.var/app/org.gnome.Evolution` to `/mail/AppData/flatpak-evolution/appdir`.
@@ -175,10 +188,11 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 5. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
 6. Keep a note that the restored archive is a local read/archive account and must not be merged into `/mail/Mailstore/mbsync/provider-live`.
 7. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
-8. Retain the split archive export until antiX Evolution validation is complete.
-9. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-10. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
-11. Decide broader project type and future packaging only if needed.
+8. Retain the main 38G split archive export until antiX Evolution validation is complete.
+9. Keep the delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+10. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+11. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
+12. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

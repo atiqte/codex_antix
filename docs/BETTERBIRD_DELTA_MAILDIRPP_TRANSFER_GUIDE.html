@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Betterbird Delta Maildir++ Transfer Guide</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #536274;
+      --line: #d8e0ea;
+      --accent: #155f9b;
+      --code-bg: #101827;
+      --code-ink: #eef5ff;
+      --warn-bg: #fff7e6;
+      --ok-bg: #ecf8f1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+    h1 { max-width: 1120px; margin: 0 auto 8px; font-size: 32px; line-height: 1.2; }
+    .subtitle { max-width: 1120px; margin: 0 auto; color: var(--muted); }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 22px;
+    }
+    nav {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    nav h2 { font-size: 15px; margin: 0 0 10px; }
+    nav a { display: block; color: var(--accent); text-decoration: none; padding: 5px 0; font-size: 14px; }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+    h2, h3 { line-height: 1.25; margin-top: 0; }
+    code { background: #eef2f7; padding: 2px 5px; border-radius: 4px; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 8px;
+      overflow-x: auto;
+      padding: 14px;
+      margin: 0;
+      white-space: pre;
+    }
+    .codebox { position: relative; margin: 12px 0 18px; }
+    button.copy {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border: 1px solid #35506f;
+      background: #1f3654;
+      color: white;
+      border-radius: 6px;
+      padding: 5px 9px;
+      cursor: pointer;
+    }
+    .callout { border-left: 5px solid var(--accent); background: #eef6ff; padding: 12px 14px; margin: 12px 0; }
+    .warn { border-left-color: #b26b00; background: var(--warn-bg); }
+    .ok { border-left-color: #16834b; background: var(--ok-bg); }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    th, td { border: 1px solid var(--line); padding: 8px; text-align: left; }
+    th { background: #eef2f7; }
+    @media (max-width: 840px) {
+      main { display: block; padding: 16px; }
+      nav { position: static; margin-bottom: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Betterbird Delta Maildir++ Transfer Guide</h1>
+    <p class="subtitle">Validated workflow for moving the 248-message Betterbird delta archive from Fedora to antiX Evolution.</p>
+  </header>
+  <main>
+    <nav>
+      <h2>Contents</h2>
+      <a href="#purpose">Purpose</a>
+      <a href="#validated">Validated Result</a>
+      <a href="#safety">Safety Rules</a>
+      <a href="#fedora-pack">Fedora Pack</a>
+      <a href="#usb">USB Transfer</a>
+      <a href="#hgfs">HGFS Transfer</a>
+      <a href="#zip">Google Drive ZIP</a>
+      <a href="#antix-stage">antiX Staging</a>
+      <a href="#antix-restore">antiX Restore</a>
+      <a href="#evolution">Evolution GUI</a>
+      <a href="#cleanup">Cleanup Notes</a>
+    </nav>
+    <div>
+      <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This guide documents the validated delta workflow for messages that arrived in Betterbird after the first full Betterbird maildir-lite to Maildir++ conversion.</p>
+        <p>It moves the verified 248-message Fedora delta Maildir++ archive to antiX as a separate Evolution Maildir account.</p>
+        <div class="callout warn">Do not merge this delta into the old 59G archive or into the mbsync live tree during this workflow.</div>
+      </section>
+
+      <section id="validated">
+        <h2>Validated Result</h2>
+        <table>
+          <tr><th>Item</th><th>Value</th></tr>
+          <tr><td>Fedora delta source</td><td><code>/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704</code></td></tr>
+          <tr><td>antiX final destination</td><td><code>/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704</code></td></tr>
+          <tr><td>Inbox</td><td>241</td></tr>
+          <tr><td>Sent</td><td>4</td></tr>
+          <tr><td>November2025</td><td>2</td></tr>
+          <tr><td>Trash</td><td>1</td></tr>
+          <tr><td>Total cur/new/tmp</td><td>248 / 0 / 0</td></tr>
+        </table>
+        <div class="callout ok">antiX Evolution validation passed: messages open, HTML renders, attachments are visible, and no error popup appears.</div>
+      </section>
+
+      <section id="safety">
+        <h2>Safety Rules</h2>
+        <ul>
+          <li>Close Betterbird and Evolution before conversion, packing, or restore.</li>
+          <li>Keep the delta archive separate from <code>/mail/Mailstore/evolution/local-maildir</code>.</li>
+          <li>Keep the delta archive separate from <code>/mail/Mailstore/mbsync/provider-live</code>.</li>
+          <li>Never unpack over an existing final destination.</li>
+          <li>Verify before transfer, after transfer, and before unpack.</li>
+          <li>Add to Evolution as <strong>Maildir-format mail directories</strong>, not MH-format.</li>
+        </ul>
+      </section>
+
+      <section id="fedora-pack">
+        <h2>Fedora Pack And Verify</h2>
+        <p>Run this after the Fedora delta Maildir++ tree has been created and validated in Fedora Evolution.</p>
+        <div class="codebox"><button class="copy">Copy</button><pre><code>SOURCE="$HOME/Evolution-Mailstore/betterbird-delta-maildirpp-20260704"
+RUN="$HOME/codex-runs"
+SCRIPT="$RUN/maildirpp_transport.py"
+EXPORT="$HOME/maildirpp-delta-export-20260704-151448"
+
+flatpak kill org.gnome.Evolution || true
+if pgrep -a -u "$USER" -f 'betterbird|thunderbird|evolution|/app/libexec/evolution|bwrap.*evolution'; then
+  echo "ERROR: mail processes still running"
+  exit 1
+fi
+
+python3 -m py_compile "$SCRIPT"
+python3 "$SCRIPT" inspect --source "$SOURCE"
+python3 "$SCRIPT" pack --source "$SOURCE" --out "$EXPORT"
+python3 "$SCRIPT" verify-archive --manifest "$EXPORT/manifest.json"</code></pre></div>
+        <p>Validated export: <code>/home/atiq/maildirpp-delta-export-20260704-151448</code>, 1 part, 286M, archive bytes <code>299189312</code>.</p>
+      </section>
+
+      <section id="usb">
+        <h2>USB Transfer Path</h2>
+        <p>Use this if a USB drive is mounted and writable on Fedora. Replace <code>YOUR_USB_LABEL</code>.</p>
+        <div class="codebox"><button class="copy">Copy</button><pre><code>USB="/run/media/$USER/YOUR_USB_LABEL"
+SRC="$HOME/maildirpp-delta-export-20260704-151448"
+RUN="$HOME/codex-runs"
+USB_EXPORT="$USB/maildirpp-delta-export-20260704-151448"
+USB_SCRIPTS="$USB/codex-runs"
+
+ls -ld "$USB" "$SRC"
+df -h "$USB" "$SRC"
+
+PROBE="$USB/codex-delta-transfer-probe-$(date +%Y%m%d-%H%M%S)"
+mkdir "$PROBE"
+printf 'probe\n' > "$PROBE/probe.txt"
+rm -f "$PROBE/probe.txt"
+rmdir "$PROBE"
+
+test ! -e "$USB_EXPORT" || { echo "ERROR: USB export already exists"; exit 1; }
+mkdir -p "$USB_SCRIPTS" "$USB_EXPORT"
+cp -av "$RUN/maildirpp_transport.py" "$USB_SCRIPTS/"
+sha256sum "$RUN/maildirpp_transport.py" "$USB_SCRIPTS/maildirpp_transport.py"
+
+if command -v rsync >/dev/null 2>&1; then
+  rsync -rt --partial --info=progress2 "$SRC/" "$USB_EXPORT/"
+else
+  cp -av "$SRC/." "$USB_EXPORT/"
+fi
+
+test -f "$USB_EXPORT/manifest.json"; echo "usb_manifest_exit=$?"
+test -f "$USB_EXPORT/inventory.jsonl"; echo "usb_inventory_exit=$?"
+echo "usb_part_count=$(find "$USB_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+python3 "$USB_SCRIPTS/maildirpp_transport.py" verify-archive --manifest "$USB_EXPORT/manifest.json"
+echo "usb_verify_archive_exit=$?"
+sync</code></pre></div>
+      </section>
+
+      <section id="hgfs">
+        <h2>HGFS / Win11 Host-Share Path</h2>
+        <p>This path was validated on Fedora at <code>/mnt/hgfs/Win11Host_Shared4VM</code>.</p>
+        <div class="codebox"><button class="copy">Copy</button><pre><code>SRC="$HOME/maildirpp-delta-export-20260704-151448"
+RUN="$HOME/codex-runs"
+SCRIPT="$RUN/maildirpp_transport.py"
+HOST="/mnt/hgfs/Win11Host_Shared4VM"
+HOST_EXPORT="$HOST/maildirpp-delta-export-20260704-151448"
+HOST_SCRIPTS="$HOST/codex-runs"
+
+host_fstype="$(findmnt -T "$HOST" -no FSTYPE 2>/dev/null || true)"
+echo "host_fstype=$host_fstype"
+case "$host_fstype" in
+  fuse.vmhgfs-fuse|fuse.vmhgfs|vmhgfs|hgfs) echo "host_share_mount_ok=yes" ;;
+  *) echo "ERROR: host share is not HGFS"; exit 1 ;;
+esac
+
+PROBE="$HOST/codex-delta-transfer-probe-$(date +%Y%m%d-%H%M%S)"
+mkdir "$PROBE"
+printf 'probe\n' > "$PROBE/probe.txt"
+rm -f "$PROBE/probe.txt"
+rmdir "$PROBE"
+
+test ! -e "$HOST_EXPORT" || { echo "ERROR: host export already exists"; exit 1; }
+mkdir -p "$HOST_SCRIPTS"
+cp -av "$SCRIPT" "$HOST_SCRIPTS/"
+sha256sum "$SCRIPT" "$HOST_SCRIPTS/maildirpp_transport.py"
+
+mkdir "$HOST_EXPORT"
+if command -v rsync >/dev/null 2>&1; then
+  rsync -rt --partial --info=progress2 "$SRC/" "$HOST_EXPORT/"
+else
+  cp -av "$SRC/." "$HOST_EXPORT/"
+fi
+
+test -f "$HOST_EXPORT/manifest.json"; echo "host_manifest_exit=$?"
+test -f "$HOST_EXPORT/inventory.jsonl"; echo "host_inventory_exit=$?"
+echo "host_part_count=$(find "$HOST_EXPORT" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+python3 "$HOST_SCRIPTS/maildirpp_transport.py" verify-archive --manifest "$HOST_EXPORT/manifest.json"
+echo "host_verify_archive_exit=$?"
+sync</code></pre></div>
+      </section>
+
+      <section id="zip">
+        <h2>Google Drive ZIP Path</h2>
+        <p>The owner manually transferred this ZIP to antiX:</p>
+        <p><code>/home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip</code></p>
+        <p>Validated ZIP SHA256:</p>
+        <p><code>65ff42dd1897dad29c09a6cb666bd019c917d52031860dc63c729daa431d8f44</code></p>
+      </section>
+
+      <section id="antix-stage">
+        <h2>antiX Staging From ZIP</h2>
+        <div class="codebox"><button class="copy">Copy</button><pre><code>ZIP="$HOME/Downloads/maildirpp-delta-export-20260704-151448.zip"
+RUN="$HOME/codex-runs"
+SCRIPT="$RUN/maildirpp_transport.py"
+STAGING_PARENT="/mail/import-staging"
+TRANSFER="$STAGING_PARENT/maildirpp-delta-export-20260704-151448"
+DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
+
+test -f "$ZIP" || { echo "ERROR: ZIP missing"; exit 1; }
+test -f "$SCRIPT" || { echo "ERROR: transport script missing"; exit 1; }
+python3 -m py_compile "$SCRIPT"
+test ! -e "$TRANSFER" || { echo "ERROR: staging already exists"; exit 1; }
+test ! -e "$DEST" || { echo "ERROR: final destination already exists"; exit 1; }
+
+python3 - <<'PY'
+from pathlib import Path, PurePosixPath
+import shutil
+import zipfile
+
+zip_path = Path.home() / "Downloads" / "maildirpp-delta-export-20260704-151448.zip"
+staging_parent = Path("/mail/import-staging")
+expected_top = "maildirpp-delta-export-20260704-151448"
+target = staging_parent / expected_top
+if target.exists():
+    raise SystemExit("extract_status=blocked_target_exists")
+with zipfile.ZipFile(zip_path) as z:
+    bad = z.testzip()
+    print(f"zip_testzip_bad_entry={bad if bad else 'NONE'}")
+    if bad:
+        raise SystemExit(2)
+    names = [i.filename for i in z.infolist()]
+    top_levels = sorted(set(n.split("/", 1)[0] for n in names if n))
+    print("zip_top_level_entries=" + "|".join(top_levels))
+    if top_levels != [expected_top]:
+        raise SystemExit("extract_status=blocked_unexpected_top_level")
+    for info in z.infolist():
+        pp = PurePosixPath(info.filename)
+        if pp.is_absolute() or ".." in pp.parts:
+            raise SystemExit(f"extract_status=blocked_unsafe_path:{info.filename}")
+    for info in z.infolist():
+        pp = PurePosixPath(info.filename)
+        out_path = staging_parent.joinpath(*pp.parts)
+        if info.is_dir():
+            out_path.mkdir(parents=True, exist_ok=True)
+            continue
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with z.open(info, "r") as src, out_path.open("xb") as dst:
+            shutil.copyfileobj(src, dst, length=1024 * 1024)
+print(f"extracted_to={target}")
+print("extract_status=ok")
+PY
+
+test -f "$TRANSFER/manifest.json"; echo "staging_manifest_exit=$?"
+test -f "$TRANSFER/inventory.jsonl"; echo "staging_inventory_exit=$?"
+echo "staging_part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+python3 "$SCRIPT" verify-archive --manifest "$TRANSFER/manifest.json"
+echo "staging_verify_archive_exit=$?"</code></pre></div>
+      </section>
+
+      <section id="antix-restore">
+        <h2>antiX Restore, Verify, Inspect</h2>
+        <div class="codebox"><button class="copy">Copy</button><pre><code>RUN="$HOME/codex-runs"
+SCRIPT="$RUN/maildirpp_transport.py"
+TRANSFER="/mail/import-staging/maildirpp-delta-export-20260704-151448"
+MANIFEST="$TRANSFER/manifest.json"
+DEST="/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704"
+
+flatpak kill org.gnome.Evolution || true
+if pgrep -a -u "$USER" -f 'evolution|/app/libexec/evolution|bwrap.*evolution'; then
+  echo "ERROR: Evolution still running"
+  exit 1
+fi
+
+test -f "$SCRIPT" || { echo "ERROR: transport script missing"; exit 1; }
+python3 -m py_compile "$SCRIPT"
+test -f "$MANIFEST" || { echo "ERROR: manifest missing"; exit 1; }
+test ! -e "$DEST" || { echo "ERROR: final destination already exists"; exit 1; }
+
+python3 "$SCRIPT" verify-archive --manifest "$MANIFEST"
+python3 "$SCRIPT" unpack --manifest "$MANIFEST" --dest "$DEST"
+python3 "$SCRIPT" verify-tree --manifest "$MANIFEST" --dest "$DEST"
+python3 "$SCRIPT" inspect --source "$DEST"
+
+find "$DEST" -path '*/cur/*' -type f | wc -l | awk '{print "dest_cur_count="$1}'
+find "$DEST" -path '*/new/*' -type f | wc -l | awk '{print "dest_new_count="$1}'
+find "$DEST" -path '*/tmp/*' -type f | wc -l | awk '{print "dest_tmp_count="$1}'</code></pre></div>
+      </section>
+
+      <section id="evolution">
+        <h2>Evolution GUI Validation</h2>
+        <p>Add this directory as <strong>Maildir-format mail directories</strong>:</p>
+        <p><code>/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704</code></p>
+        <p>Name it <code>Betterbird Delta 2026-07-04</code>.</p>
+        <table>
+          <tr><th>Folder</th><th>Expected Count</th></tr>
+          <tr><td>Local_Folders.November2025</td><td>2</td></tr>
+          <tr><td>mail_tagindustries_com_sg.Inbox</td><td>241</td></tr>
+          <tr><td>mail_tagindustries_com_sg.Sent</td><td>4</td></tr>
+          <tr><td>mail_tagindustries_com_sg.Trash</td><td>1</td></tr>
+        </table>
+      </section>
+
+      <section id="cleanup">
+        <h2>Cleanup Notes</h2>
+        <p>Keep the export ZIP and staging package until the antiX GUI validation is complete and backed up. Cleanup should be a separate explicit step.</p>
+        <ul>
+          <li><code>/home/atiq/maildirpp-delta-export-20260704-151448</code></li>
+          <li><code>/home/atiq/Downloads/maildirpp-delta-export-20260704-151448.zip</code></li>
+          <li><code>/mail/import-staging/maildirpp-delta-export-20260704-151448</code></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+  <script>
+    document.querySelectorAll('.codebox').forEach((box) => {
+      const button = box.querySelector('button.copy');
+      const code = box.querySelector('code');
+      button.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(code.innerText);
+        const old = button.textContent;
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = old; }, 1200);
+      });
+    });
+  </script>
+</body>
+</html>
