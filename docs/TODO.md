@@ -6,7 +6,7 @@
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
-- [ ] Validate `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827` in Fedora Evolution as a separate `Maildir-format mail directories` account.
+- [ ] Validate `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827` in Fedora Evolution GUI as a separate `Maildir-format mail directories` account.
 - [ ] Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
 - [ ] After validating the newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
@@ -101,3 +101,4 @@
 - [x] Copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs` and run the dynamic audit against the live Betterbird source.
 - [x] Stage, convert, verify, pack, and verify dynamic aggregate `20260704-205827` on Fedora with 249 post-main-archive messages.
 - [x] Confirm the missing `Trash: 1` from the old 248-message delta is expected because that Trash email was manually deleted from Betterbird before the new aggregate run.
+- [x] Verify host and Evolution Flatpak sandbox visibility for dynamic aggregate `20260704-205827`.

@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-04
 
+- Recorded successful Fedora Batch 7A visibility validation for dynamic aggregate `20260704-205827`: host and Evolution Flatpak sandbox both see 249 `cur`, 0 `new`, 0 `tmp`, with expected folder counts.
 - Recorded owner confirmation that the old delta's missing Trash message is expected because it was manually deleted from Betterbird before the new dynamic aggregate run; the next gate is Fedora Evolution validation, not old-delta hash equality.
 - Recorded the successful Fedora dynamic aggregate run `20260704-205827`: 249 post-main-archive messages selected, staged, converted, SHA256-verified, packed, and archive-verified.
 - Added `src/betterbird_post_archive_delta.py`, a dynamic post-main-archive Betterbird delta helper that selects all current source messages absent from the main 48,720-message archive baseline instead of using a fixed 248-message count.
