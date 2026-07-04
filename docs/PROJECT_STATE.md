@@ -151,6 +151,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The dynamic helper stages selected mail under `/home/atiq/Evolution-Mailstore/post-main-archive-work/RUN_ID/staging-betterbird-maildir`, plans converter targets as `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-RUN_ID`, refuses to overwrite existing staging/target directories, refuses missing baseline state, reports `status=no_post_archive_mail` when there is no delta, and blocks over 10,000 selected messages unless explicitly overridden.
 - The previous 248-message delta remains validated historical data. Future post-main-archive aggregate runs supersede older post-main-archive delta Evolution accounts after the newer aggregate is validated. Disable or remove the older 248-message delta account in Evolution UI to avoid duplicate search results; do not delete old delta files until backup and cleanup are explicitly planned.
 - The Betterbird delta Maildir++ guide now documents the dynamic "Post-Main-Archive Aggregate Delta" workflow. It begins with a RUN_ID-based Fedora audit, then mail-process shutdown, staging, converter dry-run, copy/hash verification, pack/verify, optional Google Drive ZIP, antiX staging, antiX restore/inspect, and Evolution GUI validation.
+- Fedora dynamic aggregate run `20260704-205827` succeeded through pack/verify on 2026-07-04. It selected 249 post-main-archive messages from the current Betterbird source, all `cur`, 0 `new`, 436,492,704 selected bytes, with folder split Inbox 242, Sent 5, and Local_Folders/November2025 2. It staged 249 `cur`, converted and SHA256-verified 249 messages into `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827`, then packed and verified `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` as 1 part, 299,207,989 archive bytes, 286M export, `status=ok`.
+- Before treating dynamic aggregate `20260704-205827` as superseding the older 248-message delta, compare old-delta content hashes against the new 249-message aggregate. This is required because the old 248-message delta included a Trash message, while the new aggregate folder split has no Trash line; it may be a move/rename, but data safety requires evidence.
 - The Betterbird delta Maildir++ HTML guide CSS was corrected after screenshot review so `pre code` command blocks no longer inherit the pale inline-code background. Brave rendering validation confirmed command text is visible on the dark code block and inline code still uses the pale style.
 - The Betterbird delta Maildir++ HTML guide `Start Here` section now renders Batch 1 through Batch 9 as separate command blocks with `Copy Batch 1` through `Copy Batch 9` buttons. Each button copies only the command text inside that batch's shell block, not headings, explanations, or fenced-code markers.
 - The Maildir++ archive guide now uses the validated antiX restore chunk based on `~/codex-runs/maildirpp_transport.py` instead of fragmented repo-relative restore examples. This prevents the earlier variable-only no-op pattern and keeps pre-unpack archive verification, destination-empty refusal, unpack, `verify-tree`, and final `inspect` in one logged operation.
@@ -180,7 +182,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
 - notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
-- Next dynamic delta validation must copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs`, run the guide's Batch 1 audit against the live Betterbird source, confirm the selected count, then stage and convert the RUN_ID-specific aggregate only if the audit output is sane.
+- Next dynamic delta validation must compare old 248-message delta content hashes against the new 249-message aggregate, then validate the new aggregate in Fedora Evolution before transfer to antiX.
 
 ## Open Questions
 
@@ -200,12 +202,14 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 6. Keep a note that the restored archive is a local read/archive account and must not be merged into `/mail/Mailstore/mbsync/provider-live`.
 7. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
 8. Retain the main 38G split archive export until antiX Evolution validation is complete.
-9. Copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs`, then run the updated guide's Batch 1 dynamic audit against the live Betterbird source.
-10. If the dynamic audit is sane, stage and convert a new RUN_ID-specific post-main-archive aggregate delta; after Evolution validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
-11. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-12. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-13. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
-14. Decide broader project type and future packaging only if needed.
+9. Compare old 248-message delta content hashes against new aggregate `20260704-205827` before disabling the old delta account.
+10. Validate `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827` in Fedora Evolution as a separate `Maildir-format mail directories` account.
+11. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+12. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup are explicitly planned.
+13. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+14. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+15. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
+16. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

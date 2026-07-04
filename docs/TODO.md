@@ -6,9 +6,10 @@
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
-- [ ] Copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs` and run the updated dynamic Batch 1 audit against the live Betterbird source.
-- [ ] If the dynamic audit is sane, stage and convert a new RUN_ID-specific post-main-archive aggregate delta, then validate it in Evolution.
-- [ ] After validating a newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
+- [ ] Compare old 248-message delta content hashes against new aggregate `20260704-205827` before disabling the old delta account.
+- [ ] Validate `/home/atiq/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827` in Fedora Evolution as a separate `Maildir-format mail directories` account.
+- [ ] Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+- [ ] After validating the newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Decide broader project type beyond the approved mail migration utility.
@@ -98,3 +99,5 @@
 - [x] Implement Python standard-library dynamic post-main-archive Betterbird aggregate delta helper.
 - [x] Add unit tests for dynamic post-main-archive delta selection, fallback matching, large-delta refusal, and staging safety.
 - [x] Replace the fixed 248-message Betterbird delta guide with a dynamic RUN_ID-based aggregate delta workflow.
+- [x] Copy `src/betterbird_post_archive_delta.py` to Fedora `~/codex-runs` and run the dynamic audit against the live Betterbird source.
+- [x] Stage, convert, verify, pack, and verify dynamic aggregate `20260704-205827` on Fedora with 249 post-main-archive messages.
