@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-05
+
+- Recorded owner-reported Fedora Evolution GUI validation of dynamic aggregate `20260704-205827`: Inbox 242, Sent 5, November2025 2, Trash 0, message open/HTML/attachments OK, and no error popup.
+
 ## 2026-07-04
 
 - Recorded successful Fedora Batch 7A visibility validation for dynamic aggregate `20260704-205827`: host and Evolution Flatpak sandbox both see 249 `cur`, 0 `new`, 0 `tmp`, with expected folder counts.
