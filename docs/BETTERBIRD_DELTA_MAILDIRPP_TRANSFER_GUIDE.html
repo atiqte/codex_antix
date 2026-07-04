@@ -163,24 +163,10 @@
 
       <section id="start-here">
         <h2>Start Here - Complete Batch Sequence</h2>
-        <p>This section is intentionally placed before the pack and transfer phases. It starts from Batch 1 in Fedora, audits the Betterbird source, creates the delta staging tree, runs converter dry-run and copy verification, and only then continues to the validated transfer phases.</p>
-        <div class="callout warn">Run one batch at a time. Do not continue if a batch reports a blocked status or if counts differ from the expected values.</div>
-        <div class="codebox"><button class="copy">Copy</button><pre><code>Start Here - Complete Batch Sequence
-------------------------------------
-
-Run one batch at a time and stop after each batch until the output matches the
-expected result. Do not continue if a command reports a blocked status.
-
-Batch 1: Fedora VM Terminal - read-only incremental audit
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Where: Fedora VM terminal where Betterbird and Fedora Evolution were used.
-Privileges: normal user `atiq`; no `sudo`.
-Purpose: discover first conversion evidence, latest source/target mail dates,
-and the missing Betterbird candidates. This batch is read-only.
-
-```bash
-echo &quot;=== Betterbird -&gt; Evolution Maildir++ delta audit: Batch 1 READ-ONLY ===&quot;
+        <p>Run one batch at a time and stop after each batch until the output matches the expected result. Do not continue if a command reports a blocked status.</p>
+        <h3>Batch 1: Fedora VM Terminal - read-only incremental audit</h3>
+        <p>Where: Fedora VM terminal where Betterbird and Fedora Evolution were used. Privileges: normal user `atiq`; no `sudo`. Purpose: discover first conversion evidence, latest source/target mail dates, and the missing Betterbird candidates. This batch is read-only.</p>
+        <div class="codebox"><button class="copy">Copy Batch 1</button><pre><code>echo &quot;=== Betterbird -&gt; Evolution Maildir++ delta audit: Batch 1 READ-ONLY ===&quot;
 date -Is
 hostnamectl 2&gt;/dev/null || true
 python3 --version
@@ -312,32 +298,20 @@ if not SRC.exists() or not TARGET.exists() or not STATE.exists():
     print(&quot;status=blocked_missing_required_path&quot;)
 else:
     print(&quot;status=read_only_audit_complete&quot;)
-PY
-```
-
-Successful output should include:
-
-- `source_exists=yes`
-- `target_exists=yes`
-- `state_db_exists=yes`
-- `state_copied_rows=48720` or close to the original converted count
-- `missing_candidate_count=248` for the validated 2026-07-04 run
-- `status=read_only_audit_complete`
-
-Report back before continuing if Betterbird/Evolution processes are running,
-`state_db_exists=no`, `status=blocked_missing_required_path`, a Python traceback
-appears, or `missing_candidate_count` is unexpectedly very large.
-
-Batch 2: Fedora VM Terminal - stop mail processes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Where: Fedora VM terminal.
-Privileges: normal user `atiq`; no `sudo`.
-Purpose: stop Evolution background services and prove Betterbird, Thunderbird,
-and Evolution are not running before staging/copy work.
-
-```bash
-echo &quot;=== Betterbird delta import: Batch 2 stop mail processes ===&quot;
+PY</code></pre></div>
+        <p>Successful output should include:</p>
+        <ul>
+          <li>`source_exists=yes`</li>
+          <li>`target_exists=yes`</li>
+          <li>`state_db_exists=yes`</li>
+          <li>`state_copied_rows=48720` or close to the original converted count</li>
+          <li>`missing_candidate_count=248` for the validated 2026-07-04 run</li>
+          <li>`status=read_only_audit_complete`</li>
+        </ul>
+        <p>Report back before continuing if Betterbird/Evolution processes are running, `state_db_exists=no`, `status=blocked_missing_required_path`, a Python traceback appears, or `missing_candidate_count` is unexpectedly very large.</p>
+        <h3>Batch 2: Fedora VM Terminal - stop mail processes</h3>
+        <p>Where: Fedora VM terminal. Privileges: normal user `atiq`; no `sudo`. Purpose: stop Evolution background services and prove Betterbird, Thunderbird, and Evolution are not running before staging/copy work.</p>
+        <div class="codebox"><button class="copy">Copy Batch 2</button><pre><code>echo &quot;=== Betterbird delta import: Batch 2 stop mail processes ===&quot;
 date -Is
 
 flatpak kill org.gnome.Evolution &gt;/dev/null 2&gt;&amp;1 || true
@@ -358,23 +332,11 @@ if pgrep -a -u &quot;$USER&quot; -f &#x27;betterbird|thunderbird|evolution|/app/
   exit 1
 else
   echo &quot;status=no_mail_processes_running&quot;
-fi
-```
-
-Successful output should include `status=no_mail_processes_running`.
-
-Batch 3: Fedora VM Terminal - build delta staging tree
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Where: Fedora VM terminal.
-Privileges: normal user `atiq`; no `sudo`.
-Purpose: compare the current Betterbird source against the original conversion
-state database, then copy only the 248 missing source files into a separate
-Betterbird-shaped staging tree. This does not modify the Betterbird source or
-the old 59G archive.
-
-```bash
-echo &quot;=== Betterbird delta import: Batch 3 build staging tree ===&quot;
+fi</code></pre></div>
+        <p>Successful output should include `status=no_mail_processes_running`.</p>
+        <h3>Batch 3: Fedora VM Terminal - build delta staging tree</h3>
+        <p>Where: Fedora VM terminal. Privileges: normal user `atiq`; no `sudo`. Purpose: compare the current Betterbird source against the original conversion state database, then copy only the 248 missing source files into a separate Betterbird-shaped staging tree. This does not modify the Betterbird source or the old 59G archive.</p>
+        <div class="codebox"><button class="copy">Copy Batch 3</button><pre><code>echo &quot;=== Betterbird delta import: Batch 3 build staging tree ===&quot;
 date -Is
 
 python3 - &lt;&lt;&#x27;PY&#x27;
@@ -473,18 +435,10 @@ print(f&quot;staging_cur_count={sum(1 for p in STAGING.glob(&#x27;**/cur/*&#x27;
 print(f&quot;staging_new_count={sum(1 for p in STAGING.glob(&#x27;**/new/*&#x27;) if p.is_file())}&quot;)
 print(f&quot;staging_tmp_count={sum(1 for p in STAGING.glob(&#x27;**/tmp/*&#x27;) if p.is_file())}&quot;)
 print(&quot;status=staging_ready&quot;)
-PY
-```
-
-Successful output should include `missing_candidate_count=248`,
-`staging_cur_count=248`, `staging_new_count=0`, `staging_tmp_count=0`, and
-`status=staging_ready`.
-
-Batch 4: Fedora VM Terminal - converter dry-run
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-```bash
-echo &quot;=== Betterbird delta import: Batch 4 converter dry-run ===&quot;
+PY</code></pre></div>
+        <p>Successful output should include `missing_candidate_count=248`, `staging_cur_count=248`, `staging_new_count=0`, `staging_tmp_count=0`, and `status=staging_ready`.</p>
+        <h3>Batch 4: Fedora VM Terminal - converter dry-run</h3>
+        <div class="codebox"><button class="copy">Copy Batch 4</button><pre><code>echo &quot;=== Betterbird delta import: Batch 4 converter dry-run ===&quot;
 date -Is
 
 CONVERTER=&quot;$HOME/codex-runs/betterbird_maildirlite_to_maildirpp.py&quot;
@@ -501,18 +455,10 @@ DRY_EXIT=$?
 echo &quot;dry_run_exit=$DRY_EXIT&quot;
 echo &quot;log_dir=$LOGDIR&quot;
 test ! -e &quot;$DELTA_TARGET&quot;; echo &quot;target_absent_after_dry_run_exit=$?&quot;
-exit &quot;$DRY_EXIT&quot;
-```
-
-Successful output should include `dry_run_exit=0`,
-`target_absent_after_dry_run_exit=0`, 248 planned copies, and 0 errors in the
-converter summary.
-
-Batch 5: Fedora VM Terminal - real copy and full hash verify
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-```bash
-echo &quot;=== Betterbird delta import: Batch 5 copy and verify ===&quot;
+exit &quot;$DRY_EXIT&quot;</code></pre></div>
+        <p>Successful output should include `dry_run_exit=0`, `target_absent_after_dry_run_exit=0`, 248 planned copies, and 0 errors in the converter summary.</p>
+        <h3>Batch 5: Fedora VM Terminal - real copy and full hash verify</h3>
+        <div class="codebox"><button class="copy">Copy Batch 5</button><pre><code>echo &quot;=== Betterbird delta import: Batch 5 copy and verify ===&quot;
 date -Is
 
 CONVERTER=&quot;$HOME/codex-runs/betterbird_maildirlite_to_maildirpp.py&quot;
@@ -537,35 +483,22 @@ echo &quot;delta_cur_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/cur/*&
 echo &quot;delta_new_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/new/*&#x27; -type f | wc -l)&quot;
 echo &quot;delta_tmp_count=$(find &quot;$DELTA_TARGET&quot; -path &#x27;*/tmp/*&#x27; -type f | wc -l)&quot;
 du -sh &quot;$DELTA_TARGET&quot;
-exit &quot;$VERIFY_EXIT&quot;
-```
-
-Successful output should include `copy_exit=0`, `verify_exit=0`,
-`delta_cur_count=248`, `delta_new_count=0`, and `delta_tmp_count=0`.
-
-Batch 6: Fedora Evolution GUI validation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Add `/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704` to
-Fedora Evolution as `Maildir-format mail directories`. Do not choose
-`MH-format mail directories`. Verify Inbox 241, Sent 4, November2025 2,
-Trash 1, message opening, HTML rendering, attachments, and no error popup.
-
-Batch 7 and later
-~~~~~~~~~~~~~~~~~
-
-After Batch 6 passes, continue with Phase 3 below:
-
-- Phase 3 is Batch 7: Fedora pack and verify.
-- Phase 4A is Batch 8A: USB transfer path.
-- Phase 4B is Batch 8B: HGFS / Win11 host-share transfer path.
-- Phase 4C is Batch 8C: Google Drive ZIP transfer path.
-- Phase 5 is Batch 9: antiX staging from ZIP. For USB/HGFS, copy the verified
-  export folder to `/mail/import-staging/maildirpp-delta-export-20260704-151448`
-  first, then run `verify-archive` against its `manifest.json`.
-- Phase 6 is Batch 10: antiX restore, verify, and inspect.
-- Phase 7 is Batch 11: antiX Evolution Flatpak visibility.
-- Phase 8 is Batch 12: antiX Evolution GUI validation.</code></pre></div>
+exit &quot;$VERIFY_EXIT&quot;</code></pre></div>
+        <p>Successful output should include `copy_exit=0`, `verify_exit=0`, `delta_cur_count=248`, `delta_new_count=0`, and `delta_tmp_count=0`.</p>
+        <h3>Batch 6: Fedora Evolution GUI validation</h3>
+        <p>Add `/home/atiq/Evolution-Mailstore/betterbird-delta-maildirpp-20260704` to Fedora Evolution as `Maildir-format mail directories`. Do not choose `MH-format mail directories`. Verify Inbox 241, Sent 4, November2025 2, Trash 1, message opening, HTML rendering, attachments, and no error popup.</p>
+        <h3>Batch 7 and later</h3>
+        <p>After Batch 6 passes, continue with Phase 3 below:</p>
+        <ul>
+          <li>Phase 3 is Batch 7: Fedora pack and verify.</li>
+          <li>Phase 4A is Batch 8A: USB transfer path.</li>
+          <li>Phase 4B is Batch 8B: HGFS / Win11 host-share transfer path.</li>
+          <li>Phase 4C is Batch 8C: Google Drive ZIP transfer path.</li>
+          <li>Phase 5 is Batch 9: antiX staging from ZIP. For USB/HGFS, copy the verified export folder to `/mail/import-staging/maildirpp-delta-export-20260704-151448` first, then run `verify-archive` against its `manifest.json`.</li>
+          <li>Phase 6 is Batch 10: antiX restore, verify, and inspect.</li>
+          <li>Phase 7 is Batch 11: antiX Evolution Flatpak visibility.</li>
+          <li>Phase 8 is Batch 12: antiX Evolution GUI validation.</li>
+        </ul>
       </section>
 
       <section id="fedora-pack">
