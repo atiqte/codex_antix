@@ -4,9 +4,6 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] On antiX, restore into `/mail/Mailstore/evolution/local-maildir` with `src/maildirpp_transport.py unpack --manifest <transfer-dir>/manifest.json --dest /mail/Mailstore/evolution/local-maildir`.
-- [ ] On antiX, run `src/maildirpp_transport.py verify-tree --manifest <transfer-dir>/manifest.json --dest /mail/Mailstore/evolution/local-maildir`.
-- [ ] On antiX, run `src/maildirpp_transport.py inspect --source /mail/Mailstore/evolution/local-maildir`.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
@@ -48,6 +45,9 @@
 - [x] Add 50 GB USB suitability preflight and `/mnt/hgfs/Win11Host_Shared4VM` host-share copy workflow to the converted Maildir++ archive guides.
 - [x] Copy the verified Maildir++ split archive export to `/mnt/hgfs/Win11Host_Shared4VM` and verify the host-share copy with `verify-archive`.
 - [x] Copy the verified Maildir++ split archive export from USB to `/mail/import-staging/maildirpp-archive-export-20260701-215204` on antiX and verify the staged archive with `verify-archive`.
+- [x] Restore the verified antiX staged archive into `/mail/Mailstore/evolution/local-maildir`.
+- [x] Verify the restored `/mail/Mailstore/evolution/local-maildir` tree with `verify-tree`.
+- [x] Inspect the restored `/mail/Mailstore/evolution/local-maildir` tree and confirm clean Maildir++ counts.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
 - [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.
