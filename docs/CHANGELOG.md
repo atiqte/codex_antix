@@ -4,7 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-04
 
-- Recorded the successful Fedora dynamic aggregate run `20260704-205827`: 249 post-main-archive messages selected, staged, converted, SHA256-verified, packed, and archive-verified; next required check is old-delta versus new-aggregate hash comparison before superseding the older 248-message delta account.
+- Recorded owner confirmation that the old delta's missing Trash message is expected because it was manually deleted from Betterbird before the new dynamic aggregate run; the next gate is Fedora Evolution validation, not old-delta hash equality.
+- Recorded the successful Fedora dynamic aggregate run `20260704-205827`: 249 post-main-archive messages selected, staged, converted, SHA256-verified, packed, and archive-verified.
 - Added `src/betterbird_post_archive_delta.py`, a dynamic post-main-archive Betterbird delta helper that selects all current source messages absent from the main 48,720-message archive baseline instead of using a fixed 248-message count.
 - Reworked the Betterbird delta Maildir++ HTML and text guides into a RUN_ID-based "Post-Main-Archive Aggregate Delta" workflow with separate copy buttons per batch and dynamic success checks.
 - Split the Betterbird delta Maildir++ HTML guide `Start Here` section so Batch 1 through Batch 5 each have their own copy button that copies only that batch's shell commands.
