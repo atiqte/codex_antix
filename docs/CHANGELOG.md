@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-04
+
+- Updated the converted Maildir++ archive HTML and text guides to replace fragmented antiX restore examples with the validated all-in-one restore, verify-tree, and inspect chunk using `~/codex-runs/maildirpp_transport.py`.
+
 ## 2026-07-03
 
 - Added a host-share mount identity guard to the Maildir++ archive transfer guide so `/mnt/hgfs/Win11Host_Shared4VM` must resolve to an HGFS/FUSE VMware shared-folder mount before any Win11 host-share copy.

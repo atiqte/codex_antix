@@ -48,6 +48,7 @@
 - [x] Restore the verified antiX staged archive into `/mail/Mailstore/evolution/local-maildir`.
 - [x] Verify the restored `/mail/Mailstore/evolution/local-maildir` tree with `verify-tree`.
 - [x] Inspect the restored `/mail/Mailstore/evolution/local-maildir` tree and confirm clean Maildir++ counts.
+- [x] Update the Maildir++ archive HTML and text guides with the validated all-in-one antiX restore, verify-tree, and inspect chunk.
 - [x] Validate Evolution Flatpak 3.60.2 on antiX 26 runit with zzzFM/IceWM using `/mail` app-data symlink and a Maildir++ test account.
 - [x] Create Evolution Flatpak antiX DIY guide in HTML and plain text formats.
 - [x] Add user-level IceWM Evolution Flatpak launcher helper and guide instructions.

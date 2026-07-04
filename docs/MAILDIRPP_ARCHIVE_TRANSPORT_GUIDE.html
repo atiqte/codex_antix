@@ -541,47 +541,103 @@ echo "===== ANTIX USB TO STAGING DONE ====="</code></pre></div>
 
       <section id="antix">
         <h2>6. antiX Restore Workflow</h2>
+        <div class="callout warning">
+          The staging path <code>/mail/import-staging/maildirpp-archive-export-20260701-215204</code>
+          is only the transfer package. The final restored Maildir++ target is
+          <code>/mail/Mailstore/evolution/local-maildir</code>.
+        </div>
         <div class="step">
-          <h3>Step 6.1 - Set paths</h3>
-          <div class="command"><div class="command-title"><span>antiX variables</span><button class="copy" data-target="cmd-antix-vars">Copy</button></div><pre id="cmd-antix-vars"><code>export REPO="$HOME/antiX_VM_Laptop"
+          <h3>Step 6.1 - Run the validated restore chunk</h3>
+          <p>This single logged command block is preferred over fragmented examples because it prints the active paths, compiles the copied script, rechecks the staged archive, refuses a non-empty final destination, unpacks, verifies restored bytes, and performs the final Maildir++ inspection.</p>
+          <div class="command"><div class="command-title"><span>antiX restore, verify-tree, inspect</span><button class="copy" data-target="cmd-antix-restore-all">Copy</button></div><pre id="cmd-antix-restore-all"><code>set +e
+
+export RUN="$HOME/codex-runs"
 export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
-export DEST="/mail/Mailstore/evolution/local-maildir"</code></pre></div>
-        </div>
+export MANIFEST="$TRANSFER/manifest.json"
+export DEST="/mail/Mailstore/evolution/local-maildir"
 
-        <div class="step">
-          <h3>Step 6.2 - Verify archive parts</h3>
-          <div class="command"><div class="command-title"><span>Verify archive</span><button class="copy" data-target="cmd-verify-archive">Copy</button></div><pre id="cmd-verify-archive"><code>cd "$REPO"
-python3 src/maildirpp_transport.py verify-archive \
-  --manifest "$TRANSFER/manifest.json"</code></pre></div>
-        </div>
+echo "===== ANTIX RESTORE UNPACK VERIFY INSPECT START ====="
+date
 
-        <div class="step">
-          <h3>Step 6.3 - Confirm destination is empty</h3>
-          <div class="command"><div class="command-title"><span>Check destination</span><button class="copy" data-target="cmd-check-dest">Copy</button></div><pre id="cmd-check-dest"><code>if [ -e "$DEST" ]; then
-  find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
-else
-  echo "Destination does not exist yet; unpack can create it."
-fi</code></pre></div>
-          <div class="callout danger">If this prints a path, stop and choose a clean destination or review the existing data manually.</div>
-        </div>
+echo "===== PATH CHECK ====="
+echo "RUN=$RUN"
+echo "TRANSFER=$TRANSFER"
+echo "MANIFEST=$MANIFEST"
+echo "DEST=$DEST"
+ls -ld "$RUN" "$TRANSFER"
+df -h /mail "$TRANSFER"
+test -f "$RUN/maildirpp_transport.py"; echo "script_exit=$?"
+test -f "$MANIFEST"; echo "manifest_exit=$?"
+test -f "$TRANSFER/inventory.jsonl"; echo "inventory_exit=$?"
+echo "part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+sha256sum "$RUN/maildirpp_transport.py"
 
-        <div class="step">
-          <h3>Step 6.4 - Unpack into antiX archive target</h3>
-          <div class="command"><div class="command-title"><span>Unpack archive</span><button class="copy" data-target="cmd-unpack">Copy</button></div><pre id="cmd-unpack"><code>cd "$REPO"
-python3 src/maildirpp_transport.py unpack \
-  --manifest "$TRANSFER/manifest.json" \
-  --dest "$DEST"</code></pre></div>
-        </div>
+echo "===== SCRIPT COMPILE CHECK ====="
+python3 -m py_compile "$RUN/maildirpp_transport.py"
+echo "compile_exit=$?"
 
-        <div class="step">
-          <h3>Step 6.5 - Verify restored tree and layout</h3>
-          <div class="command"><div class="command-title"><span>Verify restored tree</span><button class="copy" data-target="cmd-verify-tree">Copy</button></div><pre id="cmd-verify-tree"><code>cd "$REPO"
-python3 src/maildirpp_transport.py verify-tree \
-  --manifest "$TRANSFER/manifest.json" \
-  --dest "$DEST"</code></pre></div>
-          <div class="command"><div class="command-title"><span>Inspect restored Maildir++</span><button class="copy" data-target="cmd-inspect-dest">Copy</button></div><pre id="cmd-inspect-dest"><code>cd "$REPO"
-python3 src/maildirpp_transport.py inspect \
-  --source "$DEST"</code></pre></div>
+echo "===== VERIFY STAGED ARCHIVE BEFORE UNPACK ====="
+python3 "$RUN/maildirpp_transport.py" verify-archive --manifest "$MANIFEST"
+PRE_VERIFY_EXIT=$?
+echo "pre_unpack_verify_archive_exit=$PRE_VERIFY_EXIT"
+if [ "$PRE_VERIFY_EXIT" -ne 0 ]; then
+  echo "ERROR: staged archive verification failed. Stop before unpack."
+  exit 41
+fi
+
+echo "===== DESTINATION EMPTY CHECK ====="
+mkdir -p "$(dirname "$DEST")"
+if [ -e "$DEST" ] &amp;&amp; [ "$(find "$DEST" -mindepth 1 -maxdepth 1 -print -quit 2&gt;/dev/null)" ]; then
+  echo "ERROR: destination is not empty: $DEST"
+  echo "Stop here. Do not merge over an existing Maildir++ tree."
+  exit 50
+fi
+
+echo "===== UNPACK TO FINAL MAILDIR++ DESTINATION ====="
+python3 "$RUN/maildirpp_transport.py" unpack --manifest "$MANIFEST" --dest "$DEST"
+UNPACK_EXIT=$?
+echo "unpack_exit=$UNPACK_EXIT"
+if [ "$UNPACK_EXIT" -ne 0 ]; then
+  echo "ERROR: unpack failed. Stop before verify-tree."
+  exit 42
+fi
+
+echo "===== DESTINATION QUICK CHECK ====="
+ls -ld "$DEST" "$DEST/cur" "$DEST/new" "$DEST/tmp"
+du -sh "$DEST"
+
+echo "===== VERIFY RESTORED TREE ====="
+python3 "$RUN/maildirpp_transport.py" verify-tree --manifest "$MANIFEST" --dest "$DEST"
+VERIFY_TREE_EXIT=$?
+echo "verify_tree_exit=$VERIFY_TREE_EXIT"
+if [ "$VERIFY_TREE_EXIT" -ne 0 ]; then
+  echo "ERROR: verify-tree failed. Do not add to Evolution yet."
+  exit 43
+fi
+
+echo "===== INSPECT RESTORED MAILDIR++ TREE ====="
+python3 "$RUN/maildirpp_transport.py" inspect --source "$DEST"
+INSPECT_EXIT=$?
+echo "inspect_exit=$INSPECT_EXIT"
+if [ "$INSPECT_EXIT" -ne 0 ]; then
+  echo "ERROR: inspect failed. Do not add to Evolution yet."
+  exit 44
+fi
+
+echo "===== ANTIX RESTORE UNPACK VERIFY INSPECT DONE ====="</code></pre></div>
+          <div class="callout ok">
+            Validated result on antiX: <code>script_exit=0</code>, <code>manifest_exit=0</code>,
+            <code>inventory_exit=0</code>, <code>part_count=21</code>, <code>compile_exit=0</code>,
+            <code>pre_unpack_verify_archive_exit=0</code>, <code>unpack_exit=0</code>,
+            <code>verify_tree_exit=0</code>, <code>inspect_exit=0</code>, <code>status=ok</code>,
+            <code>maildir_folders=29</code>, <code>cur_files=48720</code>, <code>new_files=0</code>,
+            and <code>tmp_files=0</code>. The restored tree was 59G with 48,721 regular files.
+          </div>
+          <div class="callout danger">
+            If any exit code is nonzero, if <code>status=ok</code> is missing, or if
+            <code>tmp_files</code> is not <code>0</code>, stop and do not add the archive to Evolution yet.
+          </div>
+          <p>If a full repository checkout exists on antiX, repo-relative commands can also work. The validated manual transfer path used <code>$HOME/codex-runs/maildirpp_transport.py</code>, so this guide uses that path for the restore block.</p>
         </div>
       </section>
 
@@ -615,12 +671,13 @@ export SOURCE="/home/atiq/Evolution-Mailstore/betterbird-archive-maildirpp"
 export EXPORT="$HOME/maildirpp-archive-export-$(date +%Y%m%d-%H%M%S)"
 python3 src/maildirpp_transport.py inspect --source "$SOURCE"
 python3 src/maildirpp_transport.py pack --source "$SOURCE" --out "$EXPORT"</code></pre></div>
-        <div class="command"><div class="command-title"><span>antiX restore summary</span><button class="copy" data-target="cmd-quick-restore">Copy</button></div><pre id="cmd-quick-restore"><code>cd "$HOME/antiX_VM_Laptop"
+        <div class="command"><div class="command-title"><span>antiX restore summary</span><button class="copy" data-target="cmd-quick-restore">Copy</button></div><pre id="cmd-quick-restore"><code>export RUN="$HOME/codex-runs"
 export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
 export DEST="/mail/Mailstore/evolution/local-maildir"
-python3 src/maildirpp_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
-python3 src/maildirpp_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
-python3 src/maildirpp_transport.py verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"</code></pre></div>
+python3 "$RUN/maildirpp_transport.py" verify-archive --manifest "$TRANSFER/manifest.json"
+python3 "$RUN/maildirpp_transport.py" unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+python3 "$RUN/maildirpp_transport.py" verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+python3 "$RUN/maildirpp_transport.py" inspect --source "$DEST"</code></pre></div>
       </section>
     </div>
   </main>

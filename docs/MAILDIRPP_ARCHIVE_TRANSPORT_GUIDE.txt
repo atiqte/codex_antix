@@ -513,97 +513,132 @@ the restore target remains:
   /mail/Mailstore/evolution/local-maildir
 
 
-antiX Workflow
-==============
+antiX Workflow - Validated Restore Chunk
+========================================
 
-Step 1 - Set paths
-------------------
+Use this all-in-one restore chunk after the verified export package exists at:
 
-Set TRANSFER to the folder containing manifest.json, inventory.jsonl, and all
-maildirpp-archive part files. For the verified USB transfer flow, use the
-antiX staging package path shown here.
+  /mail/import-staging/maildirpp-archive-export-20260701-215204
+
+This is safer than running fragmented commands because it prints the active
+paths, compiles the copied script, rechecks the staged archive, refuses a
+non-empty final destination, unpacks, verifies restored bytes, and runs a final
+Maildir++ inspection in one logged operation.
+
+Important:
+
+  /mail/import-staging/maildirpp-archive-export-20260701-215204
+
+is the transfer package. Do not unpack into that folder. The final restored
+Maildir++ archive target is:
+
+  /mail/Mailstore/evolution/local-maildir
 
 COPY COMMAND:
 
-  export REPO="$HOME/antiX_VM_Laptop"
+  set +e
+
+  export RUN="$HOME/codex-runs"
   export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
+  export MANIFEST="$TRANSFER/manifest.json"
   export DEST="/mail/Mailstore/evolution/local-maildir"
 
+  echo "===== ANTIX RESTORE UNPACK VERIFY INSPECT START ====="
+  date
 
-Step 2 - Verify archive parts
------------------------------
+  echo "===== PATH CHECK ====="
+  echo "RUN=$RUN"
+  echo "TRANSFER=$TRANSFER"
+  echo "MANIFEST=$MANIFEST"
+  echo "DEST=$DEST"
+  ls -ld "$RUN" "$TRANSFER"
+  df -h /mail "$TRANSFER"
+  test -f "$RUN/maildirpp_transport.py"; echo "script_exit=$?"
+  test -f "$MANIFEST"; echo "manifest_exit=$?"
+  test -f "$TRANSFER/inventory.jsonl"; echo "inventory_exit=$?"
+  echo "part_count=$(find "$TRANSFER" -maxdepth 1 -type f -name 'maildirpp-archive.tar.gz.part*' | wc -l)"
+  sha256sum "$RUN/maildirpp_transport.py"
 
-COPY COMMAND:
+  echo "===== SCRIPT COMPILE CHECK ====="
+  python3 -m py_compile "$RUN/maildirpp_transport.py"
+  echo "compile_exit=$?"
 
-  cd "$REPO"
-  python3 src/maildirpp_transport.py verify-archive \
-    --manifest "$TRANSFER/manifest.json"
-
-Expected:
-
-  mode=verify-archive
-  status=ok
-
-
-Step 3 - Confirm destination is empty
--------------------------------------
-
-COPY COMMAND:
-
-  if [ -e "$DEST" ]; then
-    find "$DEST" -mindepth 1 -maxdepth 1 -print -quit
-  else
-    echo "Destination does not exist yet; unpack can create it."
+  echo "===== VERIFY STAGED ARCHIVE BEFORE UNPACK ====="
+  python3 "$RUN/maildirpp_transport.py" verify-archive --manifest "$MANIFEST"
+  PRE_VERIFY_EXIT=$?
+  echo "pre_unpack_verify_archive_exit=$PRE_VERIFY_EXIT"
+  if [ "$PRE_VERIFY_EXIT" -ne 0 ]; then
+    echo "ERROR: staged archive verification failed. Stop before unpack."
+    exit 41
   fi
 
-If this prints a file or folder, do not unpack there. Choose a fresh empty
-destination or review the existing path manually.
+  echo "===== DESTINATION EMPTY CHECK ====="
+  mkdir -p "$(dirname "$DEST")"
+  if [ -e "$DEST" ] && [ "$(find "$DEST" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+    echo "ERROR: destination is not empty: $DEST"
+    echo "Stop here. Do not merge over an existing Maildir++ tree."
+    exit 50
+  fi
 
+  echo "===== UNPACK TO FINAL MAILDIR++ DESTINATION ====="
+  python3 "$RUN/maildirpp_transport.py" unpack --manifest "$MANIFEST" --dest "$DEST"
+  UNPACK_EXIT=$?
+  echo "unpack_exit=$UNPACK_EXIT"
+  if [ "$UNPACK_EXIT" -ne 0 ]; then
+    echo "ERROR: unpack failed. Stop before verify-tree."
+    exit 42
+  fi
 
-Step 4 - Unpack to antiX
-------------------------
+  echo "===== DESTINATION QUICK CHECK ====="
+  ls -ld "$DEST" "$DEST/cur" "$DEST/new" "$DEST/tmp"
+  du -sh "$DEST"
 
-COPY COMMAND:
+  echo "===== VERIFY RESTORED TREE ====="
+  python3 "$RUN/maildirpp_transport.py" verify-tree --manifest "$MANIFEST" --dest "$DEST"
+  VERIFY_TREE_EXIT=$?
+  echo "verify_tree_exit=$VERIFY_TREE_EXIT"
+  if [ "$VERIFY_TREE_EXIT" -ne 0 ]; then
+    echo "ERROR: verify-tree failed. Do not add to Evolution yet."
+    exit 43
+  fi
 
-  cd "$REPO"
-  python3 src/maildirpp_transport.py unpack \
-    --manifest "$TRANSFER/manifest.json" \
-    --dest "$DEST"
+  echo "===== INSPECT RESTORED MAILDIR++ TREE ====="
+  python3 "$RUN/maildirpp_transport.py" inspect --source "$DEST"
+  INSPECT_EXIT=$?
+  echo "inspect_exit=$INSPECT_EXIT"
+  if [ "$INSPECT_EXIT" -ne 0 ]; then
+    echo "ERROR: inspect failed. Do not add to Evolution yet."
+    exit 44
+  fi
 
-Expected:
+  echo "===== ANTIX RESTORE UNPACK VERIFY INSPECT DONE ====="
 
+Expected validated result:
+
+  script_exit=0
+  manifest_exit=0
+  inventory_exit=0
+  part_count=21
+  compile_exit=0
+  pre_unpack_verify_archive_exit=0
+  unpack_exit=0
+  verify_tree_exit=0
+  inspect_exit=0
   mode=unpack
-  status=ok
-
-
-Step 5 - Verify restored bytes and layout
------------------------------------------
-
-COPY COMMAND:
-
-  cd "$REPO"
-  python3 src/maildirpp_transport.py verify-tree \
-    --manifest "$TRANSFER/manifest.json" \
-    --dest "$DEST"
-
-Expected:
-
   mode=verify-tree
-  status=ok
-
-Run a final layout inspection:
-
-COPY COMMAND:
-
-  cd "$REPO"
-  python3 src/maildirpp_transport.py inspect \
-    --source "$DEST"
-
-Expected:
-
   mode=inspect
-  tmp_files=0
   status=ok
+  maildir_folders=29
+  dot_folders=28
+  cur_files=48720
+  new_files=0
+  tmp_files=0
+  metadata_files=1
+
+The validated antiX restore on 2026-07-04 produced a 59G final tree with
+48,721 regular files and 62,430,783,277 regular bytes. If any exit code is
+nonzero, if `status=ok` is missing, or if `tmp_files` is not 0, do not add the
+archive to Evolution yet.
 
 
 Add to Evolution on antiX
@@ -722,12 +757,13 @@ antiX:
 
 COPY COMMAND:
 
-  cd "$HOME/antiX_VM_Laptop"
+  export RUN="$HOME/codex-runs"
   export TRANSFER="/mail/import-staging/maildirpp-archive-export-20260701-215204"
   export DEST="/mail/Mailstore/evolution/local-maildir"
-  python3 src/maildirpp_transport.py verify-archive --manifest "$TRANSFER/manifest.json"
-  python3 src/maildirpp_transport.py unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
-  python3 src/maildirpp_transport.py verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+  python3 "$RUN/maildirpp_transport.py" verify-archive --manifest "$TRANSFER/manifest.json"
+  python3 "$RUN/maildirpp_transport.py" unpack --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+  python3 "$RUN/maildirpp_transport.py" verify-tree --manifest "$TRANSFER/manifest.json" --dest "$DEST"
+  python3 "$RUN/maildirpp_transport.py" inspect --source "$DEST"
 
 
 Final Rule
