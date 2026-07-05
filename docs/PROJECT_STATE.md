@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 ## Project Identity
 
@@ -36,7 +36,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
-- `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for retiring Astroid, installing the single-email read-only notmuch browser viewer, daily start/stop, CLI search, tag backup/restore, and pilot-safe reindexing.
+- `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`, an offline browser DIY guide with visible embedded command blocks and copy buttons for retiring Astroid, installing the single-email read-only notmuch browser viewer, daily start/stop, CLI search, tag backup/restore, and pilot-safe reindexing.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same browser-only notmuch guide.
 - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, retained only as retired historical guides with warnings pointing to the active browser-only guide.
 - `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.

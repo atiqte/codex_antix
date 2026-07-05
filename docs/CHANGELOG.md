@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-06
+
+- Fixed the active notmuch browser HTML guide so command chunks are embedded directly in visible `<pre>` blocks instead of depending on JavaScript to populate initially blank blocks.
+
 ## 2026-07-05
 
 - Retired Astroid from the antiX notmuch workflow: settings were backed up, the package and Astroid-only dependencies were purged, Astroid-only compatibility symlinks were removed, and the browser viewer was converted to validated single-email mode.
