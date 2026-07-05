@@ -190,56 +190,70 @@
     <section>
       <h2>Command Chunks</h2>
 
-      <h3>1. Read-only status audit</h3>
+      <h3>1. Chunk 8A: Create and Launch Read-Only notmuch Browser GUI Fallback</h3>
+      <p>Run this first on another antiX VM after notmuch is configured and the pilot index exists. It writes <code>~/.local/bin/notmuch-browser-pilot</code>, compiles the Python viewer, launches it, and prints the operator checks.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Build and launch browser viewer</span><button data-copy="cmd-bootstrap">Copy</button></div>
+        <pre data-pre="cmd-bootstrap"></pre>
+      </div>
+
+      <h3>2. Read-only status audit</h3>
       <p>Run this before troubleshooting or before expanding the pilot. It should report 444 messages, 846 files, safe config flags, and zero <code>tmp</code> files in the pilot roots.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Status audit</span><button data-copy="cmd-status">Copy</button></div>
         <pre data-pre="cmd-status"></pre>
       </div>
 
-      <h3>2. Start the validated browser viewer</h3>
-      <p>This is the primary notmuch GUI path on this VM.</p>
+      <h3>3. Start Existing Browser Viewer</h3>
+      <p>Use this for normal daily launch after Chunk 8A has already created the viewer.</p>
       <div class="cmd">
-        <div class="cmd-head"><span>Launch browser viewer</span><button data-copy="cmd-browser">Copy</button></div>
+        <div class="cmd-head"><span>Start existing browser viewer</span><button data-copy="cmd-browser">Copy</button></div>
         <pre data-pre="cmd-browser"></pre>
       </div>
 
-      <h3>3. Common CLI searches</h3>
+      <h3>4. Stop Browser Viewer</h3>
+      <p>Closing the browser tab does not stop the local server. Run this when you want to stop the viewer process.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Stop browser viewer</span><button data-copy="cmd-stop">Copy</button></div>
+        <pre data-pre="cmd-stop"></pre>
+      </div>
+
+      <h3>5. Common CLI searches</h3>
       <p>Use these to verify that notmuch can answer exact searches before trusting any GUI result.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Search examples</span><button data-copy="cmd-search">Copy</button></div>
         <pre data-pre="cmd-search"></pre>
       </div>
 
-      <h3>4. Back up tags</h3>
+      <h3>6. Back up tags</h3>
       <p>This is fast and should be done before reindex, restore, or large scope changes.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Tag backup</span><button data-copy="cmd-backup">Copy</button></div>
         <pre data-pre="cmd-backup"></pre>
       </div>
 
-      <h3>5. Restore tags from a backup</h3>
+      <h3>7. Restore tags from a backup</h3>
       <p>Use only with a known-good <code>.batch-tag</code> file. This restores the tag state recorded in that dump.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Tag restore</span><button data-copy="cmd-restore">Copy</button></div>
         <pre data-pre="cmd-restore"></pre>
       </div>
 
-      <h3>6. Pilot-safe reindex</h3>
+      <h3>8. Pilot-safe reindex</h3>
       <p>This was validated. It moves the old notmuch database to backup, rebuilds the database, restores tags, recreates Astroid compatibility symlinks, and verifies counts. It must not touch <code>/mail/Mailstore</code>.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Safe reindex</span><button data-copy="cmd-reindex">Copy</button></div>
         <pre data-pre="cmd-reindex"></pre>
       </div>
 
-      <h3>7. Astroid search-only launch</h3>
+      <h3>9. Astroid search-only launch</h3>
       <p>Astroid remains useful for testing list/search behavior, but if a thread opens blank, switch back to the browser viewer.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Astroid experimental launch</span><button data-copy="cmd-astroid">Copy</button></div>
         <pre data-pre="cmd-astroid"></pre>
       </div>
 
-      <h3>8. Full archive expansion preflight only</h3>
+      <h3>10. Full archive expansion preflight only</h3>
       <p class="note">This intentionally does not run the expansion helper. It shows the current archive count and reminds the operator why expansion is deferred.</p>
       <div class="cmd">
         <div class="cmd-head"><span>Archive expansion preflight</span><button data-copy="cmd-archive">Copy</button></div>
@@ -284,6 +298,379 @@
     </footer>
   </main>
 
+  <script type="text/plain" id="cmd-bootstrap">set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-astroid-chunk8a-browser-viewer-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 8A: create read-only notmuch browser GUI fallback =="
+date -Ins 2>/dev/null || date
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+BIN_DIR="$HOME/.local/bin"
+VIEWER="$BIN_DIR/notmuch-browser-pilot"
+VIEWER_LOG="/tmp/notmuch-browser-pilot.log"
+PORT="${NOTMUCH_BROWSER_PORT:-8765}"
+
+[ -r "$CONFIG" ] || { echo "status=blocked_missing_notmuch_config"; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "status=blocked_missing_python3"; exit 1; }
+command -v notmuch >/dev/null 2>&1 || { echo "status=blocked_missing_notmuch"; exit 1; }
+
+echo "== Optional: stop Astroid to reduce confusion/resource use =="
+if pgrep -x astroid >/dev/null 2>&1; then
+  pkill -x astroid || true
+  sleep 2
+fi
+pgrep -af 'astroid|WebKit' || true
+echo
+
+echo "== Confirm pilot index =="
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files=/'
+echo
+
+echo "== Write read-only browser viewer =="
+mkdir -p "$BIN_DIR"
+cat > "$VIEWER" <<'PY'
+#!/usr/bin/env python3
+import argparse
+import html
+import os
+import socket
+import subprocess
+import sys
+import threading
+import time
+import urllib.parse
+import webbrowser
+from email import policy
+from email.parser import BytesParser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+CONFIG = Path.home() / ".config/notmuch/default/config"
+DEFAULT_QUERY = "tag:inbox"
+MAX_RESULTS = 200
+MAX_THREAD_FILES = 80
+
+CSS = """
+:root { color-scheme: light; font-family: system-ui, sans-serif; }
+body { margin: 0; background: #f5f5f2; color: #222; }
+header { background: #263238; color: white; padding: 10px 16px; display:flex; gap:12px; align-items:center; }
+header a { color: #d8eefc; text-decoration:none; }
+main { padding: 14px 18px 32px; }
+form.search { display:flex; gap:8px; margin: 12px 0 16px; }
+input[type=text] { flex:1; padding:8px 10px; font: 15px ui-monospace, monospace; }
+button, .button { padding:8px 10px; border:1px solid #87929b; background:#fff; border-radius:4px; color:#111; text-decoration:none; }
+table { border-collapse: collapse; width: 100%; background:white; }
+th, td { border-bottom:1px solid #ddd; padding:6px 8px; vertical-align:top; }
+tr:hover { background:#eef6ff; }
+.code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.notice { background:#fff8d8; border:1px solid #e0c75a; padding:10px; margin:10px 0; border-radius:4px; }
+.ok { background:#e7f7e7; border-color:#74b974; }
+.bad { background:#ffe7e7; border-color:#c77; }
+.message { background:white; border:1px solid #d5d5d5; margin:14px 0; border-radius:5px; overflow:hidden; }
+.meta { background:#eef0f2; padding:10px 12px; font-size: 14px; }
+.meta div { margin:2px 0; }
+.body { padding:12px; }
+.body iframe { width:100%; min-height:420px; border:1px solid #ccc; background:white; }
+.body pre { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.35; }
+.path { color:#555; font-size:12px; overflow-wrap:anywhere; }
+.attach { margin-top:8px; font-size:13px; color:#333; }
+.small { color:#666; font-size:13px; }
+"""
+
+def run_notmuch(args, timeout=60):
+    cmd = ["notmuch", "--config", str(CONFIG)] + args
+    return subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+
+def page(title, body):
+    return f"""<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; frame-src 'self' about:; script-src 'none'; object-src 'none'">
+<title>{html.escape(title)}</title>
+<style>{CSS}</style>
+</head>
+<body>
+<header>
+  <strong>notmuch browser pilot</strong>
+  <a href="/">Search</a>
+  <a href="/status">Status</a>
+  <span class="small">read-only viewer; use Evolution for reply/send</span>
+</header>
+<main>{body}</main>
+</body>
+</html>"""
+
+def search_form(q):
+    return f"""
+<form class="search" method="get" action="/">
+  <input type="text" name="q" value="{html.escape(q, quote=True)}" autofocus>
+  <button type="submit">Search</button>
+</form>
+<div class="small code">Examples: tag:inbox | from:tagindustries.com.sg | date:2026..2026 and tag:attachment | id:&lt;message-id&gt;</div>
+"""
+
+def parse_search_line(line):
+    # notmuch text format starts with thread:<id> then human summary.
+    if not line.startswith("thread:"):
+        return None, line
+    first, rest = (line.split(" ", 1) + [""])[:2]
+    return first.replace("thread:", "", 1), rest.strip()
+
+def render_search(q):
+    count = run_notmuch(["count", q])
+    file_count = run_notmuch(["count", "--output=files", q])
+    res = run_notmuch(["search", "--limit", str(MAX_RESULTS), q])
+    body = search_form(q)
+    if count.returncode != 0:
+        body += f"<div class='notice bad'><strong>notmuch error</strong><pre>{html.escape(count.stderr or res.stderr)}</pre></div>"
+        return page("notmuch search error", body)
+    body += f"<div class='notice ok'>Unique messages: <strong>{html.escape(count.stdout.strip())}</strong>; files: <strong>{html.escape(file_count.stdout.strip())}</strong>; showing first {MAX_RESULTS} threads.</div>"
+    if res.returncode != 0:
+        body += f"<div class='notice bad'><pre>{html.escape(res.stderr)}</pre></div>"
+        return page("notmuch search error", body)
+    rows = []
+    for line in res.stdout.splitlines():
+        tid, rest = parse_search_line(line)
+        if tid:
+            url = "/thread?" + urllib.parse.urlencode({"id": tid})
+            rows.append(f"<tr><td class='code'><a href='{url}'>{html.escape(tid)}</a></td><td>{html.escape(rest)}</td></tr>")
+        else:
+            rows.append(f"<tr><td></td><td>{html.escape(line)}</td></tr>")
+    if not rows:
+        body += "<div class='notice'>No results.</div>"
+    else:
+        body += "<table><thead><tr><th>Thread</th><th>Summary</th></tr></thead><tbody>" + "\n".join(rows) + "</tbody></table>"
+    return page("notmuch search", body)
+
+def iter_body_parts(msg):
+    if msg.is_multipart():
+        body = msg.get_body(preferencelist=("html", "plain"))
+        if body is not None:
+            yield body
+        else:
+            for part in msg.walk():
+                if part.get_content_maintype() == "text":
+                    yield part
+    else:
+        yield msg
+
+def body_html_for_message(msg):
+    parts = list(iter_body_parts(msg))
+    if not parts:
+        return "<div class='notice'>No text/html or text/plain body part found.</div>"
+    part = parts[0]
+    ctype = part.get_content_type()
+    try:
+        content = part.get_content()
+    except Exception as e:
+        return f"<div class='notice bad'>Could not decode body: {html.escape(str(e))}</div>"
+    if ctype == "text/html":
+        src = html.escape(content, quote=True)
+        return f"<div class='small'>HTML part shown in a sandboxed iframe; remote network/script execution is blocked by browser policy.</div><iframe sandbox srcdoc=\"{src}\"></iframe>"
+    return f"<pre>{html.escape(str(content))}</pre>"
+
+def render_message_file(path):
+    p = Path(path)
+    try:
+        with p.open("rb") as f:
+            msg = BytesParser(policy=policy.default).parse(f)
+    except Exception as e:
+        return f"<div class='message'><div class='meta bad'>Could not parse {html.escape(path)}: {html.escape(str(e))}</div></div>"
+
+    headers = []
+    for name in ("Subject", "From", "To", "Cc", "Date", "Message-ID"):
+        val = msg.get(name, "")
+        if val:
+            headers.append(f"<div><strong>{html.escape(name)}:</strong> {html.escape(str(val))}</div>")
+
+    attachments = []
+    for part in msg.walk():
+        filename = part.get_filename()
+        disp = part.get_content_disposition()
+        ctype = part.get_content_type()
+        if filename or disp == "attachment":
+            attachments.append(html.escape(filename or ctype))
+    attach_html = ""
+    if attachments:
+        attach_html = "<div class='attach'><strong>Attachments:</strong> " + ", ".join(attachments) + "</div>"
+
+    return f"""
+<section class="message">
+  <div class="meta">
+    {''.join(headers)}
+    <div class="path"><strong>File:</strong> {html.escape(path)}</div>
+    {attach_html}
+  </div>
+  <div class="body">{body_html_for_message(msg)}</div>
+</section>
+"""
+
+def render_thread(tid):
+    q = f"thread:{tid}"
+    files = run_notmuch(["search", "--output=files", q])
+    summary = run_notmuch(["search", "--limit", "1", q])
+    body = f"<p><a class='button' href='/'>Back to search</a></p>"
+    body += f"<h2>Thread {html.escape(tid)}</h2>"
+    if summary.returncode == 0:
+        body += f"<pre>{html.escape(summary.stdout.strip())}</pre>"
+    if files.returncode != 0:
+        body += f"<div class='notice bad'><pre>{html.escape(files.stderr)}</pre></div>"
+        return page("thread error", body)
+
+    paths = []
+    seen = set()
+    for line in files.stdout.splitlines():
+        if line and line not in seen:
+            seen.add(line)
+            paths.append(line)
+    body += f"<div class='notice'>Message files in this thread: {len(paths)}. Showing first {MAX_THREAD_FILES}.</div>"
+    for path in paths[:MAX_THREAD_FILES]:
+        body += render_message_file(path)
+    return page("thread " + tid, body)
+
+def render_status():
+    c = run_notmuch(["count", "*"])
+    f = run_notmuch(["count", "--output=files", "*"])
+    tags = run_notmuch(["search", "--output=tags", "*"])
+    body = "<h2>Status</h2>"
+    body += f"<div class='notice ok'>Config: <span class='code'>{html.escape(str(CONFIG))}</span><br>Unique messages: {html.escape(c.stdout.strip())}<br>Indexed files: {html.escape(f.stdout.strip())}</div>"
+    body += "<h3>Tags</h3><pre>" + html.escape(tags.stdout) + "</pre>"
+    body += "<h3>Data Safety</h3><ul><li>Read-only viewer.</li><li>No tag edits.</li><li>No mail file writes.</li><li>Use Evolution for reply/send.</li></ul>"
+    return page("status", body)
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        sys.stderr.write("[%s] %s\n" % (self.log_date_time_string(), fmt % args))
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(parsed.query)
+        try:
+            if parsed.path == "/":
+                q = qs.get("q", [DEFAULT_QUERY])[0].strip() or DEFAULT_QUERY
+                content = render_search(q)
+            elif parsed.path == "/thread":
+                tid = qs.get("id", [""])[0].strip()
+                if not tid:
+                    content = page("missing thread", "<div class='notice bad'>Missing thread id.</div>")
+                else:
+                    content = render_thread(tid)
+            elif parsed.path == "/status":
+                content = render_status()
+            else:
+                self.send_response(404)
+                self.end_headers()
+                self.wfile.write(b"not found")
+                return
+            data = content.encode("utf-8", "replace")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            data = page("error", "<div class='notice bad'><pre>" + html.escape(repr(e)) + "</pre></div>").encode()
+            self.send_response(500)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+def pick_port(start):
+    for port in range(start, start + 20):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+            return port
+    raise SystemExit("no free localhost port found")
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--no-open", action="store_true")
+    args = ap.parse_args()
+
+    if not CONFIG.exists():
+        raise SystemExit(f"missing notmuch config: {CONFIG}")
+
+    port = pick_port(args.port)
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    url = f"http://127.0.0.1:{port}/"
+    print(f"notmuch_browser_url={url}", flush=True)
+    print("read_only=yes", flush=True)
+    if not args.no_open:
+        threading.Thread(target=lambda: (time.sleep(0.8), webbrowser.open(url)), daemon=True).start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+if __name__ == "__main__":
+    main()
+PY
+
+chmod 755 "$VIEWER"
+python3 -m py_compile "$VIEWER"
+echo "viewer=$VIEWER"
+echo
+
+echo "== Stop previous viewer if running =="
+if pgrep -f 'notmuch-browser-pilot' >/dev/null 2>&1; then
+  pkill -f 'notmuch-browser-pilot' || true
+  sleep 2
+fi
+pgrep -af 'notmuch-browser-pilot' || true
+echo
+
+echo "== Launch viewer =="
+nohup "$VIEWER" --port "$PORT" > "$VIEWER_LOG" 2>&1 &
+viewer_pid=$!
+echo "viewer_pid=$viewer_pid"
+sleep 3
+echo
+
+echo "== Viewer startup log =="
+sed -n '1,80p' "$VIEWER_LOG" 2>/dev/null || true
+url="$(sed -n 's/^notmuch_browser_url=//p' "$VIEWER_LOG" | sed -n '1p')"
+echo "viewer_url=$url"
+echo
+
+echo "== Process check =="
+pgrep -af 'notmuch-browser-pilot|python3 .*notmuch-browser' | sed -n '1,120p' || true
+echo
+
+echo "== tmp folders still empty =="
+tmp_status=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704; do
+  c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+  echo "tmp_count $root $c"
+  [ "$c" = "0" ] || tmp_status=1
+done
+[ "$tmp_status" -eq 0 ] || { echo "status=blocked_tmp_files_present"; exit 1; }
+echo
+
+echo "status=notmuch_browser_viewer_launched"
+echo "viewer_url=$url"
+echo "log_file=$LOG_FILE"
+echo "== Chunk 8A complete =="
+echo
+echo "OPERATOR_CHECK_REQUIRED:"
+echo "1. Did a browser page open?"
+echo "2. Search for tag:inbox, then click a thread."
+echo "3. Is the message body visible in the browser viewer?"
+echo "4. Does exact search id:<message-id> work?"
+} 2>&1 | tee "$LOG_FILE"
+</script>
+
   <script type="text/plain" id="cmd-status">CONFIG="$HOME/.config/notmuch/default/config"
 echo "== notmuch version and config =="
 notmuch --version
@@ -322,6 +709,10 @@ nohup "$HOME/.local/bin/notmuch-browser-pilot" --port 8765 > "$HOME/codex-runs/n
 echo "browser_pid=$!"
 echo "browser_url=http://127.0.0.1:8765/"
 xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true
+</script>
+
+  <script type="text/plain" id="cmd-stop">pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+pgrep -af 'notmuch-browser-pilot' || echo "notmuch browser viewer stopped"
 </script>
 
   <script type="text/plain" id="cmd-search">CONFIG="$HOME/.config/notmuch/default/config"
