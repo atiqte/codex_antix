@@ -111,3 +111,4 @@
 - [x] Validate pilot-safe notmuch reindex by rebuilding only `/mail/SearchIndex/notmuch/default`, restoring tags, preserving 444 messages and 846 files, and keeping Maildir files unchanged.
 - [x] Create final notmuch/Astroid/browser-viewer DIY guide in HTML and plain text after helper and reindex validation passed.
 - [x] Add full Chunk 8A browser-viewer bootstrap and daily start/stop commands to the notmuch HTML/TXT guides for rebuilding on another antiX VM.
+- [x] Add full Chunk 8B helper creation, Chunk 8B-FIX1 helper/tag validation, and Chunk 8C safe reindex validation to the notmuch HTML/TXT guides.

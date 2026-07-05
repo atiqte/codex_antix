@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-05
 
+- Expanded the notmuch/Astroid HTML and text guides with full Chunk 8B helper creation, Chunk 8B-FIX1 corrected helper/tag validation, and Chunk 8C pilot-safe reindex validation.
 - Expanded the notmuch/Astroid HTML and text guides with the full Chunk 8A browser-viewer bootstrap that writes `~/.local/bin/notmuch-browser-pilot`, plus separate daily start and stop commands.
 - Added `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, documenting the validated notmuch pilot, read-only browser viewer, Astroid limitations, tag backup/restore, pilot-safe reindexing, and deferred full-archive expansion.
 - Recorded successful pilot-safe notmuch reindex validation: old DB moved to backup, database rebuilt only under `/mail/SearchIndex/notmuch/default`, tags restored, 444 messages and 846 files preserved, Maildir files unchanged, `tmp` empty, mbsync resumed, and browser viewer relaunched.

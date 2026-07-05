@@ -410,7 +410,532 @@ echo "4. Does exact search id:<message-id> work?"
 } 2>&1 | tee "$LOG_FILE"
 ```
 
-## 2. Read-only status audit
+## 2. Chunk 8B: Create Backup/Restore/Reindex Helper Scripts
+
+Create the notmuch helper scripts used by the pilot workflow. The original failed 8B validation attempt is superseded; this chunk does not run the known-bad `sh -n` check against the Python viewer.
+
+```sh
+set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-astroid-chunk8b-helpers-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 8B: create notmuch backup/restore/reindex helpers =="
+date -Ins 2>/dev/null || date
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+BIN_DIR="$HOME/.local/bin"
+BACKUP_DIR="/mail/Backups/notmuch"
+DB_BACKUP_ROOT="$BACKUP_DIR/reindex-db"
+
+[ -r "$CONFIG" ] || { echo "status=blocked_missing_notmuch_config"; exit 1; }
+command -v notmuch >/dev/null 2>&1 || { echo "status=blocked_missing_notmuch"; exit 1; }
+mkdir -p "$BIN_DIR" "$BACKUP_DIR" "$DB_BACKUP_ROOT"
+
+echo "== Write notmuch-backup-pilot =="
+cat > "$BIN_DIR/notmuch-backup-pilot" <<'EOF'
+#!/bin/sh
+set -eu
+CONFIG="${NOTMUCH_CONFIG:-$HOME/.config/notmuch/default/config}"
+BACKUP_DIR="/mail/Backups/notmuch"
+mkdir -p "$BACKUP_DIR"
+stamp="$(date +%Y%m%d-%H%M%S)"
+backup="$BACKUP_DIR/notmuch-tags-pilot-$stamp.batch-tag"
+notmuch --config="$CONFIG" dump --format=batch-tag > "$backup"
+sha256sum "$backup" > "$backup.sha256"
+ls -lh "$backup" "$backup.sha256"
+echo "backup_file=$backup"
+EOF
+
+echo "== Write notmuch-restore-pilot-tags =="
+cat > "$BIN_DIR/notmuch-restore-pilot-tags" <<'EOF'
+#!/bin/sh
+set -eu
+CONFIG="${NOTMUCH_CONFIG:-$HOME/.config/notmuch/default/config}"
+[ "${1:-}" ] || { echo "usage: notmuch-restore-pilot-tags /mail/Backups/notmuch/file.batch-tag" >&2; exit 2; }
+BACKUP="$1"
+[ -f "$BACKUP" ] || { echo "missing backup: $BACKUP" >&2; exit 1; }
+notmuch --config="$CONFIG" restore --format=batch-tag < "$BACKUP"
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+EOF
+
+echo "== Write notmuch-reindex-pilot =="
+cat > "$BIN_DIR/notmuch-reindex-pilot" <<'EOF'
+#!/bin/sh
+set -eu
+
+CONFIG="${NOTMUCH_CONFIG:-$HOME/.config/notmuch/default/config}"
+EXPECTED_DB="/mail/SearchIndex/notmuch/default"
+EXPECTED_MAIL_ROOT="/mail/Mailstore"
+TAG_BACKUP_DIR="/mail/Backups/notmuch"
+DB_BACKUP_ROOT="/mail/Backups/notmuch/reindex-db"
+RUN_DIR="$HOME/codex-runs"
+
+mkdir -p "$TAG_BACKUP_DIR" "$DB_BACKUP_ROOT" "$RUN_DIR"
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+db="$(notmuch --config="$CONFIG" config get database.path)"
+mail_root="$(notmuch --config="$CONFIG" config get database.mail_root)"
+sync_flags="$(notmuch --config="$CONFIG" config get maildir.synchronize_flags)"
+decrypt="$(notmuch --config="$CONFIG" config get index.decrypt)"
+stamp="$(date +%Y%m%d-%H%M%S)"
+
+echo "config=$CONFIG"
+echo "db=$db"
+echo "mail_root=$mail_root"
+echo "maildir_synchronize_flags=$sync_flags"
+echo "index_decrypt=$decrypt"
+
+[ "$db" = "$EXPECTED_DB" ] || fail "unexpected database.path: $db"
+[ "$mail_root" = "$EXPECTED_MAIL_ROOT" ] || fail "unexpected database.mail_root: $mail_root"
+[ "$sync_flags" = "false" ] || fail "maildir.synchronize_flags is not false"
+[ "$decrypt" = "false" ] || fail "index.decrypt is not false"
+[ -d "$mail_root" ] || fail "mail_root missing"
+[ -d "$db" ] || fail "database path missing"
+
+case "$db" in
+  "/"|"/mail"|"/mail/Mailstore"|"$mail_root"|"$mail_root"/*)
+    fail "unsafe database path overlaps mail data: $db"
+    ;;
+esac
+
+before_msg="$(notmuch --config="$CONFIG" count '*')"
+before_files="$(notmuch --config="$CONFIG" count --output=files '*')"
+echo "before_messages=$before_msg"
+echo "before_files=$before_files"
+[ "$before_msg" = "444" ] || fail "unexpected before message count"
+[ "$before_files" = "846" ] || fail "unexpected before file count"
+
+before_paths="$RUN_DIR/notmuch-reindex-before-$stamp.paths"
+after_paths="$RUN_DIR/notmuch-reindex-after-$stamp.paths"
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$before_paths"
+awk -v root="$mail_root/" 'index($0, root) != 1 { print "bad_path=" $0; bad=1 } END { exit bad ? 1 : 0 }' "$before_paths"
+
+tag_backup="$TAG_BACKUP_DIR/notmuch-tags-before-reindex-$stamp.batch-tag"
+notmuch --config="$CONFIG" dump --format=batch-tag > "$tag_backup"
+sha256sum "$tag_backup" > "$tag_backup.sha256"
+echo "tag_backup=$tag_backup"
+
+db_backup="$DB_BACKUP_ROOT/default-$stamp"
+[ ! -e "$db_backup" ] || fail "db backup already exists: $db_backup"
+
+echo "move_database_to=$db_backup"
+mv -- "$db" "$db_backup"
+mkdir -p "$db"
+
+echo "run_notmuch_new=yes"
+notmuch --config="$CONFIG" new
+
+echo "restore_tags=yes"
+notmuch --config="$CONFIG" restore --format=batch-tag < "$tag_backup"
+
+ln -sfn "$mail_root/mbsync" "$db/mbsync"
+ln -sfn "$mail_root/evolution" "$db/evolution"
+
+after_msg="$(notmuch --config="$CONFIG" count '*')"
+after_files="$(notmuch --config="$CONFIG" count --output=files '*')"
+echo "after_messages=$after_msg"
+echo "after_files=$after_files"
+[ "$after_msg" = "$before_msg" ] || fail "message count changed"
+[ "$after_files" = "$before_files" ] || fail "file count changed"
+
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$after_paths"
+cmp -s "$before_paths" "$after_paths" || fail "indexed file path list changed"
+
+echo "db_backup_kept=$db_backup"
+echo "status=reindex_pilot_complete"
+EOF
+
+echo "== Write notmuch-expand-include-local-archive =="
+cat > "$BIN_DIR/notmuch-expand-include-local-archive" <<'EOF'
+#!/bin/sh
+set -eu
+CONFIG="${NOTMUCH_CONFIG:-$HOME/.config/notmuch/default/config}"
+echo "Archive expansion is intentionally deferred."
+echo "Earlier verified restore: 48,720 cur."
+echo "Later notmuch preflight saw: 48,564 cur."
+echo
+echo "Current local-maildir cur count:"
+find /mail/Mailstore/evolution/local-maildir -type f -path '*/cur/*' | wc -l
+echo
+echo "Current notmuch ignore rules:"
+notmuch --config="$CONFIG" config get new.ignore
+echo
+echo "status=archive_expansion_deferred"
+exit 0
+EOF
+
+chmod 755 \
+  "$BIN_DIR/notmuch-backup-pilot" \
+  "$BIN_DIR/notmuch-restore-pilot-tags" \
+  "$BIN_DIR/notmuch-reindex-pilot" \
+  "$BIN_DIR/notmuch-expand-include-local-archive"
+
+echo "== Syntax check shell helpers =="
+for f in \
+  "$BIN_DIR/notmuch-backup-pilot" \
+  "$BIN_DIR/notmuch-restore-pilot-tags" \
+  "$BIN_DIR/notmuch-reindex-pilot" \
+  "$BIN_DIR/notmuch-expand-include-local-archive"
+do
+  sh -n "$f"
+  echo "shell_syntax_ok=$f"
+done
+
+ls -lh \
+  "$BIN_DIR/notmuch-backup-pilot" \
+  "$BIN_DIR/notmuch-restore-pilot-tags" \
+  "$BIN_DIR/notmuch-reindex-pilot" \
+  "$BIN_DIR/notmuch-expand-include-local-archive"
+
+echo
+echo "status=chunk_8b_helpers_created"
+echo "log_file=$LOG_FILE"
+echo "== Chunk 8B complete =="
+} 2>&1 | tee "$LOG_FILE"
+```
+
+## 3. Chunk 8B-FIX1: Corrected Helper Syntax and Tag Backup/Restore Validation
+
+Run this after Chunk 8B. It checks shell helpers with `sh -n`, compiles the Python viewer with Python, proves tag backup/restore, confirms exact Message-ID search, and proves Maildir file paths do not change.
+
+```sh
+set -eu
+
+echo "== started: $(date -Iseconds) =="
+echo "== Chunk 8B-FIX1: corrected notmuch helper validation =="
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+BACKUP_DIR="/mail/Backups/notmuch"
+RUN_DIR="$HOME/codex-runs"
+PROOF_QUERY='id:0c579c18-0bcf-44b8-b571-3359f690c3db@tagindustries.com.sg'
+PROOF_TAG='codex-restore-proof'
+
+mkdir -p "$RUN_DIR" "$BACKUP_DIR"
+
+echo "== Basic paths =="
+test -f "$CONFIG"
+test -d /mail/Mailstore
+test -d /mail/SearchIndex/notmuch/default
+notmuch --config="$CONFIG" config get database.path
+notmuch --config="$CONFIG" config get database.mail_root
+notmuch --config="$CONFIG" config get maildir.synchronize_flags
+notmuch --config="$CONFIG" config get index.decrypt
+echo
+
+echo "== Correct syntax checks =="
+for f in \
+  "$HOME/.local/bin/notmuch-pilot-new" \
+  "$HOME/.local/bin/notmuch-pilot-count" \
+  "$HOME/.local/bin/notmuch-open-message-id" \
+  "$HOME/.local/bin/notmuch-backup-pilot" \
+  "$HOME/.local/bin/notmuch-restore-pilot-tags" \
+  "$HOME/.local/bin/notmuch-reindex-pilot" \
+  "$HOME/.local/bin/notmuch-expand-include-local-archive"
+do
+  [ -x "$f" ]
+  sh -n "$f"
+  echo "shell_syntax_ok=$f"
+done
+
+python3 - "$HOME/.local/bin/notmuch-browser-pilot" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, "rb") as fh:
+    compile(fh.read(), path, "exec")
+print("python_syntax_ok=" + path)
+PY
+echo
+
+echo "== Current pilot counts =="
+msg_count="$(notmuch --config="$CONFIG" count '*')"
+file_count="$(notmuch --config="$CONFIG" count --output=files '*')"
+echo "notmuch_messages=$msg_count"
+echo "notmuch_files=$file_count"
+test "$msg_count" = "444"
+test "$file_count" = "846"
+echo
+
+echo "== Prove exact id query still works =="
+proof_count="$(notmuch --config="$CONFIG" count "$PROOF_QUERY")"
+proof_files="$(notmuch --config="$CONFIG" count --output=files "$PROOF_QUERY")"
+echo "proof_query_messages=$proof_count"
+echo "proof_query_files=$proof_files"
+test "$proof_count" -ge 1
+test "$proof_files" -ge 1
+echo
+
+echo "== Snapshot message file list before tag test =="
+BEFORE="$RUN_DIR/notmuch-paths-before-8bfix1.txt"
+AFTER="$RUN_DIR/notmuch-paths-after-8bfix1.txt"
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$BEFORE"
+wc -l "$BEFORE"
+echo
+
+echo "== Create direct tag backup =="
+notmuch --config="$CONFIG" tag "-$PROOF_TAG" -- "tag:$PROOF_TAG"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="$BACKUP_DIR/notmuch-tags-pilot-$STAMP.batch-tag"
+notmuch --config="$CONFIG" dump --format=batch-tag > "$BACKUP"
+sha256sum "$BACKUP" > "$BACKUP.sha256"
+ls -lh "$BACKUP" "$BACKUP.sha256"
+echo "backup_file=$BACKUP"
+echo
+
+echo "== Test tag mutation and restore from backup =="
+before_tag_count="$(notmuch --config="$CONFIG" count "tag:$PROOF_TAG")"
+notmuch --config="$CONFIG" tag "+$PROOF_TAG" -- "$PROOF_QUERY"
+after_add_count="$(notmuch --config="$CONFIG" count "tag:$PROOF_TAG")"
+notmuch --config="$CONFIG" restore --format=batch-tag < "$BACKUP"
+after_restore_count="$(notmuch --config="$CONFIG" count "tag:$PROOF_TAG")"
+
+echo "before_tag_count=$before_tag_count"
+echo "after_add_count=$after_add_count"
+echo "after_restore_count=$after_restore_count"
+test "$before_tag_count" = "0"
+test "$after_add_count" -ge 1
+test "$after_restore_count" = "0"
+echo
+
+echo "== Confirm tag test did not rename indexed message files =="
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$AFTER"
+cmp -s "$BEFORE" "$AFTER"
+echo "path_list_unchanged=yes"
+echo
+
+echo "== Confirm pilot Maildir tmp folders remain empty =="
+for root in \
+  /mail/Mailstore/mbsync/provider-live \
+  /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+do
+  if [ -d "$root" ]; then
+    tmp_count="$(find "$root" -type d -name tmp -exec sh -c 'for d do find "$d" -mindepth 1 -type f; done' sh {} + | wc -l)"
+    echo "tmp_count $root = $tmp_count"
+    test "$tmp_count" = "0"
+  fi
+done
+echo
+
+echo "== Helper existence summary =="
+ls -lh \
+  "$HOME/.local/bin/notmuch-backup-pilot" \
+  "$HOME/.local/bin/notmuch-restore-pilot-tags" \
+  "$HOME/.local/bin/notmuch-reindex-pilot" \
+  "$HOME/.local/bin/notmuch-expand-include-local-archive" \
+  "$HOME/.local/bin/notmuch-browser-pilot"
+
+echo
+echo "status=chunk_8b_fix1_complete"
+echo "== finished: $(date -Iseconds) =="
+```
+
+## 4. Chunk 8C: Pilot-Safe notmuch Reindex Validation
+
+Run this only after 8B-FIX1 passes. It moves the old notmuch database to backup, rebuilds only the disposable notmuch database, restores tags, and proves Maildir data was not renamed or moved.
+
+```sh
+set -eu
+
+echo "== started: $(date -Iseconds) =="
+echo "== Chunk 8C: pilot-safe notmuch reindex validation =="
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+RUN_DIR="$HOME/codex-runs"
+mkdir -p "$RUN_DIR"
+
+CONTROL="$HOME/.local/bin/mbsync-provider-live-control"
+BROWSER="$HOME/.local/bin/notmuch-browser-pilot"
+BROWSER_LOG="$RUN_DIR/notmuch-browser-after-reindex.log"
+initial_paused="unknown"
+browser_was_running="no"
+
+cleanup() {
+  if [ -x "$CONTROL" ] && [ "$initial_paused" = "no" ]; then
+    echo "== cleanup: resume mbsync loop =="
+    "$CONTROL" resume || true
+  fi
+  if [ "$browser_was_running" = "yes" ] && [ -x "$BROWSER" ]; then
+    echo "== cleanup: relaunch browser viewer =="
+    nohup "$BROWSER" --port 8765 > "$BROWSER_LOG" 2>&1 &
+    echo "browser_relaunched_pid=$!"
+    echo "browser_url=http://127.0.0.1:8765/"
+  fi
+}
+trap cleanup EXIT INT TERM
+
+echo "== Pause mbsync loop if needed =="
+if [ -x "$CONTROL" ]; then
+  "$CONTROL" status > "$RUN_DIR/notmuch-8c-mbsync-status-before.txt" 2>&1 || true
+  initial_paused="$(awk -F= '/^paused=/{print $2; exit}' "$RUN_DIR/notmuch-8c-mbsync-status-before.txt" || true)"
+  [ -n "$initial_paused" ] || initial_paused="unknown"
+  echo "initial_paused=$initial_paused"
+  "$CONTROL" pause || true
+else
+  echo "mbsync_control_missing=skip"
+fi
+echo
+
+echo "== Stop browser viewer during reindex if running =="
+if pgrep -f 'notmuch-browser-pilot' >/dev/null 2>&1; then
+  browser_was_running="yes"
+  pgrep -af 'notmuch-browser-pilot' || true
+  pkill -f 'notmuch-browser-pilot' || true
+  sleep 2
+else
+  echo "browser_running=no"
+fi
+echo
+
+echo "== Rewrite safe move-based notmuch-reindex-pilot helper =="
+cat > "$HOME/.local/bin/notmuch-reindex-pilot" <<'EOF'
+#!/bin/sh
+set -eu
+
+CONFIG="${NOTMUCH_CONFIG:-$HOME/.config/notmuch/default/config}"
+EXPECTED_DB="/mail/SearchIndex/notmuch/default"
+EXPECTED_MAIL_ROOT="/mail/Mailstore"
+TAG_BACKUP_DIR="/mail/Backups/notmuch"
+DB_BACKUP_ROOT="/mail/Backups/notmuch/reindex-db"
+RUN_DIR="$HOME/codex-runs"
+
+mkdir -p "$TAG_BACKUP_DIR" "$DB_BACKUP_ROOT" "$RUN_DIR"
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+db="$(notmuch --config="$CONFIG" config get database.path)"
+mail_root="$(notmuch --config="$CONFIG" config get database.mail_root)"
+sync_flags="$(notmuch --config="$CONFIG" config get maildir.synchronize_flags)"
+decrypt="$(notmuch --config="$CONFIG" config get index.decrypt)"
+stamp="$(date +%Y%m%d-%H%M%S)"
+
+echo "config=$CONFIG"
+echo "db=$db"
+echo "mail_root=$mail_root"
+echo "maildir_synchronize_flags=$sync_flags"
+echo "index_decrypt=$decrypt"
+
+[ "$db" = "$EXPECTED_DB" ] || fail "unexpected database.path: $db"
+[ "$mail_root" = "$EXPECTED_MAIL_ROOT" ] || fail "unexpected database.mail_root: $mail_root"
+[ "$sync_flags" = "false" ] || fail "maildir.synchronize_flags is not false"
+[ "$decrypt" = "false" ] || fail "index.decrypt is not false"
+[ -d "$mail_root" ] || fail "mail_root missing"
+[ -d "$db" ] || fail "database path missing"
+
+case "$db" in
+  "/"|"/mail"|"/mail/Mailstore"|"$mail_root"|"$mail_root"/*)
+    fail "unsafe database path overlaps mail data: $db"
+    ;;
+esac
+
+before_msg="$(notmuch --config="$CONFIG" count '*')"
+before_files="$(notmuch --config="$CONFIG" count --output=files '*')"
+echo "before_messages=$before_msg"
+echo "before_files=$before_files"
+[ "$before_msg" = "444" ] || fail "unexpected before message count"
+[ "$before_files" = "846" ] || fail "unexpected before file count"
+
+before_paths="$RUN_DIR/notmuch-reindex-before-$stamp.paths"
+after_paths="$RUN_DIR/notmuch-reindex-after-$stamp.paths"
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$before_paths"
+awk -v root="$mail_root/" 'index($0, root) != 1 { print "bad_path=" $0; bad=1 } END { exit bad ? 1 : 0 }' "$before_paths"
+
+tag_backup="$TAG_BACKUP_DIR/notmuch-tags-before-reindex-$stamp.batch-tag"
+notmuch --config="$CONFIG" dump --format=batch-tag > "$tag_backup"
+sha256sum "$tag_backup" > "$tag_backup.sha256"
+echo "tag_backup=$tag_backup"
+
+db_backup="$DB_BACKUP_ROOT/default-$stamp"
+[ ! -e "$db_backup" ] || fail "db backup already exists: $db_backup"
+
+echo "move_database_to=$db_backup"
+mv -- "$db" "$db_backup"
+mkdir -p "$db"
+
+echo "run_notmuch_new=yes"
+notmuch --config="$CONFIG" new
+
+echo "restore_tags=yes"
+notmuch --config="$CONFIG" restore --format=batch-tag < "$tag_backup"
+
+ln -sfn "$mail_root/mbsync" "$db/mbsync"
+ln -sfn "$mail_root/evolution" "$db/evolution"
+
+after_msg="$(notmuch --config="$CONFIG" count '*')"
+after_files="$(notmuch --config="$CONFIG" count --output=files '*')"
+echo "after_messages=$after_msg"
+echo "after_files=$after_files"
+[ "$after_msg" = "$before_msg" ] || fail "message count changed"
+[ "$after_files" = "$before_files" ] || fail "file count changed"
+
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$after_paths"
+cmp -s "$before_paths" "$after_paths" || fail "indexed file path list changed"
+
+echo "db_backup_kept=$db_backup"
+echo "status=reindex_pilot_complete"
+EOF
+
+chmod +x "$HOME/.local/bin/notmuch-reindex-pilot"
+sh -n "$HOME/.local/bin/notmuch-reindex-pilot"
+echo "reindex_helper_syntax_ok=yes"
+echo
+
+echo "== Pre-reindex Maildir file list snapshots =="
+find /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 \
+  -type f \( -path '*/cur/*' -o -path '*/new/*' \) | LC_ALL=C sort > "$RUN_DIR/mail-files-before-8c.txt"
+wc -l "$RUN_DIR/mail-files-before-8c.txt"
+echo
+
+echo "== Run safe reindex helper =="
+"$HOME/.local/bin/notmuch-reindex-pilot"
+echo
+
+echo "== Post-reindex verification =="
+msg_count="$(notmuch --config="$CONFIG" count '*')"
+file_count="$(notmuch --config="$CONFIG" count --output=files '*')"
+echo "notmuch_messages=$msg_count"
+echo "notmuch_files=$file_count"
+test "$msg_count" = "444"
+test "$file_count" = "846"
+
+find /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 \
+  -type f \( -path '*/cur/*' -o -path '*/new/*' \) | LC_ALL=C sort > "$RUN_DIR/mail-files-after-8c.txt"
+cmp -s "$RUN_DIR/mail-files-before-8c.txt" "$RUN_DIR/mail-files-after-8c.txt"
+echo "maildir_file_list_unchanged=yes"
+
+for root in \
+  /mail/Mailstore/mbsync/provider-live \
+  /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+do
+  tmp_count="$(find "$root" -type d -name tmp -exec sh -c 'for d do find "$d" -mindepth 1 -type f; done' sh {} + | wc -l)"
+  echo "tmp_count $root = $tmp_count"
+  test "$tmp_count" = "0"
+done
+
+echo "== DB and shim summary =="
+ls -ld /mail/SearchIndex/notmuch/default
+readlink /mail/SearchIndex/notmuch/default/mbsync || true
+readlink /mail/SearchIndex/notmuch/default/evolution || true
+find /mail/Backups/notmuch/reindex-db -maxdepth 1 -type d -name 'default-*' | LC_ALL=C sort | tail -n 5
+
+echo
+echo "status=chunk_8c_complete"
+echo "== finished: $(date -Iseconds) =="
+```
+
+## 5. Read-only status audit
 
 ```sh
 CONFIG="$HOME/.config/notmuch/default/config"
@@ -447,7 +972,7 @@ fi
 
 Expected pilot count is 444 messages and 846 files.
 
-## 3. Start Existing Browser Viewer
+## 6. Start Existing Browser Viewer
 
 Use this for normal daily launch after Chunk 8A has already created the viewer.
 
@@ -469,7 +994,7 @@ Search examples in the browser:
 
 The viewer is read-only. It renders message bodies in the browser, lists attachments, and blocks remote/script execution. Use Evolution for reply/send.
 
-## 4. Stop Browser Viewer
+## 7. Stop Browser Viewer
 
 Closing the browser tab does not stop the local server. Run this when you want to stop the viewer process.
 
@@ -478,7 +1003,7 @@ pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
 pgrep -af 'notmuch-browser-pilot' || echo "notmuch browser viewer stopped"
 ```
 
-## 5. CLI search examples
+## 8. CLI search examples
 
 ```sh
 CONFIG="$HOME/.config/notmuch/default/config"
@@ -502,7 +1027,7 @@ notmuch --config="$CONFIG" search --limit=10 'date:2026..2026 and tag:attachment
 
 Duplicate Message-ID values are expected in preserved archives. One `id:` query can legitimately match multiple files.
 
-## 6. Back up notmuch tags
+## 9. Back up notmuch tags
 
 ```sh
 CONFIG="$HOME/.config/notmuch/default/config"
@@ -521,7 +1046,7 @@ Validated backup example:
 
 `/mail/Backups/notmuch/notmuch-tags-pilot-20260705-083433.batch-tag`
 
-## 7. Restore notmuch tags
+## 10. Restore notmuch tags
 
 Use only with a known-good `.batch-tag` file.
 
@@ -539,7 +1064,7 @@ notmuch --config="$CONFIG" count --output=files '*'
 
 The validation proof added a temporary tag, restored the backup, and confirmed the temporary tag returned from 1 to 0 while the indexed file paths stayed unchanged.
 
-## 8. Pilot-safe reindex
+## 11. Pilot-safe reindex
 
 This validated helper moves the old database to `/mail/Backups/notmuch/reindex-db`, rebuilds only `/mail/SearchIndex/notmuch/default`, restores tags, recreates Astroid compatibility symlinks, and verifies counts. It must not touch `/mail/Mailstore`.
 
@@ -558,7 +1083,7 @@ Validated reindex result:
 - mbsync resumed
 - Browser viewer relaunched
 
-## 9. Astroid experimental launch
+## 12. Astroid experimental launch
 
 Astroid is installed and configured, but message bodies stayed blank on this antiX/IceWM/VMware setup. Use it only as experimental search/list UI.
 
@@ -578,7 +1103,7 @@ Known Astroid limitations from validation:
 - It needed symlink shims under `/mail/SearchIndex/notmuch/default` because it resolved paths under the database directory instead of honoring notmuch `database.mail_root`.
 - It is not primary until the body rendering issue is fixed or a later Astroid/WebKitGTK stack is validated.
 
-## 10. Full archive expansion preflight only
+## 13. Full archive expansion preflight only
 
 Do not run archive expansion yet. This command only shows why it is deferred.
 
