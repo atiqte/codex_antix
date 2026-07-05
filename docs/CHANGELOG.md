@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-06
 
+- Added the first broader application implementation: a read-only Go standard-library notmuch browser service with embedded local CSS/HTMX, notmuch JSON parsing, localhost-only bind safety, focused unit tests, and an antiX control script source.
+- Added `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt` and updated project memory to record Go stdlib, SSH tunnel access, Evolution reply/send split, and deferred 59G archive expansion.
 - Fixed the active notmuch browser HTML guide so command chunks are embedded directly in visible `<pre>` blocks instead of depending on JavaScript to populate initially blank blocks.
 
 ## 2026-07-05

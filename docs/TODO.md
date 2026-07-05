@@ -11,15 +11,18 @@
 - [ ] After validating the newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
-- [ ] Decide broader project type beyond the approved mail migration utility.
+- [ ] Run `go test ./...` for the Go notmuch browser service on antiX or another machine with Go installed.
+- [ ] Build `cmd/notmuch-browser` on antiX and install it as `~/.local/bin/notmuch-browser`.
+- [ ] Install `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` on antiX and validate `start`, `status`, `logs`, `refresh-index`, and `tunnel-hint`.
+- [ ] Browser-validate the Go notmuch service on antiX: `/healthz`, `tag:inbox` search, single-message view, HTML iframe rendering, attachment-name display, duplicate selector, and Status page.
+- [ ] Validate Windows 11 access through SSH tunnel while the service remains bound to antiX `127.0.0.1:8765`.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
 ## Later
 
 - [ ] Consider moving the mbsync `PassCmd` from the current chmod `600` password file to GPG after unattended polling remains stable.
 - [ ] Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
-- [ ] Define the first implementation milestone.
-- [ ] Choose language, runtime, and tooling only after the project type is explicit.
+- [ ] Decide whether the Go notmuch browser should start through IceWM startup or reviewed root-level runit service after antiX validation.
 - [ ] Add project-specific setup instructions after tooling is selected.
 - [ ] Create issue tracker labels or project board after a remote is connected, if useful.
 
@@ -114,3 +117,6 @@
 - [x] Retire Astroid after backing up its settings, purge the package and Astroid-only dependencies, and remove Astroid-only notmuch compatibility symlinks.
 - [x] Replace the notmuch browser viewer's threaded UI with single-email search/result opening and validate exact Message-ID search.
 - [x] Create browser-only notmuch DIY guide in HTML and plain text, and mark the old Astroid guide as retired historical context.
+- [x] Decide the first broader application objective: a read-only Go standard-library notmuch browser service for antiX.
+- [x] Define the first implementation milestone as the read-only Go notmuch browser service.
+- [x] Implement the initial Go notmuch browser service, embedded local CSS/HTMX assets, focused unit tests, and antiX control script source.

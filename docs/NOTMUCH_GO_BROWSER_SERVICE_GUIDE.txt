@@ -1,0 +1,103 @@
+# Go notmuch Browser Service for antiX
+
+This is the implementation guide for the read-only Go notmuch browser service.
+It supersedes the Python pilot viewer as the next implementation direction, but
+it keeps the same safety posture: search/view only, localhost bind, Evolution
+for reply/forward/send, and no Maildir mutation.
+
+## Scope
+
+- Backend: Go standard library `net/http`, no Gin, Flask, uv, Node, npm, or CDN.
+- Frontend: server-rendered HTML, local CSS, and vendored local HTMX.
+- Binding: `127.0.0.1:8765` inside antiX.
+- Host access: SSH tunnel from Windows 11.
+- notmuch database: `/mail/SearchIndex/notmuch/default`.
+- mail root: `/mail/Mailstore`.
+- Safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`.
+- Full 59G archive expansion remains deferred until the count drift is accepted
+  or explained.
+
+## Build on antiX
+
+Run from the repository root on antiX after Go is installed or available.
+
+```sh
+set -eu
+
+go test ./...
+go build -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
+install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
+
+notmuch-browser-control status
+notmuch-browser-control start
+notmuch-browser-control status
+```
+
+Open locally inside antiX:
+
+```sh
+xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true
+```
+
+## Windows 11 SSH Tunnel
+
+Keep the service bound to antiX localhost. From Windows PowerShell, use:
+
+```powershell
+ssh -N -L 8765:127.0.0.1:8765 atiq@ANTI_X_VM_IP
+```
+
+Then open this in the Windows browser:
+
+```text
+http://127.0.0.1:8765/
+```
+
+## Control Commands
+
+After installing `scripts/notmuch_browser_control.sh` as
+`~/.local/bin/notmuch-browser-control`:
+
+```sh
+notmuch-browser-control start
+notmuch-browser-control stop
+notmuch-browser-control restart
+notmuch-browser-control status
+notmuch-browser-control logs
+notmuch-browser-control refresh-index
+notmuch-browser-control tunnel-hint
+notmuch-browser-control install-icewm-startup
+notmuch-browser-control print-runit-service
+```
+
+`refresh-index` runs `notmuch new` only after confirming the notmuch safety
+settings. It skips instead of overlapping when the mbsync provider-live lock is
+present at `/mail/AppData/isync/provider-live-loop/lock`.
+
+## Runit Versus IceWM Startup
+
+Use `install-icewm-startup` for the current user-level pattern. It edits only
+`~/.icewm/startup` with a marked block.
+
+Use `print-runit-service` only as a reviewed template for later root-level
+runit setup. Do not run those commands blindly; root-level service installation
+should be a separate controlled antiX step.
+
+Do not use `tmux` as the service supervisor. It is acceptable only for manual
+debugging.
+
+## Validation Checklist
+
+On antiX, validate:
+
+1. `go test ./...` passes.
+2. `notmuch-browser-control start` reports `server=running`.
+3. `/healthz` returns `ok: true`.
+4. Search `tag:inbox` shows individual messages.
+5. Opening a result shows one selected email.
+6. Duplicate Message-ID file selector appears when multiple files exist.
+7. HTML mail renders in the sandboxed iframe.
+8. Attachment names are visible but downloads are not exposed in v1.
+9. `notmuch-browser-control refresh-index` skips while mbsync lock is present.
+10. Before/after Maildir path lists and `tmp` counts do not change from
+    search/view operations.

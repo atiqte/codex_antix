@@ -32,10 +32,10 @@ Use these files as the project memory source of truth.
 
 ## Repository Posture
 
-- Current phase: planning/setup.
-- Current goal: maintain an AI-readable memory and Git workflow system.
-- Application implementation has not started.
-- Project type is intentionally undecided.
+- Current phase: planning/setup plus first application implementation.
+- Current goal: maintain an AI-readable memory and Git workflow system, the approved mail migration utilities, and the read-only Go notmuch browser service.
+- First broader application objective: Go standard-library notmuch browser service for antiX, read/search/view only, localhost-bound, Windows access through SSH tunnel.
+- Do not add unrelated application features until the owner explicitly decides the next implementation objective.
 
 ## Portability Notes
 

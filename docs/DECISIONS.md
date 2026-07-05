@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-06: Build Read-Only notmuch Browser as a Go Standard-Library Service
+
+- Status: accepted
+- Context: The owner requested an extremely lightweight, robust, always-available notmuch browser for antiX runit/IceWM that can be reached from Windows 11. Gin, Flask, uv-managed Python, and tmux were considered. The existing Python localhost browser viewer proved the workflow, but the next version needs a smaller permanent service posture.
+- Decision: Implement the v1 service in Go using `net/http`, `html/template`, embedded local CSS/HTMX, and direct notmuch CLI execution with argument arrays. Do not use Gin or Flask for v1. Keep the service read-only: search and view only; Evolution remains reply/forward/send. Bind to `127.0.0.1:8765` by default and use an SSH tunnel from Windows 11. Use a POSIX control script and later IceWM startup or reviewed runit supervision; do not use tmux as the service supervisor.
+- Consequence: The first broader application objective is now explicitly selected. The implementation lives under `cmd/notmuch-browser` and `internal/notmuchbrowser`, with `scripts/notmuch_browser_control.sh` as the antiX control source. Go compilation and `go test ./...` still need validation on antiX or another machine with Go installed because the Windows workspace used for implementation did not have Go available.
+
 ### 2026-07-05: Retire Astroid and Use Browser-Only Single-Email notmuch Viewer
 
 - Status: accepted

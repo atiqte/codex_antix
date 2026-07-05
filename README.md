@@ -1,8 +1,8 @@
 # antiX VM Laptop
 
-This repository is currently in the planning/setup phase. Its immediate purpose is to hold project memory, workflow notes, and the approved local Betterbird mail migration utilities in a form that is easy for humans and AI coding sessions to resume.
+This repository holds project memory, workflow notes, the approved local Betterbird mail migration utilities, antiX mail setup helpers, and the first broader application objective: a read-only Go notmuch browser service for antiX.
 
-No broader application type, framework, package manager, or deployment target has been chosen yet. The approved implementation work is limited to Python 3 standard-library mail migration utilities plus small user-level antiX setup helpers.
+The broader application direction is now selected for v1: a lightweight Go standard-library web service that searches/views notmuch mail over localhost, with Windows 11 access through an SSH tunnel. Evolution remains the reply/forward/send client.
 
 ## Current Status
 
@@ -11,8 +11,9 @@ No broader application type, framework, package manager, or deployment target ha
 - `AGENTS.md` defines rules for future Codex sessions.
 - `docs/WORK_VALIDATION_LEDGER.md` records topic-neutral command-chunk validation outcomes for future terminal-guided work.
 - Approved mail migration utilities live in `src/`.
+- The Go notmuch browser service lives under `cmd/notmuch-browser` and `internal/notmuchbrowser`.
 - Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls, and the browser-only notmuch search/view workflow.
-- AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration, the first mbsync INBOX test setup, and the validated production `provider-live`/Sent-upload workflow.
+- AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration, the first mbsync INBOX test setup, the validated production `provider-live`/Sent-upload workflow, and the Go notmuch browser control workflow.
 - Windows 11 and Debian Linux portability is a project requirement.
 
 ## Start Here
@@ -48,17 +49,23 @@ Before doing project work, read these files:
 │   ├── MBSYNC_ANTIX_GUIDE.txt
 │   ├── NOTMUCH_BROWSER_ANTIX_GUIDE.html
 │   ├── NOTMUCH_BROWSER_ANTIX_GUIDE.txt
+│   ├── NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt
 │   ├── TODO.md
 │   ├── WORK_VALIDATION_LEDGER.md
 │   └── WORKFLOW.md
+├── cmd/
+│   └── notmuch-browser/
+├── internal/
+│   └── notmuchbrowser/
 ├── scripts/
 │   ├── evolution_flatpak_icewm_launcher_setup.sh
-│   └── mbsync_provider_inbox_setup.sh
+│   ├── mbsync_provider_inbox_setup.sh
+│   └── notmuch_browser_control.sh
 ├── src/
 └── tests/
 ```
 
-`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, maildir-lite conversion, and dynamic post-main-archive delta utilities. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, and the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, stale-lock recovery, and stale loop PID protection. Broader application work should remain undecided until the project type is explicitly chosen.
+`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, maildir-lite conversion, and dynamic post-main-archive delta utilities. `cmd/notmuch-browser` and `internal/notmuchbrowser` contain the Go notmuch browser service. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, stale-lock recovery, stale loop PID protection, and the notmuch browser control script.
 
 ## Development Policy
 

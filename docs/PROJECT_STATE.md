@@ -5,20 +5,20 @@ Last updated: 2026-07-06
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
-- Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a pilot notmuch search layer with a validated read-only browser viewer fallback
+- Project type: local mail migration utilities plus a read-only Go notmuch browser service for antiX
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a notmuch search/view layer now being promoted from the Python pilot viewer to a Go standard-library browser service
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
 ## Current Phase
 
-Planning/setup with approved local mail migration utility implementations.
+Planning/setup plus first broader application implementation.
 
-The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, transporting the already-converted Maildir++ archive from Fedora to antiX, and selecting/staging post-main-archive Betterbird aggregate deltas, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. Other application direction remains undecided.
+The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, transporting the already-converted Maildir++ archive from Fedora to antiX, and selecting/staging post-main-archive Betterbird aggregate deltas, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. On 2026-07-06, the owner accepted the first broader application objective: a read-only Go standard-library notmuch browser service for antiX, bound to localhost and reached from Windows 11 through SSH tunneling.
 
 ## Current Objective
 
-Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, plus maintain the approved mail migration utilities.
+Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, maintain the approved mail migration utilities, and implement the read-only Go notmuch browser service for antiX.
 
 ## What Exists Now
 
@@ -38,6 +38,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`, an offline browser DIY guide with visible embedded command blocks and copy buttons for retiring Astroid, installing the single-email read-only notmuch browser viewer, daily start/stop, CLI search, tag backup/restore, and pilot-safe reindexing.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same browser-only notmuch guide.
+- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt`, the implementation and antiX validation guide for the new Go standard-library notmuch browser service.
 - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, retained only as retired historical guides with warnings pointing to the active browser-only guide.
 - `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.
 - `src/` utility folder for approved Python standard-library mail migration tools.
@@ -53,24 +54,25 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `tests/test_betterbird_post_archive_delta.py`, standard-library tests for dynamic post-main-archive delta selection, fallback matching, and staging safety.
 - `scripts/evolution_flatpak_icewm_launcher_setup.sh`, a user-level antiX helper for adding Evolution Flatpak to IceWM menu/taskbar launch surfaces and starting `gnome-keyring-daemon`.
 - `scripts/mbsync_provider_inbox_setup.sh`, an antiX helper for inspecting package/layout state, installing isync/mbsync, creating the isolated `/mail` mbsync test layout, writing a pull-only INBOX config, production `provider-live` layout/config/status, Sent-only upload channel setup, and provider-live auto-sync loop/startup setup with log retention, timeout wrapping, stale-lock proofing, and stale loop PID protection.
+- `scripts/notmuch_browser_control.sh`, the source control script intended to be installed on antiX as `~/.local/bin/notmuch-browser-control`; it starts/stops the Go browser service, reports status/logs, refreshes the notmuch index with lock safety, prints SSH tunnel hints, installs an IceWM startup block, and prints a reviewed runit service template.
+- `cmd/notmuch-browser/main.go`, the Go service entrypoint.
+- `internal/notmuchbrowser/`, the Go standard-library service package, including notmuch command execution, JSON parsing, server-rendered templates, local CSS, vendored local HTMX 2.0.10, and unit tests.
 
 ## What Is Intentionally Undecided
 
-- Broader application type beyond the approved mail migration utility
-- Runtime or packaging beyond Python 3 standard library
-- Framework
+- Packaging/install workflow for the Go browser service after antiX validation
+- Whether the Go service should be started first through IceWM startup or promoted to root-level runit supervision
 - Package manager
-- Database or storage layer
-- UI, CLI, service, automation, or library direction
-- Deployment target
+- Database or storage layer beyond the existing notmuch sidecar index
+- Additional UI actions beyond read-only search/view
 - Git hosting provider
 - Branching model beyond keeping changes commit-ready
 
 ## Active Working Context
 
-- The repository is in setup-only mode.
+- The repository is in setup plus first application implementation mode.
 - Do not install Python, Node, npm packages, pip packages, Docker, devcontainers, or other dependencies without explicit approval.
-- The current transport and converter utilities must remain Python 3 standard-library-only unless the owner approves a dependency change. User-level antiX setup helpers should remain POSIX shell; package-installing helper commands should remain explicit subcommands and only run after owner approval.
+- The current transport and converter utilities must remain Python 3 standard-library-only unless the owner approves a dependency change. The notmuch browser service is Go standard-library-only for backend code; HTMX is vendored as a local static browser asset. User-level antiX setup helpers should remain POSIX shell; package-installing helper commands should remain explicit subcommands and only run after owner approval.
 - Do not delete files without explicit approval.
 - End each working session by committing changes with a clear self-explanatory message and pushing to the configured remote.
 - Do not perform non-routine remote operations without explicit approval.
@@ -105,18 +107,30 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.txt`
   - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`
   - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`
-- `.gitignore`
-- `.gitattributes`
-- `src/betterbird_profile_transport.py`
-- `src/maildirpp_transport.py`
-- `src/betterbird_maildirlite_to_maildirpp.py`
-- `src/betterbird_post_archive_delta.py`
-- `scripts/evolution_flatpak_icewm_launcher_setup.sh`
-- `scripts/mbsync_provider_inbox_setup.sh`
-- `tests/test_betterbird_profile_transport.py`
-- `tests/test_maildirpp_transport.py`
-- `tests/test_betterbird_maildirlite_to_maildirpp.py`
-- `tests/test_betterbird_post_archive_delta.py`
+  - `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt`
+  - `.gitignore`
+  - `.gitattributes`
+  - `go.mod`
+  - `cmd/notmuch-browser/main.go`
+  - `internal/notmuchbrowser/config.go`
+  - `internal/notmuchbrowser/notmuch.go`
+  - `internal/notmuchbrowser/server.go`
+  - `internal/notmuchbrowser/templates.go`
+  - `internal/notmuchbrowser/notmuch_test.go`
+  - `internal/notmuchbrowser/static/app.css`
+  - `internal/notmuchbrowser/static/htmx.min.js`
+  - `internal/notmuchbrowser/static/htmx.LICENSE.txt`
+  - `src/betterbird_profile_transport.py`
+  - `src/maildirpp_transport.py`
+  - `src/betterbird_maildirlite_to_maildirpp.py`
+  - `src/betterbird_post_archive_delta.py`
+  - `scripts/evolution_flatpak_icewm_launcher_setup.sh`
+  - `scripts/mbsync_provider_inbox_setup.sh`
+  - `scripts/notmuch_browser_control.sh`
+  - `tests/test_betterbird_profile_transport.py`
+  - `tests/test_maildirpp_transport.py`
+  - `tests/test_betterbird_maildirlite_to_maildirpp.py`
+  - `tests/test_betterbird_post_archive_delta.py`
 
 ## Current Implementation Notes
 
@@ -196,29 +210,32 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The validated notmuch GUI path is the read-only localhost browser viewer at `~/.local/bin/notmuch-browser-pilot`, launched on `http://127.0.0.1:8765/`. It now uses single-email mode: search results are individual messages, `/message?id=<message-id>` opens one selected email body, exact `id:<message-id>` search works, and the Status page reports `Viewer mode: single-email`. This viewer is read/search/view only; reply/send stays in Evolution.
 - notmuch backup/restore/reindex helper validation has passed for the pilot scope. Corrected Chunk 8B-FIX1 passed shell/Python syntax checks, tag backup/restore, exact `id:` search, indexed path stability, and zero `tmp` changes. Chunk 8C then moved the old database to `/mail/Backups/notmuch/reindex-db/default-20260705-084026`, rebuilt only `/mail/SearchIndex/notmuch/default`, restored tags from `/mail/Backups/notmuch/notmuch-tags-before-reindex-20260705-084026.batch-tag`, preserved 444 messages and 846 files at that time, kept the pilot Maildir file list unchanged, kept `tmp` folders empty, resumed mbsync, and relaunched the browser viewer.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html` and `.txt` now document the active browser-only path, including Astroid purge, single-email viewer installation, shim removal, daily browser-viewer start/stop commands, status checks, CLI search examples, tag backup/restore, pilot-safe reindex, and the deferred full-archive expansion preflight. The older `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt` are retained only as retired historical guides.
+- The next notmuch browser implementation is now the Go standard-library service in `cmd/notmuch-browser` and `internal/notmuchbrowser`. It exposes `GET /`, `/search`, `/message`, `/status`, and `/healthz`, executes notmuch through argument-array `exec.CommandContext` calls, parses notmuch JSON, renders server-side HTML, embeds local CSS and HTMX 2.0.10, refuses non-localhost binds by default, and checks startup safety for `database.path=/mail/SearchIndex/notmuch/default`, `database.mail_root=/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`.
+- `scripts/notmuch_browser_control.sh` is the installable antiX control source for the Go browser service. It expects the compiled binary at `~/.local/bin/notmuch-browser`, uses logs under `/mail/Logs/notmuch-browser`, stores state under `/mail/AppData/notmuch-browser`, keeps Windows access on an SSH tunnel, and makes `refresh-index` skip when `/mail/AppData/isync/provider-live-loop/lock` is present so it does not overlap the provider-live mbsync loop.
+- The local Windows workspace used for the initial implementation did not have Go installed, so Go compilation and `go test ./...` must be run on antiX or another machine with Go available before treating the service as validated.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
 ## Open Questions
 
-- What should this project become?
+- Should the Go browser service be validated first through IceWM startup or through a reviewed root-level runit service?
 - Which operating environments must the finished project support beyond Windows 11 and Debian Linux?
 - Should the remote be GitHub or GitLab?
 - Should the project use a conventional branching model, trunk-based work, or simple local commits until the direction is clearer?
-- What is the first implementation milestone after planning/setup?
+- What is the next implementation milestone after the read-only Go notmuch browser service is antiX-validated?
 
 ## Next Actions
 
-1. Review the setup and memory files.
-2. Keep the notmuch pilot scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
-3. Use the read-only single-email browser viewer as the validated notmuch GUI for search/view and keep Evolution Flatpak as the reply/send client.
-4. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
-5. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup are explicitly planned.
-6. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-7. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-8. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-9. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
-10. Decide broader project type and future packaging only if needed.
+1. Run `go test ./...` and build `cmd/notmuch-browser` on antiX or another machine with Go installed.
+2. Install the compiled binary as `~/.local/bin/notmuch-browser` and `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` on antiX, then validate `start`, `status`, `logs`, `/healthz`, search, message view, duplicate selector, and SSH tunnel access from Windows 11.
+3. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
+4. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
+5. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+6. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup are explicitly planned.
+7. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+8. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+9. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+10. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
 
 ## Cross-Machine Restore Instructions
 

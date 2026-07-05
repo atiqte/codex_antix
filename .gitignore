@@ -37,6 +37,12 @@ yarn-error.log*
 dist/
 build/
 
+# Go build outputs
+/notmuch-browser
+/notmuch-browser.exe
+*.test
+coverage.out
+
 # General caches and temporary files
 .cache/
 tmp/

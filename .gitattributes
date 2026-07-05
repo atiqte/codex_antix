@@ -1,3 +1,4 @@
 # Keep executable scripts portable across Windows checkouts and Debian/antiX runs.
 *.sh text eol=lf
 *.py text eol=lf
+*.go text eol=lf
