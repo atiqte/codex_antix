@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>antiX Runit zzzFM-IceWM WezTerm Manual Setup Guide</title>
+<style>
+:root { --bg:#0f1117; --panel:#171a22; --panel2:#202432; --text:#e8eaf0; --muted:#aab1c2; --accent:#8ab4f8; --ok:#7bd88f; --warn:#f5c16c; --danger:#ff7b72; --code:#0b0d12; --border:#303545; }
+html { scroll-behavior:smooth; }
+body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+header { padding:32px 24px; border-bottom:1px solid var(--border); background:linear-gradient(135deg,#111827,#1f2937); }
+header h1 { margin:0 0 10px; font-size:30px; line-height:1.2; }
+header p { max-width:980px; color:var(--muted); margin:0; }
+main { max-width:1120px; margin:0 auto; padding:24px; }
+nav { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:22px; }
+nav a { color:var(--accent); text-decoration:none; margin-right:16px; white-space:nowrap; }
+section { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:22px; margin:18px 0; }
+h2 { margin-top:0; color:#fff; font-size:22px; }
+h3 { margin-top:22px; color:#fff; }
+.note,.warning,.success { border-left:4px solid; padding:12px 14px; border-radius:8px; background:var(--panel2); margin:14px 0; }
+.note { border-color:var(--accent); } .warning{border-color:var(--warn);} .success{border-color:var(--ok);} .danger{color:var(--danger);}
+.code-wrap { position:relative; margin:14px 0 20px; }
+pre { background:var(--code); border:1px solid var(--border); border-radius:10px; padding:44px 16px 16px; overflow:auto; tab-size:2; }
+code { font-family:"JetBrains Mono","DejaVu Sans Mono","Liberation Mono",Consolas,monospace; font-size:13px; color:#f1f5f9; }
+.copy-btn { position:absolute; top:8px; right:8px; border:1px solid var(--border); background:#263044; color:#fff; border-radius:7px; padding:6px 10px; cursor:pointer; font-size:12px; }
+.copy-btn:hover { background:#33425d; }
+table { border-collapse:collapse; width:100%; margin:12px 0; }
+th,td { border:1px solid var(--border); padding:10px; vertical-align:top; }
+th { background:var(--panel2); }
+footer { color:var(--muted); border-top:1px solid var(--border); margin-top:28px; padding-top:18px; font-size:13px; }
+</style>
+<script>
+function copyCode(id){ const code=document.getElementById(id).innerText; navigator.clipboard.writeText(code).then(()=>{ const btn=document.querySelector('[data-copy-target="'+id+'"]'); const old=btn.innerText; btn.innerText='Copied'; setTimeout(()=>btn.innerText=old,1200); }); }
+</script>
+</head>
+<body>
+<header><h1>antiX Runit zzzFM-IceWM WezTerm Manual Setup Guide</h1><p>Professional DIY guideline for installing, configuring, testing, updating, and safely using WezTerm manually while keeping ROXterm as the stable system default terminal on antiX inside VMware.</p></header>
+<main>
+<nav><a href="#principle">Design principle</a><a href="#install">Install</a><a href="#default">Keep ROXterm default</a><a href="#config">Configure</a><a href="#test">Test</a><a href="#troubleshoot">Troubleshoot</a><a href="#update">Update</a><a href="#rollback">Rollback</a></nav>
+<section id="principle"><h2>1. Design principle</h2><p>This setup deliberately keeps <code>ROXterm</code> as <code>x-terminal-emulator</code>. WezTerm is installed and configured, but launched manually with <code>wezterm</code> or <code>wezterm start</code>.</p><div class="success"><strong>Recommended final state:</strong> antiX remains compatible with existing IceWM, zzzFM, and antiX menu tools. WezTerm is available as an advanced optional terminal.</div><table><tr><th>Component</th><th>Recommended setting</th><th>Reason</th></tr><tr><td>System default terminal</td><td><code>/usr/bin/roxterm</code></td><td>Maximum antiX compatibility and minimum system change.</td></tr><tr><td>WezTerm launch method</td><td><code>wezterm</code> or <code>wezterm start</code></td><td>Manual use avoids breaking old <code>x-terminal-emulator -e</code> launchers.</td></tr><tr><td>Config location</td><td><code>~/.config/wezterm/wezterm.lua</code></td><td>User-level, easy to back up, no root edit needed.</td></tr><tr><td>VMware display backend</td><td><code>OpenGL</code>, fallback <code>Software</code></td><td>OpenGL is fast; Software is safer if VMware rendering glitches occur.</td></tr></table><div class="warning"><strong>Do not set</strong> <code>x-terminal-emulator</code> to <code>/usr/bin/open-wezterm-here</code> for a stability-focused antiX setup. It may open WezTerm normally, but may fail traditional command execution such as <code>x-terminal-emulator -e command</code>.</div></section>
+<section id="install"><h2>2. Install WezTerm from the APT repository</h2><p>Run this from ROXterm. It adds the WezTerm APT signing key and repository, updates APT, installs nala, then installs WezTerm.</p>
+<h3>Install WezTerm APT repository and package</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-1" onclick="copyCode('code-1')">Copy</button>
+<pre><code id="code-1">curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+echo &#x27;deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *&#x27; | sudo tee /etc/apt/sources.list.d/wezterm.list
+sudo chmod 644 /usr/share/keyrings/wezterm-fury.gpg
+sudo apt update
+sudo apt install nala
+sudo nala install wezterm</code></pre>
+</div>
+<h3>Verify installation</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-2" onclick="copyCode('code-2')">Copy</button>
+<pre><code id="code-2">command -v wezterm
+wezterm --version
+apt policy wezterm</code></pre>
+</div>
+</section><section id="default"><h2>3. Keep ROXterm as the system default terminal</h2><p>This is the key stability decision. WezTerm is installed, but <code>x-terminal-emulator</code> remains ROXterm.</p><h3>Restore or keep ROXterm as x-terminal-emulator</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-3" onclick="copyCode('code-3')">Copy</button>
+<pre><code id="code-3">sudo update-alternatives --set x-terminal-emulator /usr/bin/roxterm
+update-alternatives --query x-terminal-emulator | grep -E &#x27;Status:|Best:|Value:|Alternative:|Priority:&#x27;
+readlink -f /etc/alternatives/x-terminal-emulator</code></pre>
+</div>
+<h3>Test that system default still opens ROXterm</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-4" onclick="copyCode('code-4')">Copy</button>
+<pre><code id="code-4">x-terminal-emulator
+x-terminal-emulator -e sh -lc &#x27;echo &quot;ROXterm default terminal test OK&quot;; echo &quot;Press Enter to close&quot;; read dummy&#x27; </code></pre>
+</div>
+<div class="note">Expected result: <code>readlink -f /etc/alternatives/x-terminal-emulator</code> should show <code>/usr/bin/roxterm</code>.</div></section><section id="manual"><h2>4. Use WezTerm manually</h2><p>Use one of these commands when you want WezTerm. This avoids changing antiX defaults.</p><h3>Launch WezTerm manually</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-5" onclick="copyCode('code-5')">Copy</button>
+<pre><code id="code-5">wezterm
+wezterm start
+wezterm start --cwd &quot;$HOME&quot;</code></pre>
+</div>
+</section><section id="config"><h2>5. Configure WezTerm</h2><p>The configuration file is a Lua file that returns a configuration table. This config is optimized for antiX zzzFM-IceWM under VMware: X11 only, OpenGL with Software fallback, explicit theme, JetBrains Mono font, blinking I-beam cursor, visible scrollbar, moderate scrollback, and no built-in update checks.</p><h3>Create config directory and backup old config</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-6" onclick="copyCode('code-6')">Copy</button>
+<pre><code id="code-6">mkdir -p ~/.config/wezterm
+[ -f ~/.config/wezterm/wezterm.lua ] &amp;&amp; cp -a ~/.config/wezterm/wezterm.lua ~/.config/wezterm/wezterm.lua.bak.$(date +%F-%H%M%S) || true</code></pre>
+</div>
+<h3>Write ~/.config/wezterm/wezterm.lua</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-7" onclick="copyCode('code-7')">Copy</button>
+<pre><code id="code-7">cat &gt; ~/.config/wezterm/wezterm.lua &lt;&lt;&#x27;EOF&#x27;
+local wezterm = require &#x27;wezterm&#x27;
+local config = wezterm.config_builder()
+
+-- antiX zzzFM-IceWM under VMware should use X11, not Wayland.
+config.enable_wayland = false
+
+-- VMware-friendly rendering.
+-- If you see black window, flicker, crashes, or rendering glitches, change &quot;OpenGL&quot; to &quot;Software&quot;.
+config.front_end = &quot;OpenGL&quot;
+
+-- Explicit theme. This makes WezTerm independent from desktop light/dark theme detection.
+-- If this scheme name is not recognized, use: &quot;Builtin Solarized Dark&quot;
+config.color_scheme = &quot;Night Owl (Gogh)&quot;
+
+-- Font.
+config.font = wezterm.font &quot;JetBrains Mono&quot;
+config.font_size = 11
+
+-- Cursor: I-beam/bar cursor with blinking.
+config.default_cursor_style = &quot;BlinkingBar&quot;
+config.cursor_blink_rate = 700
+config.cursor_thickness = &quot;2px&quot;
+
+-- Keep animation modest for VMware/low-power laptop efficiency.
+config.animation_fps = 10
+
+-- Visible scrollbar.
+config.enable_scroll_bar = true
+config.colors = {
+  scrollbar_thumb = &quot;#5c6370&quot;,
+}
+
+-- Use login bash shell.
+config.default_prog = { &quot;/bin/bash&quot;, &quot;-l&quot; }
+
+-- Window size.
+config.initial_cols = 112
+config.initial_rows = 30
+
+-- Scrollback.
+config.scrollback_lines = 10000
+
+-- Tabs.
+config.enable_tab_bar = true
+config.hide_tab_bar_if_only_one_tab = false
+config.mouse_wheel_scrolls_tabs = false
+
+-- UX behavior.
+config.window_close_confirmation = &quot;NeverPrompt&quot;
+config.audible_bell = &quot;Disabled&quot;
+
+-- Updates are handled by apt/nala, not by WezTerm itself.
+config.check_for_updates = false
+
+return config
+EOF</code></pre>
+</div>
+</section><section id="test"><h2>6. Test WezTerm after configuration</h2><h3>Open and test WezTerm</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-8" onclick="copyCode('code-8')">Copy</button>
+<pre><code id="code-8">wezterm
+wezterm start --cwd &quot;$HOME&quot;</code></pre>
+</div>
+<h3>Check startup output for errors</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-9" onclick="copyCode('code-9')">Copy</button>
+<pre><code id="code-9">wezterm 2&gt;&amp;1 | tee /tmp/wezterm-startup.log
+grep -iE &#x27;error|unknown|scheme|font|panic|failed&#x27; /tmp/wezterm-startup.log</code></pre>
+</div>
+<div class="note">The message about <code>xdg-desktop-portal</code> appearance detection is usually harmless on antiX/IceWM. This guide uses an explicit color scheme so WezTerm does not need a GNOME/KDE portal to determine light/dark appearance.</div></section><section id="troubleshoot"><h2>7. Troubleshooting</h2><table><tr><th>Problem</th><th>Cause</th><th>Fix</th></tr><tr><td>Black window, flicker, or rendering glitches</td><td>VMware graphics/OpenGL issue</td><td>Switch <code>front_end</code> from <code>OpenGL</code> to <code>Software</code>.</td></tr><tr><td>Color scheme error</td><td>Scheme name not present in current WezTerm build</td><td>Use <code>Builtin Solarized Dark</code>.</td></tr><tr><td>Font does not look right</td><td>Font fallback or rendering difference</td><td>Keep JetBrains Mono or try <code>DejaVu Sans Mono</code>.</td></tr><tr><td>antiX menu item fails with <code>-e</code></td><td>You changed <code>x-terminal-emulator</code> away from ROXterm</td><td>Restore ROXterm as default using the command in section 3.</td></tr></table><h3>Fallback if OpenGL has rendering problems in VMware</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-10" onclick="copyCode('code-10')">Copy</button>
+<pre><code id="code-10">sed -i &#x27;s/config.front_end = &quot;OpenGL&quot;/config.front_end = &quot;Software&quot;/&#x27; ~/.config/wezterm/wezterm.lua
+wezterm</code></pre>
+</div>
+<h3>Fallback if Night Owl scheme is not recognized</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-11" onclick="copyCode('code-11')">Copy</button>
+<pre><code id="code-11">sed -i &#x27;s/config.color_scheme = &quot;Night Owl (Gogh)&quot;/config.color_scheme = &quot;Builtin Solarized Dark&quot;/&#x27; ~/.config/wezterm/wezterm.lua
+wezterm</code></pre>
+</div>
+</section><section id="update"><h2>8. Update WezTerm later</h2><p>Because WezTerm was installed via APT, update it through nala/apt. Do not rely on WezTerm built-in update checking.</p><h3>Update WezTerm later</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-12" onclick="copyCode('code-12')">Copy</button>
+<pre><code id="code-12">sudo nala update
+apt policy wezterm
+sudo nala upgrade
+wezterm --version</code></pre>
+</div>
+</section><section id="rollback"><h2>9. Rollback and cleanup</h2><p>Use these only when needed.</p><h3>Rollback only WezTerm config</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-13" onclick="copyCode('code-13')">Copy</button>
+<pre><code id="code-13">ls -1 ~/.config/wezterm/wezterm.lua.bak.* 2&gt;/dev/null
+cp -a ~/.config/wezterm/wezterm.lua.bak.YYYY-MM-DD-HHMMSS ~/.config/wezterm/wezterm.lua</code></pre>
+</div>
+<h3>Remove WezTerm package but keep repository</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-14" onclick="copyCode('code-14')">Copy</button>
+<pre><code id="code-14">sudo nala remove wezterm</code></pre>
+</div>
+<h3>Remove WezTerm package and repository</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-15" onclick="copyCode('code-15')">Copy</button>
+<pre><code id="code-15">sudo nala remove wezterm
+sudo rm -f /etc/apt/sources.list.d/wezterm.list
+sudo rm -f /usr/share/keyrings/wezterm-fury.gpg
+sudo apt update</code></pre>
+</div>
+<h3>Undo previous custom wrapper/default change</h3>
+<div class="code-wrap">
+<button class="copy-btn" data-copy-target="code-16" onclick="copyCode('code-16')">Copy</button>
+<pre><code id="code-16">sudo update-alternatives --set x-terminal-emulator /usr/bin/roxterm
+sudo update-alternatives --remove x-terminal-emulator /usr/local/bin/wezterm-x-terminal-emulator 2&gt;/dev/null || true
+sudo rm -f /usr/local/bin/wezterm-x-terminal-emulator
+readlink -f /etc/alternatives/x-terminal-emulator</code></pre>
+</div>
+</section><section id="final"><h2>10. Final verification checklist</h2><div class="code-wrap"><button class="copy-btn" data-copy-target="final-check" onclick="copyCode('final-check')">Copy</button><pre><code id="final-check">command -v wezterm
+wezterm --version
+readlink -f /etc/alternatives/x-terminal-emulator
+test "$(readlink -f /etc/alternatives/x-terminal-emulator)" = "/usr/bin/roxterm" && echo "OK: ROXterm is still default"
+wezterm</code></pre></div><p>Correct final state:</p><pre><code>WezTerm installed: yes
+WezTerm config: ~/.config/wezterm/wezterm.lua
+System default terminal: /usr/bin/roxterm
+Manual WezTerm command: wezterm
+No WezTerm wrapper required</code></pre></section>
+<section id="sources"><h2>Sources used for this guide</h2><ul><li>WezTerm official Linux installation documentation: <code>https://wezterm.org/install/linux.html</code></li><li>WezTerm official configuration file documentation: <code>https://wezterm.org/config/files.html</code></li><li>WezTerm official appearance/color scheme documentation: <code>https://wezterm.org/config/appearance.html</code></li><li>WezTerm official <code>enable_wayland</code> option documentation: <code>https://wezterm.org/config/lua/config/enable_wayland.html</code></li><li>WezTerm official cursor blink documentation: <code>https://wezterm.org/config/lua/config/cursor_blink_rate.html</code></li></ul></section><footer>Generated for antiX Linux Runit edition with zzzFM-IceWM under VMware. Keep ROXterm as x-terminal-emulator for maximum antiX stability; launch WezTerm manually.</footer></main></body></html>

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>notmuch + Astroid antiX Maildir++ Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f8;
+      --panel: #ffffff;
+      --text: #172026;
+      --muted: #5c6670;
+      --line: #d7dde2;
+      --accent: #165a72;
+      --warn: #8a4f00;
+      --ok: #17633a;
+      --code-bg: #101820;
+      --code-text: #e8eef2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+    header {
+      background: #22313a;
+      color: #fff;
+      padding: 22px 28px;
+      border-bottom: 4px solid var(--accent);
+    }
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 20px auto 48px;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 18px 20px;
+      margin: 16px 0;
+    }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 12px; font-size: 22px; color: #22313a; }
+    h3 { margin: 18px 0 8px; font-size: 17px; }
+    p { margin: 8px 0; }
+    ul, ol { margin-top: 8px; padding-left: 24px; }
+    li { margin: 5px 0; }
+    code {
+      background: #edf1f4;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 0.95em;
+    }
+    .status {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .status div {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      padding: 10px;
+      border-radius: 4px;
+      background: #fbfcfd;
+    }
+    .ok { color: var(--ok); font-weight: 700; }
+    .warn { color: var(--warn); font-weight: 700; }
+    .danger { color: #9f1d1d; font-weight: 700; }
+    .cmd {
+      margin: 14px 0;
+      border: 1px solid #26323a;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--code-bg);
+    }
+    .cmd-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #26323a;
+      color: #fff;
+      font-weight: 700;
+    }
+    button {
+      border: 1px solid #b8c2cc;
+      background: #fff;
+      color: #172026;
+      border-radius: 5px;
+      padding: 5px 9px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 0;
+      padding: 13px 14px;
+      overflow: auto;
+      color: var(--code-text);
+      background: var(--code-bg);
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+    .note {
+      border-left: 4px solid var(--warn);
+      background: #fff8ed;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .good {
+      border-left: 4px solid var(--ok);
+      background: #eef8f1;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #eef2f5; }
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>notmuch + Astroid Search Layer for antiX Maildir++</h1>
+    <p>Validated pilot guide for antiX Linux runit with zzzFM/IceWM, large Maildir++ storage on <code>/mail</code>, and Evolution Flatpak as the normal reply/send client.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Validated Result</h2>
+      <div class="status">
+        <div><span class="ok">notmuch backend:</span> validated pilot index, 444 unique messages, 846 files.</div>
+        <div><span class="ok">Browser viewer:</span> validated read-only GUI for search, exact Message-ID search, thread opening, and body rendering.</div>
+        <div><span class="warn">Astroid:</span> installed and can list/search, but not primary because message bodies stayed blank on this VM.</div>
+        <div><span class="warn">Evolution handoff:</span> raw Maildir file open is rejected because Evolution opened the wrong Berkeley mbox import workflow.</div>
+      </div>
+      <p>The reliable stack is: <strong>notmuch for fast search</strong>, <strong>localhost browser viewer for read-only search/view</strong>, and <strong>Evolution Flatpak for normal account-based reply/send</strong>.</p>
+      <p class="note">Data safety overrides speed. Do not expand the notmuch index to the 59G archive until the count drift is reviewed: the archive later showed 48,564 <code>cur</code> files while the earlier verified restore ledger said 48,720.</p>
+    </section>
+
+    <section>
+      <h2>Validated Layout</h2>
+      <table>
+        <tr><th>Item</th><th>Path or value</th></tr>
+        <tr><td>notmuch config</td><td><code>~/.config/notmuch/default/config</code></td></tr>
+        <tr><td>notmuch database</td><td><code>/mail/SearchIndex/notmuch/default</code></td></tr>
+        <tr><td>notmuch mail root</td><td><code>/mail/Mailstore</code></td></tr>
+        <tr><td>Pilot indexed scope</td><td><code>/mail/Mailstore/mbsync/provider-live</code> plus <code>/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704</code></td></tr>
+        <tr><td>Ignored for now</td><td>59G archive, stale test trees, and missing/unrestored aggregate trees</td></tr>
+        <tr><td>Critical safety flags</td><td><code>maildir.synchronize_flags=false</code>, <code>index.decrypt=false</code></td></tr>
+        <tr><td>Backups</td><td><code>/mail/Backups/notmuch</code></td></tr>
+        <tr><td>Browser viewer</td><td><code>http://127.0.0.1:8765/</code></td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>Operating Rules</h2>
+      <ul>
+        <li>Never delete or rebuild Maildir data to fix notmuch. The notmuch database is disposable; the mail files are not.</li>
+        <li>Pause mbsync before full reindex work, then resume it after validation.</li>
+        <li>Keep <code>maildir.synchronize_flags=false</code> so notmuch tag changes do not rename Maildir files.</li>
+        <li>Back up tags with <code>notmuch dump --format=batch-tag</code> before any rebuild.</li>
+        <li>Use the browser viewer for notmuch search/view. Use Evolution from its configured Maildir accounts for reply, forward, edit, and send.</li>
+        <li>Do not use <code>xdg-open</code> on raw Maildir files for Evolution; it opened the wrong import wizard during validation.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Command Chunks</h2>
+
+      <h3>1. Read-only status audit</h3>
+      <p>Run this before troubleshooting or before expanding the pilot. It should report 444 messages, 846 files, safe config flags, and zero <code>tmp</code> files in the pilot roots.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Status audit</span><button data-copy="cmd-status">Copy</button></div>
+        <pre data-pre="cmd-status"></pre>
+      </div>
+
+      <h3>2. Start the validated browser viewer</h3>
+      <p>This is the primary notmuch GUI path on this VM.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Launch browser viewer</span><button data-copy="cmd-browser">Copy</button></div>
+        <pre data-pre="cmd-browser"></pre>
+      </div>
+
+      <h3>3. Common CLI searches</h3>
+      <p>Use these to verify that notmuch can answer exact searches before trusting any GUI result.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Search examples</span><button data-copy="cmd-search">Copy</button></div>
+        <pre data-pre="cmd-search"></pre>
+      </div>
+
+      <h3>4. Back up tags</h3>
+      <p>This is fast and should be done before reindex, restore, or large scope changes.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Tag backup</span><button data-copy="cmd-backup">Copy</button></div>
+        <pre data-pre="cmd-backup"></pre>
+      </div>
+
+      <h3>5. Restore tags from a backup</h3>
+      <p>Use only with a known-good <code>.batch-tag</code> file. This restores the tag state recorded in that dump.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Tag restore</span><button data-copy="cmd-restore">Copy</button></div>
+        <pre data-pre="cmd-restore"></pre>
+      </div>
+
+      <h3>6. Pilot-safe reindex</h3>
+      <p>This was validated. It moves the old notmuch database to backup, rebuilds the database, restores tags, recreates Astroid compatibility symlinks, and verifies counts. It must not touch <code>/mail/Mailstore</code>.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Safe reindex</span><button data-copy="cmd-reindex">Copy</button></div>
+        <pre data-pre="cmd-reindex"></pre>
+      </div>
+
+      <h3>7. Astroid search-only launch</h3>
+      <p>Astroid remains useful for testing list/search behavior, but if a thread opens blank, switch back to the browser viewer.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Astroid experimental launch</span><button data-copy="cmd-astroid">Copy</button></div>
+        <pre data-pre="cmd-astroid"></pre>
+      </div>
+
+      <h3>8. Full archive expansion preflight only</h3>
+      <p class="note">This intentionally does not run the expansion helper. It shows the current archive count and reminds the operator why expansion is deferred.</p>
+      <div class="cmd">
+        <div class="cmd-head"><span>Archive expansion preflight</span><button data-copy="cmd-archive">Copy</button></div>
+        <pre data-pre="cmd-archive"></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>Browser Viewer Use</h2>
+      <p>Open <code>http://127.0.0.1:8765/</code>. Search examples:</p>
+      <ul>
+        <li><code>tag:inbox</code></li>
+        <li><code>from:tagindustries.com.sg</code></li>
+        <li><code>date:2026..2026 and tag:attachment</code></li>
+        <li><code>id:0c579c18-0bcf-44b8-b571-3359f690c3db@tagindustries.com.sg</code></li>
+      </ul>
+      <p>The viewer is read-only. It renders bodies in the browser, lists attachments, and blocks remote/script execution. Use Evolution for replying or sending.</p>
+    </section>
+
+    <section>
+      <h2>Known Limitations</h2>
+      <ul>
+        <li>Astroid 0.16 on this antiX/IceWM/VMware setup displayed message lists but blank message bodies. The mail files and notmuch body output were valid, so the failure is treated as GUI rendering/client behavior, not index corruption.</li>
+        <li>Astroid needed symlink shims under the notmuch database path because it resolved mail paths relative to the database instead of the configured mail root.</li>
+        <li>Evolution Flatpak is not reliable as a raw Maildir file opener from notmuch. The validated wrong behavior was the Berkeley mbox import wizard.</li>
+        <li>Duplicate Message-ID values are expected in preserved archives. <code>id:</code> searches can match one logical message with multiple files.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Recovery Summary</h2>
+      <ol>
+        <li>If search breaks, run the read-only status audit first.</li>
+        <li>If only tags are wrong, restore from the latest known-good <code>/mail/Backups/notmuch/*.batch-tag</code>.</li>
+        <li>If the index is corrupt, run the pilot-safe reindex helper. It moves the old database to <code>/mail/Backups/notmuch/reindex-db</code>.</li>
+        <li>If Maildir counts or <code>tmp</code> files look wrong, stop and investigate before running any more indexing.</li>
+      </ol>
+    </section>
+
+    <footer>
+      Generated from the validated 2026-07-05 antiX notmuch/Astroid/browser-viewer pilot. Keep this guide with <code>docs/WORK_VALIDATION_LEDGER.md</code>.
+    </footer>
+  </main>
+
+  <script type="text/plain" id="cmd-status">CONFIG="$HOME/.config/notmuch/default/config"
+echo "== notmuch version and config =="
+notmuch --version
+notmuch --config="$CONFIG" config get database.path
+notmuch --config="$CONFIG" config get database.mail_root
+notmuch --config="$CONFIG" config get maildir.synchronize_flags
+notmuch --config="$CONFIG" config get index.decrypt
+
+echo
+echo "== pilot counts =="
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+
+echo
+echo "== pilot tmp folders =="
+for root in \
+  /mail/Mailstore/mbsync/provider-live \
+  /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+do
+  if [ -d "$root" ]; then
+    tmp_count="$(find "$root" -type d -name tmp -exec sh -c 'for d do find "$d" -mindepth 1 -type f; done' sh {} + | wc -l)"
+    echo "tmp_count $root = $tmp_count"
+  fi
+done
+
+echo
+echo "== mbsync loop status =="
+if [ -x "$HOME/.local/bin/mbsync-provider-live-control" ]; then
+  "$HOME/.local/bin/mbsync-provider-live-control" status || true
+fi
+</script>
+
+  <script type="text/plain" id="cmd-browser">mkdir -p "$HOME/codex-runs"
+pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+nohup "$HOME/.local/bin/notmuch-browser-pilot" --port 8765 > "$HOME/codex-runs/notmuch-browser-pilot.log" 2>&1 &
+echo "browser_pid=$!"
+echo "browser_url=http://127.0.0.1:8765/"
+xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true
+</script>
+
+  <script type="text/plain" id="cmd-search">CONFIG="$HOME/.config/notmuch/default/config"
+
+echo "== inbox count =="
+notmuch --config="$CONFIG" count 'tag:inbox'
+
+echo
+echo "== exact Message-ID proof =="
+MID='0c579c18-0bcf-44b8-b571-3359f690c3db@tagindustries.com.sg'
+notmuch --config="$CONFIG" count "id:$MID"
+notmuch --config="$CONFIG" count --output=files "id:$MID"
+notmuch --config="$CONFIG" search "id:$MID"
+notmuch --config="$CONFIG" search --output=files "id:$MID"
+
+echo
+echo "== sender/domain/date examples =="
+notmuch --config="$CONFIG" search --limit=10 'from:tagindustries.com.sg'
+notmuch --config="$CONFIG" search --limit=10 'date:2026..2026 and tag:attachment'
+</script>
+
+  <script type="text/plain" id="cmd-backup">CONFIG="$HOME/.config/notmuch/default/config"
+BACKUP_DIR="/mail/Backups/notmuch"
+mkdir -p "$BACKUP_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="$BACKUP_DIR/notmuch-tags-$STAMP.batch-tag"
+
+notmuch --config="$CONFIG" dump --format=batch-tag > "$BACKUP"
+sha256sum "$BACKUP" > "$BACKUP.sha256"
+ls -lh "$BACKUP" "$BACKUP.sha256"
+echo "backup_file=$BACKUP"
+</script>
+
+  <script type="text/plain" id="cmd-restore">CONFIG="$HOME/.config/notmuch/default/config"
+
+echo "Set BACKUP to the exact .batch-tag file you want to restore."
+BACKUP="/mail/Backups/notmuch/notmuch-tags-pilot-20260705-083433.batch-tag"
+
+test -f "$BACKUP"
+notmuch --config="$CONFIG" restore --format=batch-tag < "$BACKUP"
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+</script>
+
+  <script type="text/plain" id="cmd-reindex">mkdir -p "$HOME/codex-runs"
+"$HOME/.local/bin/notmuch-reindex-pilot" 2>&1 | tee "$HOME/codex-runs/notmuch-reindex-$(date +%Y%m%d-%H%M%S).log"
+</script>
+
+  <script type="text/plain" id="cmd-astroid">mkdir -p "$HOME/codex-runs"
+echo "Astroid is experimental on this VM. Use browser viewer if body pane is blank."
+if [ -x "$HOME/.local/bin/astroid-notmuch-pilot" ]; then
+  "$HOME/.local/bin/astroid-notmuch-pilot" 2>&1 | tee "$HOME/codex-runs/astroid-pilot-$(date +%Y%m%d-%H%M%S).log"
+else
+  astroid 2>&1 | tee "$HOME/codex-runs/astroid-pilot-$(date +%Y%m%d-%H%M%S).log"
+fi
+</script>
+
+  <script type="text/plain" id="cmd-archive">echo "Do not expand the 59G archive yet unless the count drift is accepted."
+echo "Earlier verified restore: 48,720 cur."
+echo "Later notmuch preflight saw: 48,564 cur."
+
+echo
+echo "== current local-maildir count =="
+find /mail/Mailstore/evolution/local-maildir -type f -path '*/cur/*' | wc -l
+
+echo
+echo "== current notmuch ignore rules =="
+notmuch --config="$HOME/.config/notmuch/default/config" config get new.ignore
+
+echo
+echo "If expansion is later approved, back up tags first and run only the validated expansion helper after a fresh read-only count audit."
+</script>
+
+  <script>
+    function textFor(id) {
+      var node = document.getElementById(id);
+      return node ? node.textContent.replace(/^\n/, "").replace(/\n$/, "") : "";
+    }
+    document.querySelectorAll("pre[data-pre]").forEach(function(pre) {
+      pre.textContent = textFor(pre.getAttribute("data-pre"));
+    });
+    document.querySelectorAll("button[data-copy]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var text = textFor(button.getAttribute("data-copy"));
+        navigator.clipboard.writeText(text).then(function() {
+          var old = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(function() { button.textContent = old; }, 1200);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

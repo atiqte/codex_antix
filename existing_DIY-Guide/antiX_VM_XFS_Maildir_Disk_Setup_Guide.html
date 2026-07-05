@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>antiX VM XFS Maildir Data Disk Setup Guide</title>
+<style>
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1f2933;
+  --muted: #5b6773;
+  --border: #d9dee7;
+  --code-bg: #101827;
+  --code-text: #e7edf7;
+  --accent: #1f5eff;
+  --accent-dark: #1647bf;
+  --warn-bg: #fff7e6;
+  --warn-border: #f0b429;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.62;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  background: #111827;
+  color: white;
+  padding: 34px 24px;
+}
+header .inner, main { max-width: 1060px; margin: 0 auto; }
+h1 { margin: 0 0 10px; font-size: 2rem; line-height: 1.2; }
+.subtitle { color: #cfd8e3; margin: 0; font-size: 1.05rem; }
+.meta { color: #aeb9c8; font-size: 0.92rem; margin-top: 12px; }
+main { padding: 24px; }
+.toc, section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.toc h2 { margin-top: 0; }
+.toc ol { columns: 2; padding-left: 22px; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+h2 { margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: 1.35rem; }
+p { margin: 12px 0; }
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: "Cascadia Mono", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  border: 1px solid #263244;
+}
+.copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.copy-btn:hover { background: var(--accent-dark); }
+.note {
+  background: var(--warn-bg);
+  border-left: 4px solid var(--warn-border);
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin: 14px 0;
+}
+footer { max-width: 1060px; margin: 0 auto; padding: 0 24px 28px; color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 760px) {
+  .toc ol { columns: 1; }
+  main { padding: 16px; }
+  header { padding: 26px 16px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>antiX VM XFS Maildir Data Disk Setup Guide</h1>
+    <p class="subtitle">Correct XFS formatting and mounting procedure for a second VMware VMDK dedicated to Betterbird Maildir, Logseq, search indexes, and backups.</p>
+    <div class="meta">Generated: 2026-06-14 16:32 UTC</div>
+  </div>
+</header>
+<main>
+  <div class="toc">
+    <h2>Table of contents</h2>
+    <ol><li><a href="#sec-1">Purpose and target layout</a></li>
+<li><a href="#sec-2">Critical safety warning</a></li>
+<li><a href="#sec-3">Step 1 — Identify disks</a></li>
+<li><a href="#sec-4">Step 2 — Install required tools</a></li>
+<li><a href="#sec-5">Step 3 — Verify the second disk is empty</a></li>
+<li><a href="#sec-6">Step 4 — Create a GPT partition table and one XFS partition</a></li>
+<li><a href="#sec-7">Step 5 — Confirm /dev/sdb1 exists</a></li>
+<li><a href="#sec-8">Step 6 — Format /dev/sdb1 as XFS</a></li>
+<li><a href="#sec-9">Step 7 — Confirm the new XFS UUID</a></li>
+<li><a href="#sec-10">Step 8 — Create the /mail mount point</a></li>
+<li><a href="#sec-11">Step 9 — Back up and edit /etc/fstab</a></li>
+<li><a href="#sec-12">Step 10 — Test fstab and mount /mail</a></li>
+<li><a href="#sec-13">Step 11 — Verify fstab line</a></li>
+<li><a href="#sec-14">Step 12 — Set ownership and private permissions</a></li>
+<li><a href="#sec-15">Step 13 — Write test</a></li>
+<li><a href="#sec-16">Step 14 — Confirm block discard/TRIM support</a></li>
+<li><a href="#sec-17">Step 15 — Mandatory reboot test</a></li>
+<li><a href="#sec-18">Step 16 — Create production directory layout</a></li>
+<li><a href="#sec-19">Step 17 — Install tree and verify layout</a></li>
+<li><a href="#sec-20">Step 18 — Install search, backup, and SMB tools</a></li>
+<li><a href="#sec-21">Step 19 — Betterbird profile rule</a></li>
+<li><a href="#sec-22">Step 20 — Final verification checklist</a></li>
+<li><a href="#sec-23">Troubleshooting</a></li>
+<li><a href="#sec-24">Final verdict</a></li></ol>
+  </div>
+  <section id="sec-1">
+<h2>Purpose and target layout</h2>
+<p>This guide documents the complete procedure for preparing a second VMware virtual disk as an XFS data partition mounted at /mail inside an antiX Linux Runit VM. The intended use is Betterbird with Maildir/file-per-message storage, Logseq graph storage, search indexes, and backup staging.</p>
+<p>Target VM folder on Windows host:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>├── VM/
+│   └── antiX/
+│       ├── antiX_Debian13_64-bit_maildata-flat.vmdk
+│       ├── antiX_Debian13_64-bit_maildata.vmdk
+│       ├── antiX_Debian13_64-bit-flat.vmdk
+│       ├── antiX_Debian13_64-bit.vmdk
+│       ├── antiX_Debian13_64-bit.nvram
+│       ├── antiX_Debian13_64-bit.vmx
+│       ├── antiX_Debian13_64-bit.vmxf
+│       └── vmware.log</code></pre></div>
+<p>Logical design inside antiX:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/dev/sda   = main antiX system disk
+/dev/sda1  = root filesystem mounted at /
+/dev/sdb   = second VMware VMDK dedicated to mail/data
+/dev/sdb1  = XFS filesystem labeled MAILDATA mounted at /mail</code></pre></div>
+<p>The second disk must be used for /mail only. Do not store the live Betterbird profile on SMB, OneDrive, Google Drive, VMware Shared Folders, or a Windows-hosted network path. Keep the live profile on the XFS VMDK.</p>
+</section><section id="sec-2">
+<h2>Critical safety warning</h2>
+<p>The commands in this guide intentionally create a new partition table and filesystem on /dev/sdb. They destroy existing content on /dev/sdb. They must never be run against /dev/sda or /dev/sda1.</p>
+<p>Before running destructive commands, confirm that:</p>
+<p>1. /dev/sda is the 50G antiX system disk.<br>2. /dev/sda1 is ext4 and mounted at /.<br>3. /dev/sdb is the blank second disk.<br>4. /dev/sdb has no existing partition, filesystem, or mounted data.</p>
+<p>If the disk names differ on another VM, adapt carefully. The method is correct; the disk name must be verified every time.</p>
+</section><section id="sec-3">
+<h2>Step 1 — Identify disks</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MODEL</code></pre></div>
+<p>Expected before formatting:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>NAME    SIZE TYPE FSTYPE LABEL       UUID                                 MODEL
+sda      50G disk                                                         VMware Virtual S
+└─sda1   50G part ext4   rootantiX26 fe979039-bedf-4c1f-84b7-5128f0fd4b22
+sdb     205G disk                                                         VMware Virtual S
+sr0    1024M rom                                                          VMware Virtual SATA CDRW Drive</code></pre></div>
+<p>Interpretation:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/dev/sda  = OS disk. Do not touch.
+/dev/sda1 = root partition. Do not touch.
+/dev/sdb  = new 205G mail/data disk. This is the target.
+/dev/sr0  = virtual optical drive. Ignore.</code></pre></div>
+</section><section id="sec-4">
+<h2>Step 2 — Install required tools</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nala install xfsprogs parted util-linux</code></pre></div>
+<p>If the output says the packages are already installed, that is fine. Required tools:</p>
+<p>xfsprogs   = mkfs.xfs, xfs_info, XFS utilities<br>parted     = GPT partition creation<br>util-linux = lsblk, blkid, mount, findmnt, wipefs, partprobe-related utilities</p>
+</section><section id="sec-5">
+<h2>Step 3 — Verify the second disk is empty</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+sudo fdisk -l /dev/sdb
+sudo wipefs -n /dev/sdb</code></pre></div>
+<p>Expected safe condition:</p>
+<p>1. /dev/sdb appears as a 205G disk.<br>2. No /dev/sdb1 exists yet.<br>3. fdisk shows disk size but no partition table details.<br>4. wipefs -n prints nothing.</p>
+<p>Important: wipefs -n is a dry-run inspection. It does not erase data.</p>
+</section><section id="sec-6">
+<h2>Step 4 — Create a GPT partition table and one XFS partition</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo parted -s /dev/sdb -- mklabel gpt
+sudo parted -s -a optimal /dev/sdb -- mkpart MAILDATA xfs 1MiB 100%
+sudo partprobe /dev/sdb
+sudo udevadm settle</code></pre></div>
+<p>Explanation:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>mklabel gpt                  = creates a modern GPT partition table.
+-a optimal                   = asks parted to align the partition optimally.
+mkpart MAILDATA xfs 1MiB 100% = creates one partition from 1 MiB to the end of disk.
+partprobe + udevadm settle   = asks Linux to re-read the partition table cleanly.</code></pre></div>
+</section><section id="sec-7">
+<h2>Step 5 — Confirm /dev/sdb1 exists</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL</code></pre></div>
+<p>Expected result:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sdb     205G disk
+└─sdb1  205G part</code></pre></div>
+<p>At this point /dev/sdb1 exists but is not formatted yet.</p>
+</section><section id="sec-8">
+<h2>Step 6 — Format /dev/sdb1 as XFS</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkfs.xfs -f -L MAILDATA /dev/sdb1</code></pre></div>
+<p>Expected output includes XFS metadata similar to:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>meta-data=/dev/sdb1              isize=512    agcount=4
+crc=1        finobt=1     sparse=1
+reflink=1    bigtime=1
+naming   =version 2              ftype=1
+log      =internal log</code></pre></div>
+<p>Explanation:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>-f              = force format the target partition.
+-L MAILDATA     = assigns the filesystem label MAILDATA.
+/dev/sdb1       = target partition. This must be the new second-disk partition, not the OS disk.</code></pre></div>
+<p>The XFS output showing crc=1, finobt=1, ftype=1, reflink=1, and bigtime=1 indicates a modern XFS filesystem. No reformat is needed if your output matches this pattern.</p>
+</section><section id="sec-9">
+<h2>Step 7 — Confirm the new XFS UUID</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+sudo blkid /dev/sdb1
+sudo blkid -s UUID -o value /dev/sdb1</code></pre></div>
+<p>Example actual result from this VM:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/dev/sdb1: LABEL=&quot;MAILDATA&quot; UUID=&quot;4241803d-55c2-4dfb-8a70-b44e01b56bb3&quot; BLOCK_SIZE=&quot;512&quot; TYPE=&quot;xfs&quot; PARTLABEL=&quot;MAILDATA&quot; PARTUUID=&quot;539c8f62-c208-47c5-9a61-a6e1abf2f7b0&quot;</code></pre></div>
+<p>Clean UUID:</p>
+<p>4241803d-55c2-4dfb-8a70-b44e01b56bb3</p>
+<p>The UUID is used in /etc/fstab because UUID mounting is safer than mounting by /dev/sdb1. Device names can change; UUIDs are stable.</p>
+</section><section id="sec-10">
+<h2>Step 8 — Create the /mail mount point</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkdir -p /mail</code></pre></div>
+<p>At this moment /mail is only an empty directory on the root filesystem. After mounting, it becomes the entry point to the XFS data partition.</p>
+</section><section id="sec-11">
+<h2>Step 9 — Back up and edit /etc/fstab</h2>
+<p>Back up fstab first:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo cp /etc/fstab /etc/fstab.bak.$(date +%F-%H%M)</code></pre></div>
+<p>Open fstab:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nano /etc/fstab</code></pre></div>
+<p>Add this line at the bottom:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0</code></pre></div>
+<p>Use your real UUID if different.</p>
+<p>Explanation of mount options:</p>
+<p>rw          = mount read/write.<br>noatime     = do not update access time on every file read; reduces metadata writes.<br>nodiratime  = do not update directory access time; slightly reduces metadata writes.<br>nodiscard   = do not run online discard/TRIM on every delete; better for latency.<br>inode64     = allow inode placement above 32-bit block boundaries; suitable for modern XFS.<br>0 0         = do not use traditional fsck pass ordering for this XFS mount.</p>
+<p>Do not use 0 2 for this XFS partition. Use 0 0.</p>
+</section><section id="sec-12">
+<h2>Step 10 — Test fstab and mount /mail</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo mount -a
+findmnt /mail</code></pre></div>
+<p>Expected output:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>TARGET SOURCE    FSTYPE OPTIONS
+/mail  /dev/sdb1 xfs    rw,noatime,nodiratime,attr2,inode64,logbufs=8,logbsize=32k,noquota</code></pre></div>
+<p>This is correct. findmnt shows /dev/sdb1 because Linux resolves the UUID to the actual device. That does not mean fstab is wrong.</p>
+<p>Verify capacity:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>df -hT /mail</code></pre></div>
+<p>Expected output:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/sdb1      xfs   205G  4.0G  201G   2% /mail</code></pre></div>
+<p>The 4.0G used space on a new XFS filesystem is normal. It is filesystem metadata, allocation structures, and internal log reservation. It is not user data.</p>
+<p>Check mount line:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>mount | grep &#x27; /mail &#x27;</code></pre></div>
+<p>Check XFS details:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>xfs_info /mail</code></pre></div>
+</section><section id="sec-13">
+<h2>Step 11 — Verify fstab line</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>grep -nE &#x27;mail|MAILDATA|sdb1&#x27; /etc/fstab</code></pre></div>
+<p>Expected output from this VM:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>4:UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0</code></pre></div>
+<p>This is correct because it uses UUID, not /dev/sdb1.</p>
+</section><section id="sec-14">
+<h2>Step 12 — Set ownership and private permissions</h2>
+<p>Check current ownership:</p>
+<p>ls -ld /mail</p>
+<p>Before ownership correction, it may show:</p>
+<p>drwxr-xr-x 2 root root 6 Jun 14 21:11 /mail</p>
+<p>Change ownership to your normal user:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo chown -R &quot;$USER:$USER&quot; /mail
+chmod 700 /mail</code></pre></div>
+<p>Verify:</p>
+<p>ls -ld /mail</p>
+<p>Expected:</p>
+<p>drwx------ 2 atiq atiq 6 Jun 14 21:11 /mail</p>
+<p>Explanation:</p>
+<p>Betterbird profile data, Maildir files, Logseq graphs, and indexes are user data. /mail should not be world-readable. Permission 700 means only the owner can read/write/enter the directory.</p>
+</section><section id="sec-15">
+<h2>Step 13 — Write test</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>touch /mail/.write-test
+ls -lah /mail/.write-test
+rm /mail/.write-test
+ls -lah /mail/.write-test</code></pre></div>
+<p>Expected result:</p>
+<p>1. touch succeeds without sudo.<br>2. ls shows /mail/.write-test owned by atiq:atiq.<br>3. rm deletes it.<br>4. final ls says: No such file or directory.</p>
+<p>This confirms that your normal user can write to the XFS data disk.</p>
+</section><section id="sec-16">
+<h2>Step 14 — Confirm block discard/TRIM support</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>cat /sys/block/sdb/queue/discard_max_bytes</code></pre></div>
+<p>Result from this VM:</p>
+<p>0</p>
+<p>Interpretation:</p>
+<p>0 means VMware is not exposing discard/TRIM support for this virtual disk path. This is not an XFS failure. It only means fstrim will not reclaim deleted space back to the Windows host for this disk.</p>
+<p>Because discard_max_bytes is 0, do not create a weekly fstrim job for this disk now. It is not useful unless VMware later exposes discard support. Keeping nodiscard in /etc/fstab is still the correct choice.</p>
+<p>Check fstrim path only for future reference:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>command -v fstrim</code></pre></div>
+<p>Result from this VM:</p>
+<p>/sbin/fstrim</p>
+</section><section id="sec-17">
+<h2>Step 15 — Mandatory reboot test</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo reboot</code></pre></div>
+<p>After reboot, run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>findmnt /mail
+df -hT /mail
+ls -ld /mail
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+touch /mail/.after-reboot-test
+ls -lah /mail/.after-reboot-test
+rm /mail/.after-reboot-test</code></pre></div>
+<p>Expected result:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/mail is mounted automatically.
+/mail is XFS.
+/mail uses /dev/sdb1 as resolved source.
+/mail remains owned by atiq:atiq.
+/mail remains drwx------.
+Normal user can create and delete /mail/.after-reboot-test.</code></pre></div>
+<p>Do not configure Betterbird before this reboot test passes.</p>
+</section><section id="sec-18">
+<h2>Step 16 — Create production directory layout</h2>
+<p>After the reboot test passes, create the directory layout.</p>
+<p>Recommended cleaner layout:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p /mail/Betterbird/Profile/main
+mkdir -p /mail/Betterbird/Mail
+mkdir -p /mail/Betterbird/Indexes
+mkdir -p /mail/Logseq/graphs
+mkdir -p /mail/Logseq/backups
+mkdir -p /mail/SearchIndex/recoll
+mkdir -p /mail/SearchIndex/notmuch
+mkdir -p /mail/Backups</code></pre></div>
+<p>Alternative minimal layout requested by user:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p /mail/Betterbird_Profile
+chmod -R 700 /mail/Betterbird_Profile</code></pre></div>
+<p>Professional recommendation:</p>
+<p>Use /mail/Betterbird/Profile/main instead of /mail/Betterbird_Profile. It scales better because it separates profile, account mail, and indexes.</p>
+<p>Set private permissions:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>chmod -R 700 /mail/Betterbird
+chmod -R 700 /mail/Logseq
+chmod -R 700 /mail/SearchIndex
+chmod -R 700 /mail/Backups</code></pre></div>
+<p>If you choose the minimal directory:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>chmod -R 700 /mail/Betterbird_Profile</code></pre></div>
+</section><section id="sec-19">
+<h2>Step 17 — Install tree and verify layout</h2>
+<p>Install tree:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nala install tree</code></pre></div>
+<p>Show the layout:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>tree -a -L 3 /mail</code></pre></div>
+<p>Expected professional layout:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/mail
+├── Backups
+├── Betterbird
+│   ├── Indexes
+│   ├── Mail
+│   └── Profile
+│       └── main
+├── Logseq
+│   ├── backups
+│   └── graphs
+└── SearchIndex
+    ├── notmuch
+    └── recoll</code></pre></div>
+</section><section id="sec-20">
+<h2>Step 18 — Install search, backup, and SMB tools</h2>
+<p>Run:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nala install recoll recollgui notmuch ripgrep fd-find rsync borgbackup restic cifs-utils smbclient</code></pre></div>
+<p>What these packages are for:</p>
+<p>recoll       = GUI full-text search indexer; useful for .eml, text, PDFs, documents.<br>recollgui    = graphical Recoll interface.<br>notmuch      = powerful mail indexer/search tool; useful for Maildir-style workflows.<br>ripgrep      = very fast text search from terminal.<br>fd-find      = fast file finder.<br>rsync        = simple reliable mirror/copy backup tool.<br>borgbackup   = deduplicated, compressed, optionally encrypted backup system.<br>restic       = modern deduplicated backup tool, good for external/cloud destinations.<br>cifs-utils   = Linux client support for mounting Windows SMB shares.<br>smbclient    = command-line SMB client for testing/accessing Windows shares.</p>
+<p>If you want a lighter first-stage install, use:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nala install recoll recollgui notmuch ripgrep fd-find rsync cifs-utils smbclient</code></pre></div>
+<p>Then install BorgBackup and Restic later:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nala install borgbackup restic</code></pre></div>
+</section><section id="sec-21">
+<h2>Step 19 — Betterbird profile rule</h2>
+<p>After /mail is mounted and tested, create the Betterbird profile on the XFS disk.</p>
+<p>Preferred profile path:</p>
+<p>/mail/Betterbird/Profile/main</p>
+<p>Launch Betterbird profile manager using the command available on your system:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>betterbird -ProfileManager</code></pre></div>
+<p>or:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>betterbird-bin -ProfileManager</code></pre></div>
+<p>or:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/opt/betterbird/betterbird -ProfileManager</code></pre></div>
+<p>Create profile name:</p>
+<p>main</p>
+<p>Choose folder manually:</p>
+<p>/mail/Betterbird/Profile/main</p>
+<p>Before adding accounts, enable Maildir/file-per-message storage. In Betterbird Config Editor, set:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>mail.serverDefaultStoreContractID</code></pre></div>
+<p>Value:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>@mozilla.org/msgstore/maildirstore;1</code></pre></div>
+<p>Then add mail accounts. For each account, keep local storage under:</p>
+<p>/mail/Betterbird/Mail/&lt;account-name&gt;</p>
+<p>Do not store Betterbird live profile or Maildir on SMB, VMware Shared Folders, OneDrive, Google Drive, or a synced folder.</p>
+</section><section id="sec-22">
+<h2>Step 20 — Final verification checklist</h2>
+<p>Run this final diagnostic group:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>grep -nE &#x27;mail|MAILDATA|sdb1&#x27; /etc/fstab
+findmnt /mail
+df -hT /mail
+ls -ld /mail
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
+xfs_info /mail
+cat /sys/block/sdb/queue/discard_max_bytes</code></pre></div>
+<p>Correct final state for this VM:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/etc/fstab contains UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail xfs rw,noatime,nodiratime,nodiscard,inode64 0 0
+/mail mounted automatically
+/mail type xfs
+/mail source /dev/sdb1
+/mail owner atiq:atiq
+/mail permission drwx------
+/dev/sdb1 label MAILDATA
+/dev/sdb1 UUID 4241803d-55c2-4dfb-8a70-b44e01b56bb3
+discard_max_bytes = 0, so no useful fstrim at present</code></pre></div>
+<p>If all checks pass, the XFS Maildir data disk is ready.</p>
+</section><section id="sec-23">
+<h2>Troubleshooting</h2>
+<p>Problem: sudo mount -a shows an error.<br>Action: Check /etc/fstab for wrong UUID, wrong filesystem type, missing spaces, or hidden quotes. Run sudo blkid /dev/sdb1 and compare UUID.</p>
+<p>Problem: /mail is still owned by root after reboot.<br>Action: Run sudo chown -R &quot;$USER:$USER&quot; /mail and chmod 700 /mail while /mail is mounted. Then verify with findmnt /mail and ls -ld /mail.</p>
+<p>Problem: touch /mail/test fails.<br>Action: Confirm /mail is mounted and owned by your user. Run findmnt /mail and ls -ld /mail.</p>
+<p>Problem: fstrim does not work.<br>Action: If cat /sys/block/sdb/queue/discard_max_bytes returns 0, TRIM is not exposed by VMware for this disk path. Ignore it. Do not use the discard mount option.</p>
+<p>Problem: Betterbird creates profile in /home.<br>Action: Reopen Profile Manager and create/select the profile path manually under /mail/Betterbird/Profile/main.</p>
+<p>Problem: Millions of emails are slow.<br>Action: Do not place all messages in one folder. Use year/month archive folders, keep Betterbird closed during bulk copy/backups, and use Recoll or Notmuch as external search support.</p>
+</section><section id="sec-24">
+<h2>Final verdict</h2>
+<p>The completed setup is correct, efficient, and robust for an antiX Runit VM with a second VMware virtual disk dedicated to large mail and knowledge-management data.</p>
+<p>Best final design:</p>
+<p>OS disk: /dev/sda1, ext4, mounted at /<br>Data disk: /dev/sdb1, XFS, mounted at /mail<br>Mount options: rw,noatime,nodiratime,nodiscard,inode64 0 0<br>Owner: atiq:atiq<br>Permissions: 700<br>Betterbird profile: /mail/Betterbird/Profile/main<br>Betterbird mail: /mail/Betterbird/Mail/&lt;account-name&gt;<br>Logseq graphs: /mail/Logseq/graphs<br>Search indexes: /mail/SearchIndex<br>Backups: external target preferred; /mail/Backups only as staging</p>
+<p>The only limitation observed is discard/TRIM support showing 0. That is a VMware virtual disk path limitation, not a mistake in the XFS setup.</p>
+</section>
+</main>
+<footer>
+  This guide is written for the specific antiX Runit VM scenario with a 50G OS disk and a 205G second VMware VMDK prepared as XFS at /mail. Verify disk names before running destructive commands.
+</footer>
+<script>
+function copyCode(btn) {
+  const code = btn.parentElement.querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const old = btn.innerText;
+    btn.innerText = 'Copied';
+    setTimeout(() => btn.innerText = old, 1200);
+  }).catch(() => {
+    const range = document.createRange();
+    range.selectNode(btn.parentElement.querySelector('code'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    btn.innerText = 'Select';
+  });
+}
+</script>
+</body>
+</html>

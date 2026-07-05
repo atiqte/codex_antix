@@ -1,0 +1,1702 @@
+Windows 11 25H2 Host + antiX Runit Guest SMB3 Transfer Guide
+VMware Workstation Pro 26H1, host-only VMnet1, Windows SMB3 server, antiX CIFS/SMB3 client, zzzFM-IceWM integration
+Version 1.0 — built from the confirmed working setup
+Generated: 2026-06-17 01:57
+====================================================================================================
+
+0. Scope, confirmed values, and design rules
+--------------------------------------------
+This document describes the complete end-to-end procedure for configuring a robust SMB3 transfer channel between a Windows 11 25H2 host and an antiX Linux Runit zzzFM-IceWM guest running inside VMware Workstation Pro 26H1.
+
+The intended use is frequent two-way file transfer for Betterbird attachments, PDFs, Excel files, images, exported documents, scanned files, and mixed small/medium/large files. The SMB share is not designed to hold the active Betterbird profile, active Maildir store, Logseq database, or any continuously indexed database. Keep those on the antiX VM local virtual disk. Use this SMB share only as an exchange/staging area.
+
+Confirmed values from the completed setup:
+
+```
+Windows computer name: DESKTOP-JPMLALG
+Windows VMnet1 host-only IP: 192.168.4.1/24
+Windows SMB share name: VMXFER
+Windows SMB share path: F:\VM-SMB-Exchange
+Windows SMB local user: smbvm
+antiX mount point: /mnt/win-vmxfer
+antiX user and group: uid=1000(atiq), gid=1000(atiq)
+VMware topology: NAT on Adapter 1, host-only VMnet1 on Adapter 2
+```
+
+If your VMnet1 IP, Windows computer name, username, or mount point is different, adjust the commands consistently. In this confirmed setup, use `192.168.4.1`, not `192.168.56.1`.
+
+The professional design is:
+
+```
+Adapter 1: NAT / VMnet8
+  Purpose: Internet access for antiX.
+  Default route: allowed.
+
+Adapter 2: Host-only / VMnet1
+  Purpose: private SMB3 transfer path between Windows host and antiX guest.
+  Default route: not needed.
+
+Windows host:
+  SMB3 server.
+  Share only F:\VM-SMB-Exchange as VMXFER.
+  Firewall allows TCP 445 only on VMware Network Adapter VMnet1.
+
+antiX guest:
+  SMB/CIFS client.
+  noauto fstab entry.
+  On-demand mount/unmount scripts.
+  zzzFM bookmark.
+  IceWM menu entries.
+  YAD live tray status indicator.
+```
+
+Do not use bridged networking for the SMB transfer path unless you intentionally want the share exposed on the physical LAN. Host-only VMnet1 is the correct private design.
+
+1. VMware Workstation Pro 26H1 network topology
+-----------------------------------------------
+Power off the antiX VM before changing virtual network adapters.
+
+Open VMware Workstation Pro and configure the antiX VM as follows.
+
+Network Adapter 1:
+
+```
+Network Adapter 1:
+  NAT: used to share the host's IP address
+  Prefer VMnet8
+  Connect at power on: enabled
+```
+
+Network Adapter 2:
+
+```
+Network Adapter 2:
+  Host-only: private network shared with the host
+  Prefer VMnet1
+  Connect at power on: enabled
+```
+
+Critical rule: Adapter 1 is for Internet. Adapter 2 is for SMB3 transfer. Do not use the Internet/NAT adapter as your SMB path if the dedicated host-only adapter is working.
+
+After booting Windows, confirm that VMnet1 exists and has an IPv4 address. Run PowerShell as Administrator:
+
+```
+Get-NetAdapter | Where-Object {$_.Name -like "*VMnet*"} |
+  Format-Table Name,InterfaceDescription,Status,ifIndex,MacAddress
+
+Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {$_.InterfaceAlias -like "*VMnet1*"} |
+  Format-Table InterfaceAlias,IPAddress,PrefixLength
+```
+
+Expected for this specific machine:
+
+```
+InterfaceAlias                  IPAddress      PrefixLength
+--------------                  ---------      ------------
+VMware Network Adapter VMnet1    192.168.4.1    24
+```
+
+The antiX guest should later receive an address like `192.168.4.x` on its host-only interface.
+
+2. Windows firewall rule for host-only SMB3
+-------------------------------------------
+Windows firewall must allow SMB only on VMnet1, not on Wi-Fi/Ethernet/bridged public networks.
+
+Run PowerShell as Administrator:
+
+```
+$RuleName = "VMware Host-Only SMB3 to antiX VM only"
+Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
+New-NetFirewallRule `
+  -DisplayName "VMware Host-Only SMB3 to antiX VM only" `
+  -Direction Inbound `
+  -Action Allow `
+  -Protocol TCP `
+  -LocalPort 445 `
+  -InterfaceAlias "VMware Network Adapter VMnet1" `
+  -RemoteAddress 192.168.4.0/24 `
+  -Profile Any
+```
+
+Verify the rule:
+
+```
+Get-NetFirewallRule -DisplayName "VMware Host-Only SMB3 to antiX VM only" |
+  Format-List DisplayName,Enabled,Direction,Action,Profile
+
+Get-NetFirewallRule -DisplayName "VMware Host-Only SMB3 to antiX VM only" |
+  Get-NetFirewallPortFilter |
+  Format-List Protocol,LocalPort
+
+Get-NetFirewallRule -DisplayName "VMware Host-Only SMB3 to antiX VM only" |
+  Get-NetFirewallAddressFilter |
+  Format-List RemoteAddress
+
+Get-NetFirewallRule -DisplayName "VMware Host-Only SMB3 to antiX VM only" |
+  Get-NetFirewallInterfaceFilter |
+  Format-List InterfaceAlias
+```
+
+Correct characteristics:
+
+```
+Enabled: True
+Direction: Inbound
+Action: Allow
+Profile: Any
+Protocol: TCP
+LocalPort: 445
+RemoteAddress: 192.168.4.0/24
+InterfaceAlias: VMware Network Adapter VMnet1
+```
+
+Using `Profile Any` is acceptable here because the rule is constrained by interface alias and remote subnet. This is important because Windows may not show a normal network profile for VMnet1.
+
+3. Windows SMB server baseline
+------------------------------
+Confirm the Windows SMB server service is running:
+
+```
+Get-Service LanmanServer
+```
+
+Confirm that Windows is listening on TCP port 445:
+
+```
+Get-NetTCPConnection -LocalPort 445 -State Listen
+```
+
+Configure the SMB protocol baseline:
+
+```
+Set-SmbServerConfiguration `
+  -EnableSMB1Protocol $false `
+  -EnableSMB2Protocol $true `
+  -Confirm:$false
+
+Get-SmbServerConfiguration |
+  Select-Object EnableSMB1Protocol,EnableSMB2Protocol,EncryptData,RejectUnencryptedAccess,RequireSecuritySignature,EnableSecuritySignature
+```
+
+Expected baseline:
+
+```
+EnableSMB1Protocol       : False
+EnableSMB2Protocol       : True
+EncryptData              : False
+RejectUnencryptedAccess  : True
+RequireSecuritySignature : True
+EnableSecuritySignature  : False
+```
+
+`EnableSMB2Protocol=True` is correct. Windows uses this setting for SMB2 and SMB3. Do not disable it.
+
+SMB signing and SMB encryption are not the same thing. Signing protects message integrity. Encryption protects confidentiality over the network. Because this transfer path is a private VMware host-only link, the share is configured with `EncryptData $false` for performance. If you ever expose the share over bridged/LAN networking, reassess this choice.
+
+4. Create the dedicated Windows SMB user
+----------------------------------------
+Use a dedicated Windows local user for the VM. Do not use your main Windows administrator account for routine SMB transfers.
+
+PowerShell `else` blocks are easy to break if pasted line-by-line. The robust method below avoids `else` entirely. Run PowerShell as Administrator and paste the whole block.
+
+Important: Windows local-user description has a 48-character limit. Use the short description below.
+
+```
+$User = "smbvm"
+$FullName = "VM SMB Transfer User"
+$Desc = "antiX VM SMB file transfer"
+$Pass = Read-Host "Enter a strong password for smbvm" -AsSecureString
+
+$ExistingUser = Get-LocalUser -Name $User -ErrorAction SilentlyContinue
+
+if ($null -eq $ExistingUser) {
+    New-LocalUser `
+      -Name $User `
+      -Password $Pass `
+      -FullName $FullName `
+      -Description $Desc `
+      -AccountNeverExpires `
+      -PasswordNeverExpires
+}
+
+$CheckUser = Get-LocalUser -Name $User -ErrorAction Stop
+
+Set-LocalUser `
+  -Name $User `
+  -Password $Pass `
+  -FullName $FullName `
+  -Description $Desc `
+  -PasswordNeverExpires $true
+
+Enable-LocalUser -Name $User
+
+net user smbvm /passwordreq:yes
+net user smbvm /active:yes
+net user smbvm /expires:never
+
+Get-LocalUser -Name $User | Format-List Name,Enabled,FullName,Description,PasswordRequired,PasswordLastSet
+net user smbvm
+```
+
+Correct checkpoint:
+
+```
+Name             : smbvm
+Enabled          : True
+FullName         : VM SMB Transfer User
+Description      : antiX VM SMB file transfer
+PasswordRequired : True
+
+Account active               Yes
+Account expires              Never
+Password required            Yes
+Password expires             Never
+```
+
+Write down the password safely. It will be stored on antiX in `/root/.smbcredentials/vmxfer.cred` with root-only permission.
+
+5. Confirm Windows computer name
+--------------------------------
+Run:
+
+```
+$env:COMPUTERNAME
+```
+
+Confirmed value in this setup:
+
+```
+DESKTOP-JPMLALG
+```
+
+This value is used as the SMB domain/workstation name in antiX:
+
+```
+domain=DESKTOP-JPMLALG
+```
+
+6. Use F: drive for the SMB exchange folder
+-------------------------------------------
+The completed setup uses `F:\VM-SMB-Exchange`. This keeps the exchange folder away from the Windows system partition.
+
+Confirm that `F:` is accessible:
+
+```
+Test-Path F:\
+```
+
+Expected:
+
+```
+True
+```
+
+Check BitLocker state:
+
+```
+Get-BitLockerVolume -MountPoint "F:" |
+  Format-List MountPoint,VolumeStatus,ProtectionStatus,LockStatus,EncryptionPercentage
+```
+
+Confirmed result:
+
+```
+MountPoint           : F:
+VolumeStatus         : FullyEncrypted
+ProtectionStatus     : Off
+LockStatus           : Unlocked
+EncryptionPercentage : 100
+```
+
+Interpretation: the drive is fully encrypted and currently unlocked, so it is usable for SMB. `ProtectionStatus: Off` means BitLocker protection is suspended/off for that volume; it does not block SMB operation. Later, you may re-enable BitLocker protection if desired. For SMB setup, the important line is `LockStatus: Unlocked`.
+
+Operational rule: after reboot, Windows must have `F:` unlocked before antiX can access the SMB share.
+
+7. Create Windows folder structure on F:
+----------------------------------------
+Run PowerShell as Administrator:
+
+```
+$Root = "F:\VM-SMB-Exchange"
+
+New-Item -ItemType Directory -Force -Path $Root
+New-Item -ItemType Directory -Force -Path "$Root\01_From_Windows_To_VM"
+New-Item -ItemType Directory -Force -Path "$Root\02_From_VM_To_Windows"
+New-Item -ItemType Directory -Force -Path "$Root\03_Betterbird_Attachments"
+New-Item -ItemType Directory -Force -Path "$Root\99_Temp_Staging"
+
+Get-ChildItem $Root
+```
+
+Folder purpose:
+
+```
+01_From_Windows_To_VM       Files staged on Windows for antiX
+02_From_VM_To_Windows       Files exported from antiX to Windows
+03_Betterbird_Attachments   Attachments exchange/staging folder
+99_Temp_Staging             Temporary scratch/staging area
+```
+
+8. Apply NTFS permissions
+-------------------------
+NTFS permissions are the real filesystem permissions. SMB share permissions sit on top of NTFS permissions. Both must allow access.
+
+Run PowerShell as Administrator:
+
+```
+$User = "smbvm"
+$Root = "F:\VM-SMB-Exchange"
+$Account = "$env:COMPUTERNAME\$User"
+
+icacls $Root /inheritance:r
+icacls $Root /grant:r "${Account}:(OI)(CI)M" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F"
+icacls $Root /remove:g "Users" "Authenticated Users" "Everyone"
+icacls $Root
+```
+
+The `${Account}` syntax is intentional. Without braces, PowerShell can misread the colon after the variable.
+
+Correct result:
+
+```
+F:\VM-SMB-Exchange NT AUTHORITY\SYSTEM:(OI)(CI)(F)
+                   BUILTIN\Administrators:(OI)(CI)(F)
+                   DESKTOP-JPMLALG\smbvm:(OI)(CI)(M)
+```
+
+Meaning:
+
+```
+SYSTEM: full control
+Administrators: full control
+smbvm: modify, inherited to files/folders
+```
+
+9. Create the Windows SMB share
+-------------------------------
+Create the share named `VMXFER` pointing to `F:\VM-SMB-Exchange`.
+
+Run PowerShell as Administrator:
+
+```
+$ShareName = "VMXFER"
+$Root = "F:\VM-SMB-Exchange"
+$User = "smbvm"
+$Account = "$env:COMPUTERNAME\$User"
+
+if (Get-SmbShare -Name $ShareName -ErrorAction SilentlyContinue) {
+    Remove-SmbShare -Name $ShareName -Force
+}
+
+New-SmbShare `
+  -Name $ShareName `
+  -Path $Root `
+  -ChangeAccess $Account `
+  -FullAccess "BUILTIN\Administrators" `
+  -CachingMode None `
+  -FolderEnumerationMode AccessBased `
+  -EncryptData $false
+
+Get-SmbShare -Name VMXFER
+Get-SmbShareAccess -Name VMXFER
+```
+
+Correct result:
+
+```
+Name   ScopeName Path
+----   --------- ----
+VMXFER *         F:\VM-SMB-Exchange
+
+Name   AccountName              AccessRight
+----   -----------              -----------
+VMXFER BUILTIN\Administrators   Full
+VMXFER DESKTOP-JPMLALG\smbvm    Change
+```
+
+Create a Windows-side test file:
+
+```
+"SMB test from Windows host on F drive" |
+  Out-File F:\VM-SMB-Exchange\01_From_Windows_To_VM\host-test.txt -Encoding utf8
+
+Get-Content F:\VM-SMB-Exchange\01_From_Windows_To_VM\host-test.txt
+```
+
+10. antiX network checks
+------------------------
+On antiX, the expected design is:
+
+```
+eth0: NAT / VMnet8 / Internet
+  Example: 192.168.254.x/24
+  Default route allowed through 192.168.254.2
+
+eth1: Host-only / VMnet1 / SMB path
+  Example: 192.168.4.x/24
+  No default route required
+
+Windows VMnet1 host IP:
+  192.168.4.1
+```
+
+Check antiX network state:
+
+```
+ip -4 addr
+ip route
+ip route get 1.1.1.1
+ip route get 192.168.4.1
+```
+
+Correct routing pattern:
+
+```
+Internet traffic: via eth0 / 192.168.254.2
+SMB host traffic: directly via eth1 / 192.168.4.0/24
+```
+
+Do not rely on ping to Windows VMnet1. Windows may block ICMP. Use TCP port 445 as the real SMB reachability test:
+
+```
+nc -vz 192.168.4.1 445
+```
+
+Correct result:
+
+```
+Connection to 192.168.4.1 445 port [tcp/microsoft-ds] succeeded!
+```
+
+11. Install antiX SMB/CIFS client tools
+---------------------------------------
+Install required tools:
+
+```
+sudo apt update
+sudo apt install cifs-utils smbclient rsync netcat-openbsd yad
+```
+
+If you prefer Nala:
+
+```
+sudo nala install cifs-utils smbclient rsync netcat-openbsd yad
+```
+
+Check:
+
+```
+command -v smbclient
+command -v mount.cifs
+command -v nc
+command -v yad
+```
+
+12. Test SMB3 authentication from antiX before mounting
+-------------------------------------------------------
+This is the most important client-side test. It confirms network path, firewall, SMB authentication, share listing, and permissions before `/etc/fstab` is introduced.
+
+List shares:
+
+```
+smbclient -L //192.168.4.1 -m SMB3 -U 'DESKTOP-JPMLALG\smbvm'
+```
+
+Expected share list includes:
+
+```
+VMXFER          Disk
+SMB1 disabled -- no workgroup available
+```
+
+The `SMB1 disabled -- no workgroup available` message is normal and good. SMB1 browsing is disabled. You are connecting directly by IP using SMB3.
+
+Connect to the share:
+
+```
+smbclient //192.168.4.1/VMXFER -m SMB3 -U 'DESKTOP-JPMLALG\smbvm'
+```
+
+Inside the `smb:` prompt:
+
+```
+ls
+cd 01_From_Windows_To_VM
+ls
+get host-test.txt
+cd ..
+cd 02_From_VM_To_Windows
+put /etc/hostname antix-hostname-test.txt
+ls
+quit
+```
+
+Verify on Windows:
+
+```
+Get-ChildItem F:\VM-SMB-Exchange\02_From_VM_To_Windows
+Get-Content F:\VM-SMB-Exchange\02_From_VM_To_Windows\antix-hostname-test.txt
+```
+
+Correct checkpoint:
+
+```
+antiX can read host-test.txt from Windows.
+antiX can write antix-hostname-test.txt to Windows.
+Windows can read the file written by antiX.
+```
+
+13. Create antiX credentials file
+---------------------------------
+Create a root-only credentials file. Do not put the SMB password directly in `/etc/fstab`.
+
+```
+sudo mkdir -p /root/.smbcredentials
+sudo fresh /root/.smbcredentials/vmxfer.cred
+```
+
+If `fresh` is not available, use:
+
+```
+sudo nano /root/.smbcredentials/vmxfer.cred
+```
+
+File content:
+
+```
+username=smbvm
+password=YOUR_SMBVM_PASSWORD
+domain=DESKTOP-JPMLALG
+```
+
+Secure it:
+
+```
+sudo chmod 600 /root/.smbcredentials/vmxfer.cred
+sudo chown root:root /root/.smbcredentials/vmxfer.cred
+sudo ls -l /root/.smbcredentials/vmxfer.cred
+```
+
+Expected:
+
+```
+-rw------- 1 root root ... /root/.smbcredentials/vmxfer.cred
+```
+
+Verify structure without exposing the password:
+
+```
+sudo sh -c 'sed -E "s/^password=.*/password=<hidden>/" /root/.smbcredentials/vmxfer.cred'
+```
+
+14. Create the antiX mount point
+--------------------------------
+Confirm user ID:
+
+```
+id
+```
+
+Confirmed setup:
+
+```
+uid=1000(atiq) gid=1000(atiq)
+```
+
+Create mount point:
+
+```
+sudo mkdir -p /mnt/win-vmxfer
+sudo chown atiq:atiq /mnt/win-vmxfer
+```
+
+15. Add the antiX fstab entry with noauto
+-----------------------------------------
+Use a manual/on-demand mount. Do not auto-mount this SMB share at boot.
+
+Reason: antiX Runit does not provide the same systemd-style network-online automount behavior. SMB mount during boot can race with VMware adapters, DHCP, Windows SMB service, firewall readiness, or BitLocker unlock state. `noauto,_netdev,nofail` keeps boot clean and lets the user mount only when needed.
+
+Edit `/etc/fstab`:
+
+```
+sudo fresh /etc/fstab
+```
+
+Fallback:
+
+```
+sudo nano /etc/fstab
+```
+
+Add this one-line entry:
+
+```
+//192.168.4.1/VMXFER /mnt/win-vmxfer cifs credentials=/root/.smbcredentials/vmxfer.cred,vers=3.1.1,uid=1000,gid=1000,file_mode=0660,dir_mode=0770,iocharset=utf8,noperm,serverino,actimeo=5,cache=strict,mfsymlinks,nosharesock,_netdev,nofail,noauto 0 0
+```
+
+Meaning of key options:
+
+```
+credentials=...       Use root-only credential file.
+vers=3.1.1            Prefer SMB 3.1.1.
+uid=1000,gid=1000     Show files as owned by antiX user atiq.
+file_mode=0660        Files writable by owner/group.
+dir_mode=0770         Directories accessible by owner/group.
+iocharset=utf8        Correct Unicode filename handling.
+noperm                Let Windows SMB/NTFS permissions decide access.
+serverino             Use server-provided inode numbers.
+actimeo=5             Short attribute cache, good balance for two-way transfer.
+cache=strict          Safer cache behavior.
+mfsymlinks            Map symlinks in a Windows-compatible way.
+nosharesock           Avoid shared socket reuse issues.
+_netdev,nofail        Network filesystem, do not block boot.
+noauto                Do not mount automatically at boot.
+```
+
+16. Test the fstab mount
+------------------------
+Mount using the fstab definition:
+
+```
+sudo mount /mnt/win-vmxfer
+findmnt /mnt/win-vmxfer
+ls -la /mnt/win-vmxfer
+cat /mnt/win-vmxfer/01_From_Windows_To_VM/host-test.txt
+```
+
+Write a test file through the mounted filesystem:
+
+```
+echo "SMB mounted write test from antiX" > /mnt/win-vmxfer/02_From_VM_To_Windows/antix-mounted-test.txt
+sync
+```
+
+Verify from Windows:
+
+```
+Get-Content F:\VM-SMB-Exchange\02_From_VM_To_Windows\antix-mounted-test.txt
+```
+
+Unmount:
+
+```
+sync
+sudo umount /mnt/win-vmxfer
+ls -la /mnt/win-vmxfer
+```
+
+After unmount, `/mnt/win-vmxfer` should look like an empty local directory. That is normal.
+
+Avoid running `sudo mount /mnt/win-vmxfer` twice. Linux can stack mounts on the same mount point. If you accidentally mount twice, one `umount` removes only one layer. The robust unmount script later handles this.
+
+17. Create the robust mount script
+----------------------------------
+This script uses TCP port 445 reachability with `nc`, not ping. Ping can fail even when SMB works because Windows may block ICMP.
+
+Create:
+
+```
+sudo fresh /usr/local/bin/mount-vmxfer
+```
+
+Fallback:
+
+```
+sudo nano /usr/local/bin/mount-vmxfer
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+HOST_IP="192.168.4.1"
+MNT="/mnt/win-vmxfer"
+CREDS="/root/.smbcredentials/vmxfer.cred"
+
+mkdir -p "$MNT"
+
+if mountpoint -q "$MNT"; then
+    echo "$MNT is already mounted."
+    exit 0
+fi
+
+if [ ! -f "$CREDS" ]; then
+    echo "ERROR: SMB credentials file is missing: $CREDS"
+    exit 1
+fi
+
+CREDS_PERM="$(stat -c '%a' "$CREDS" 2>/dev/null)"
+if [ "$CREDS_PERM" != "600" ]; then
+    echo "WARNING: $CREDS permission is $CREDS_PERM, recommended is 600."
+    echo "Fix with: sudo chmod 600 $CREDS"
+fi
+
+if ! awk '$2 == "/mnt/win-vmxfer" {found=1} END {exit !found}' /etc/fstab; then
+    echo "ERROR: $MNT is not defined in /etc/fstab."
+    exit 1
+fi
+
+nc -z -w 2 "$HOST_IP" 445 >/dev/null 2>&1 || {
+    echo "ERROR: SMB TCP/445 on $HOST_IP is not reachable."
+    echo "Check Windows, F: drive unlock state, VMware VMnet1, and firewall."
+    exit 1
+}
+
+if mount "$MNT"; then
+    echo "Mounted $MNT"
+else
+    echo "ERROR: Failed to mount $MNT"
+    echo "Diagnostic commands:"
+    echo "  sudo mount -v $MNT"
+    echo "  smbclient -L //$HOST_IP -m SMB3 -U 'DESKTOP-JPMLALG\\smbvm'"
+    exit 1
+fi
+```
+
+Make it executable:
+
+```
+sudo chmod +x /usr/local/bin/mount-vmxfer
+```
+
+18. Create the robust unmount script
+------------------------------------
+This version handles accidental stacked/double mounts by looping until the mount point is actually unmounted.
+
+Create:
+
+```
+sudo fresh /usr/local/bin/umount-vmxfer
+```
+
+Fallback:
+
+```
+sudo nano /usr/local/bin/umount-vmxfer
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+MNT="/mnt/win-vmxfer"
+
+if ! mountpoint -q "$MNT"; then
+    echo "$MNT is not mounted."
+    exit 0
+fi
+
+sync
+
+COUNT=0
+while mountpoint -q "$MNT"; do
+    COUNT=$((COUNT + 1))
+
+    if [ "$COUNT" -gt 5 ]; then
+        echo "ERROR: $MNT is still mounted after 5 unmount attempts."
+        echo "Most likely cause: zzzFM, terminal, Betterbird file picker, or another process is using it."
+        echo
+        echo "Check with:"
+        echo "  fuser -vm $MNT"
+        echo
+        echo "Then close the process or leave the directory and retry:"
+        echo "  cd ~"
+        echo "  sudo umount $MNT"
+        exit 1
+    fi
+
+    if ! umount "$MNT"; then
+        echo "ERROR: Failed to unmount $MNT"
+        echo "Most likely cause: a process is using the mount."
+        echo
+        echo "Check with:"
+        echo "  fuser -vm $MNT"
+        exit 1
+    fi
+done
+
+echo "Unmounted $MNT"
+exit 0
+```
+
+Make it executable:
+
+```
+sudo chmod +x /usr/local/bin/umount-vmxfer
+```
+
+Test:
+
+```
+sudo /usr/local/bin/mount-vmxfer
+findmnt /mnt/win-vmxfer
+sudo /usr/local/bin/umount-vmxfer
+findmnt /mnt/win-vmxfer || echo "Cleanly unmounted"
+```
+
+19. zzzFM bookmark for /mnt/win-vmxfer
+--------------------------------------
+The zzzFM bookmark is only a shortcut to the mount point. It does not mount SMB by itself. Mount first, then open the bookmark.
+
+First mount:
+
+```
+sudo /usr/local/bin/mount-vmxfer
+```
+
+Open the folder in zzzFM:
+
+```
+zzzfm /mnt/win-vmxfer
+```
+
+Then in zzzFM:
+
+```
+1. Confirm the current path is /mnt/win-vmxfer.
+2. Open the Bookmarks menu.
+3. Choose Add Bookmark, New Bookmark, or Bookmark Current Folder.
+4. Set the bookmark name/label/title to: Windows VMXFER
+5. Set or confirm the path/location as: /mnt/win-vmxfer
+6. Save.
+```
+
+If zzzFM creates a bookmark named `win-vmxfer`, right-click it in the left-side bookmark panel and choose Rename/Edit/Properties. Rename it to:
+
+```
+Windows VMXFER
+```
+
+Fallback method if zzzFM bookmark naming is awkward:
+
+```
+ln -sfn /mnt/win-vmxfer "$HOME/Windows VMXFER"
+zzzfm "$HOME/Windows VMXFER"
+```
+
+Then bookmark `$HOME/Windows VMXFER`.
+
+Daily rule:
+
+```
+Mount VMXFER first.
+Then click the Windows VMXFER zzzFM bookmark.
+Unmount when finished.
+```
+
+20. IceWM menu entries for mount/open/unmount
+---------------------------------------------
+Do not use a raw IceWM command like `prog ... sudo /usr/local/bin/mount-vmxfer`. It may fail silently because IceWM menu commands do not provide a terminal for the sudo password prompt.
+
+Use terminal wrapper scripts.
+
+Confirm terminal launcher:
+
+```
+command -v x-terminal-emulator
+```
+
+Expected:
+
+```
+/usr/bin/x-terminal-emulator
+```
+
+Create mount GUI wrapper:
+
+```
+sudo fresh /usr/local/bin/mount-vmxfer-gui
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+sudo /usr/local/bin/mount-vmxfer
+
+echo
+echo "Press Enter to close this window..."
+read dummy
+```
+
+Make executable:
+
+```
+sudo chmod +x /usr/local/bin/mount-vmxfer-gui
+```
+
+Create unmount GUI wrapper:
+
+```
+sudo fresh /usr/local/bin/umount-vmxfer-gui
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+sudo /usr/local/bin/umount-vmxfer
+
+echo
+echo "Press Enter to close this window..."
+read dummy
+```
+
+Make executable:
+
+```
+sudo chmod +x /usr/local/bin/umount-vmxfer-gui
+```
+
+Test wrappers:
+
+```
+x-terminal-emulator -e /usr/local/bin/mount-vmxfer-gui
+x-terminal-emulator -e /usr/local/bin/umount-vmxfer-gui
+```
+
+Now prepare IceWM menu:
+
+```
+mkdir -p ~/.icewm
+
+if [ ! -f ~/.icewm/menu ]; then
+    if [ -f /etc/X11/icewm/menu ]; then
+        cp /etc/X11/icewm/menu ~/.icewm/menu
+    elif [ -f /usr/share/icewm/menu ]; then
+        cp /usr/share/icewm/menu ~/.icewm/menu
+    else
+        touch ~/.icewm/menu
+    fi
+fi
+
+cp ~/.icewm/menu ~/.icewm/menu.bak.$(date +%F-%H%M%S)
+fresh ~/.icewm/menu
+```
+
+Fallback:
+
+```
+nano ~/.icewm/menu
+```
+
+Add this block near the top or near file-manager/tools entries:
+
+```
+separator
+menu "Windows SMB Share" folder {
+    prog "Mount VMXFER" folder x-terminal-emulator -e /usr/local/bin/mount-vmxfer-gui
+    prog "Open VMXFER Folder" folder zzzfm /mnt/win-vmxfer
+    prog "Unmount VMXFER" folder x-terminal-emulator -e /usr/local/bin/umount-vmxfer-gui
+}
+separator
+```
+
+Reload IceWM:
+
+```
+IceWM menu -> Logout -> Restart IceWM
+```
+
+If no restart option exists, log out and log back in.
+
+21. YAD live tray indicator without changing taskbar size
+---------------------------------------------------------
+This creates a live tray icon in IceWM showing the present state of `/mnt/win-vmxfer`.
+
+Design:
+
+```
+Green check icon = mounted
+Red cross icon = unmounted
+Click tray icon = open control dialog
+Control dialog when unmounted = Mount button
+Control dialog when mounted = Open Folder + Unmount buttons
+```
+
+This guide intentionally does not enlarge the IceWM taskbar. To keep the default taskbar size readable, use simple icons with no tiny text.
+
+Check YAD:
+
+```
+command -v yad
+type -a yad
+ls -l /usr/local/bin/yad /usr/bin/yad 2>/dev/null
+yad --version
+yad --title="YAD Test" --text="YAD is working." --button="OK:0"
+```
+
+Create icon directory:
+
+```
+sudo mkdir -p /usr/local/share/icons/vmxfer
+```
+
+Create mounted icon:
+
+```
+sudo tee /usr/local/share/icons/vmxfer/vmxfer-mounted.svg >/dev/null <<'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#101418"/>
+  <circle cx="64" cy="64" r="48" fill="#22c55e"/>
+  <path d="M42 64l15 15 32-38"
+        fill="none"
+        stroke="#ffffff"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>
+EOF
+```
+
+Create unmounted icon:
+
+```
+sudo tee /usr/local/share/icons/vmxfer/vmxfer-unmounted.svg >/dev/null <<'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#101418"/>
+  <circle cx="64" cy="64" r="48" fill="#ef4444"/>
+  <path d="M45 45l38 38M83 45L45 83"
+        fill="none"
+        stroke="#ffffff"
+        stroke-width="14"
+        stroke-linecap="round"/>
+</svg>
+EOF
+```
+
+Verify:
+
+```
+ls -lh /usr/local/share/icons/vmxfer/
+```
+
+Create tray control dialog:
+
+```
+sudo fresh /usr/local/bin/vmxfer-control
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+MNT="/mnt/win-vmxfer"
+YAD="$(command -v yad)"
+TERM_CMD="$(command -v x-terminal-emulator)"
+
+ICON_ON="/usr/local/share/icons/vmxfer/vmxfer-mounted.svg"
+ICON_OFF="/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg"
+
+if [ -z "$YAD" ]; then
+    echo "ERROR: yad not found."
+    exit 1
+fi
+
+if [ -z "$TERM_CMD" ]; then
+    echo "ERROR: x-terminal-emulator not found."
+    exit 1
+fi
+
+if mountpoint -q "$MNT"; then
+    "$YAD" \
+      --title="Windows VMXFER" \
+      --window-icon="$ICON_ON" \
+      --text="Windows VMXFER is currently MOUNTED." \
+      --button="Open Folder:10" \
+      --button="Unmount:20" \
+      --button="Cancel:1"
+
+    ACTION="$?"
+
+    case "$ACTION" in
+        10)
+            zzzfm "$MNT" >/dev/null 2>&1 &
+            ;;
+        20)
+            "$TERM_CMD" -e /usr/local/bin/umount-vmxfer-gui &
+            ;;
+    esac
+else
+    "$YAD" \
+      --title="Windows VMXFER" \
+      --window-icon="$ICON_OFF" \
+      --text="Windows VMXFER is currently NOT mounted." \
+      --button="Mount:10" \
+      --button="Cancel:1"
+
+    ACTION="$?"
+
+    case "$ACTION" in
+        10)
+            "$TERM_CMD" -e /usr/local/bin/mount-vmxfer-gui &
+            ;;
+    esac
+fi
+```
+
+Make executable and test:
+
+```
+sudo chmod +x /usr/local/bin/vmxfer-control
+/usr/local/bin/vmxfer-control
+```
+
+Create live tray indicator:
+
+```
+sudo fresh /usr/local/bin/vmxfer-tray
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+MNT="/mnt/win-vmxfer"
+YAD="$(command -v yad)"
+
+ICON_ON="/usr/local/share/icons/vmxfer/vmxfer-mounted.svg"
+ICON_OFF="/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg"
+
+if [ -z "$YAD" ]; then
+    echo "ERROR: yad not found."
+    exit 1
+fi
+
+(
+    LAST_STATE=""
+
+    while true; do
+        if mountpoint -q "$MNT"; then
+            STATE="mounted"
+            ICON="$ICON_ON"
+            TIP="Windows VMXFER: MOUNTED"
+        else
+            STATE="unmounted"
+            ICON="$ICON_OFF"
+            TIP="Windows VMXFER: NOT mounted"
+        fi
+
+        if [ "$STATE" != "$LAST_STATE" ]; then
+            echo "icon:$ICON"
+            echo "tooltip:$TIP"
+            LAST_STATE="$STATE"
+        fi
+
+        sleep 2
+    done
+) | "$YAD" \
+      --notification \
+      --listen \
+      --image="$ICON_OFF" \
+      --text="Windows VMXFER: starting..." \
+      --command="/usr/local/bin/vmxfer-control"
+```
+
+Make executable:
+
+```
+sudo chmod +x /usr/local/bin/vmxfer-tray
+```
+
+Manual tray test:
+
+```
+/usr/local/bin/vmxfer-tray &
+```
+
+Test status change:
+
+```
+sudo /usr/local/bin/umount-vmxfer
+sleep 3
+mountpoint /mnt/win-vmxfer && echo "Mounted" || echo "Unmounted"
+
+sudo /usr/local/bin/mount-vmxfer
+sleep 3
+mountpoint /mnt/win-vmxfer && echo "Mounted" || echo "Unmounted"
+```
+
+Stop the manual tray test before adding startup:
+
+```
+pkill -f /usr/local/bin/vmxfer-tray
+pgrep -af vmxfer-tray
+```
+
+22. Add YAD tray indicator to IceWM startup
+-------------------------------------------
+Create/edit IceWM startup:
+
+```
+mkdir -p ~/.icewm
+
+if [ ! -f ~/.icewm/startup ]; then
+    printf '#!/bin/sh\n' > ~/.icewm/startup
+fi
+
+cp ~/.icewm/startup ~/.icewm/startup.bak.$(date +%F-%H%M%S)
+fresh ~/.icewm/startup
+```
+
+Fallback:
+
+```
+nano ~/.icewm/startup
+```
+
+Add near the end:
+
+```
+# Windows VMXFER live tray status indicator
+if ! pgrep -u "$USER" -f '/usr/local/bin/vmxfer-tray' >/dev/null 2>&1; then
+    /usr/local/bin/vmxfer-tray &
+fi
+```
+
+Make executable:
+
+```
+chmod +x ~/.icewm/startup
+```
+
+Restart IceWM or log out/in:
+
+```
+IceWM menu -> Logout -> Restart IceWM
+```
+
+After restart, the VMXFER tray icon should appear automatically.
+
+If it does not appear, check:
+
+```
+pgrep -af vmxfer-tray
+pgrep -af yad
+```
+
+If no tray icon appears but processes are running, the IceWM tray may be hidden. Enable tray display without changing taskbar size:
+
+```
+mkdir -p ~/.icewm
+touch ~/.icewm/prefoverride
+
+grep -q '^TaskBarShowTray=' ~/.icewm/prefoverride || echo 'TaskBarShowTray=1' >> ~/.icewm/prefoverride
+grep -q '^TaskBarEnableSystemTray=' ~/.icewm/prefoverride || echo 'TaskBarEnableSystemTray=1' >> ~/.icewm/prefoverride
+```
+
+Then restart IceWM again.
+
+23. Change the SVG tray icons later
+-----------------------------------
+Professional method: do not edit the tray script every time. Keep the tray script fixed and replace only these two files:
+
+```
+/usr/local/share/icons/vmxfer/vmxfer-mounted.svg
+/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg
+```
+
+Create an editable source folder in your home directory:
+
+```
+mkdir -p "$HOME/VMXFER-Icons"
+fresh "$HOME/VMXFER-Icons/mounted.svg"
+fresh "$HOME/VMXFER-Icons/unmounted.svg"
+```
+
+Recommended tray icon design rules:
+
+```
+Use large simple shapes.
+Use thick strokes.
+Use strong contrast.
+Avoid tiny text.
+Avoid complex gradients.
+Avoid detailed file/folder drawings.
+Use green/check for mounted and red/cross for unmounted.
+```
+
+Create a reusable icon update script:
+
+```
+sudo fresh /usr/local/bin/update-vmxfer-icons
+```
+
+Paste:
+
+```
+#!/bin/sh
+
+SRC_DIR="$HOME/VMXFER-Icons"
+DST_DIR="/usr/local/share/icons/vmxfer"
+
+SRC_ON="$SRC_DIR/mounted.svg"
+SRC_OFF="$SRC_DIR/unmounted.svg"
+
+DST_ON="$DST_DIR/vmxfer-mounted.svg"
+DST_OFF="$DST_DIR/vmxfer-unmounted.svg"
+
+STAMP="$(date +%F-%H%M%S)"
+
+if [ ! -f "$SRC_ON" ]; then
+    echo "ERROR: Missing mounted icon: $SRC_ON"
+    exit 1
+fi
+
+if [ ! -f "$SRC_OFF" ]; then
+    echo "ERROR: Missing unmounted icon: $SRC_OFF"
+    exit 1
+fi
+
+sudo mkdir -p "$DST_DIR"
+
+if [ -f "$DST_ON" ]; then
+    sudo cp "$DST_ON" "$DST_ON.bak.$STAMP"
+fi
+
+if [ -f "$DST_OFF" ]; then
+    sudo cp "$DST_OFF" "$DST_OFF.bak.$STAMP"
+fi
+
+sudo install -m 0644 "$SRC_ON" "$DST_ON"
+sudo install -m 0644 "$SRC_OFF" "$DST_OFF"
+
+pkill -f /usr/local/bin/vmxfer-tray 2>/dev/null || true
+pkill -f "Windows VMXFER" 2>/dev/null || true
+
+nohup /usr/local/bin/vmxfer-tray >/dev/null 2>&1 &
+
+echo "VMXFER icons updated and tray restarted."
+echo "Mounted icon:   $DST_ON"
+echo "Unmounted icon: $DST_OFF"
+```
+
+Make executable:
+
+```
+sudo chmod +x /usr/local/bin/update-vmxfer-icons
+```
+
+Future workflow to change icons:
+
+```
+fresh "$HOME/VMXFER-Icons/mounted.svg"
+fresh "$HOME/VMXFER-Icons/unmounted.svg"
+update-vmxfer-icons
+```
+
+This updates icons, backs up old icons, and restarts only the VMXFER tray indicator.
+
+24. Betterbird usage rules
+--------------------------
+For Betterbird, use this SMB share for attachments and file exchange only.
+
+Recommended pattern:
+
+```
+Incoming files from Windows:
+  F:\VM-SMB-Exchange\01_From_Windows_To_VM
+  visible in antiX as /mnt/win-vmxfer/01_From_Windows_To_VM
+
+Outgoing files from antiX:
+  /mnt/win-vmxfer/02_From_VM_To_Windows
+  visible in Windows as F:\VM-SMB-Exchange\02_From_VM_To_Windows
+
+Betterbird attachments staging:
+  /mnt/win-vmxfer/03_Betterbird_Attachments
+```
+
+Do not put these on SMB:
+
+```
+Betterbird profile
+Betterbird Maildir store
+Thunderbird/Betterbird global-messages-db.sqlite
+Logseq DB
+millions of .eml files
+active search indexes
+SQLite databases
+```
+
+Reason: SMB is excellent for file exchange but not ideal for active database/index/maildir workloads inside a VM. For millions of `.eml` messages and fast searching, keep the store local on the antiX virtual disk and use SMB only to import/export files.
+
+25. Daily operating procedure
+-----------------------------
+Use this simple routine.
+
+Graphical workflow:
+
+```
+1. Click the red VMXFER tray icon.
+2. Click Mount.
+3. If sudo asks for a password, enter the antiX sudo password.
+4. Click green VMXFER tray icon.
+5. Click Open Folder.
+6. Transfer files with zzzFM.
+7. Close zzzFM or leave /mnt/win-vmxfer.
+8. Click green VMXFER tray icon.
+9. Click Unmount.
+```
+
+Terminal workflow:
+
+```
+sudo /usr/local/bin/mount-vmxfer
+zzzfm /mnt/win-vmxfer
+sudo /usr/local/bin/umount-vmxfer
+```
+
+Always unmount before:
+
+```
+Suspending the VM
+Pausing the VM
+Taking a VMware snapshot during file transfer
+Shutting down Windows host
+Locking or disconnecting the F: drive
+Heavy host sleep/resume cycles
+```
+
+26. Complete verification checklist
+-----------------------------------
+Windows checks:
+
+```
+Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {$_.InterfaceAlias -like "*VMnet1*"} |
+  Format-Table InterfaceAlias,IPAddress,PrefixLength
+
+Get-Service LanmanServer
+Get-SmbShare -Name VMXFER
+Get-SmbShareAccess -Name VMXFER
+icacls F:\VM-SMB-Exchange
+Get-Content F:\VM-SMB-Exchange\01_From_Windows_To_VM\host-test.txt
+```
+
+antiX checks:
+
+```
+nc -vz 192.168.4.1 445
+smbclient -L //192.168.4.1 -m SMB3 -U 'DESKTOP-JPMLALG\smbvm'
+grep -n 'VMXFER\|win-vmxfer' /etc/fstab
+sudo sh -c 'sed -E "s/^password=.*/password=<hidden>/" /root/.smbcredentials/vmxfer.cred'
+sudo /usr/local/bin/mount-vmxfer
+findmnt /mnt/win-vmxfer
+ls -la /mnt/win-vmxfer
+sudo /usr/local/bin/umount-vmxfer
+findmnt /mnt/win-vmxfer || echo "Cleanly unmounted"
+pgrep -af vmxfer-tray
+```
+
+27. Troubleshooting
+-------------------
+Problem: `ping 192.168.4.1` fails, but `nc -vz 192.168.4.1 445` succeeds.
+Meaning: not a problem. Windows is probably blocking ICMP. SMB works over TCP 445.
+
+Problem: `SMB1 disabled -- no workgroup available` appears.
+Meaning: normal. You are using direct SMB3 by IP. Workgroup browsing is unnecessary.
+
+Problem: `smbclient` authentication fails.
+Check:
+
+```
+Windows computer name: DESKTOP-JPMLALG
+Username: smbvm
+Command format: smbclient //192.168.4.1/VMXFER -m SMB3 -U 'DESKTOP-JPMLALG\smbvm'
+Password: exact smbvm password
+Windows account active: net user smbvm
+```
+
+Problem: access denied after login.
+Check both permission layers:
+
+```
+Get-SmbShareAccess -Name VMXFER
+icacls F:\VM-SMB-Exchange
+```
+
+Problem: fstab mount fails but smbclient works.
+Check credential file:
+
+```
+sudo sh -c 'sed -E "s/^password=.*/password=<hidden>/" /root/.smbcredentials/vmxfer.cred'
+sudo ls -l /root/.smbcredentials/vmxfer.cred
+sudo mount -v /mnt/win-vmxfer
+```
+
+Problem: findmnt still shows the mount after one unmount.
+Likely cause: you mounted the same mount point twice. Use the robust script:
+
+```
+sudo /usr/local/bin/umount-vmxfer
+```
+
+Problem: unmount says target is busy.
+Check:
+
+```
+fuser -vm /mnt/win-vmxfer
+cd ~
+sudo /usr/local/bin/umount-vmxfer
+```
+
+Close zzzFM, Betterbird file picker, or terminals currently inside `/mnt/win-vmxfer`.
+
+Problem: tray icon does not appear.
+Check:
+
+```
+command -v yad
+pgrep -af vmxfer-tray
+pgrep -af yad
+```
+
+Enable tray display without changing taskbar size:
+
+```
+mkdir -p ~/.icewm
+touch ~/.icewm/prefoverride
+grep -q '^TaskBarShowTray=' ~/.icewm/prefoverride || echo 'TaskBarShowTray=1' >> ~/.icewm/prefoverride
+grep -q '^TaskBarEnableSystemTray=' ~/.icewm/prefoverride || echo 'TaskBarEnableSystemTray=1' >> ~/.icewm/prefoverride
+```
+
+Problem: the icon is too small.
+Do not rely on tiny text in the SVG. Use large check/cross icons. This guide intentionally avoids changing the default taskbar size.
+
+Problem: Windows F: drive is locked.
+Unlock F: in Windows first. Then remount from antiX.
+
+Problem: VMnet1 IP changes.
+Re-check Windows VMnet1 IP and update all locations if needed:
+
+```
+Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {$_.InterfaceAlias -like "*VMnet1*"} |
+  Format-Table InterfaceAlias,IPAddress,PrefixLength
+```
+
+Then update antiX:
+
+```
+sudo fresh /etc/fstab
+sudo fresh /usr/local/bin/mount-vmxfer
+```
+
+28. antiX duplicate IP cleanup and reboot check
+-----------------------------------------------
+Earlier, the antiX VM showed duplicate static and DHCP IPs. The correct permanent state is one IP per interface:
+
+```
+eth0: DHCP from VMnet8 NAT, default route allowed
+eth1: DHCP from VMnet1 host-only, no default route
+```
+
+After reboot, check:
+
+```
+ip -4 addr
+ip route
+```
+
+Correct pattern:
+
+```
+default route only via eth0 / 192.168.254.2
+192.168.4.0/24 route via eth1
+no duplicate 192.168.254.129/24 static address
+no duplicate 192.168.4.128/24 static address
+no default route via eth1
+```
+
+If duplicates return, diagnose before editing randomly:
+
+```
+ps -ef | grep -E 'connmand|dhclient|dhcpcd|NetworkManager|wicd|ifplugd' | grep -v grep
+
+sudo grep -R "192.168.254.129\|192.168.4.128\|eth0\|eth1" \
+  /etc/network /etc/connman /etc/ceni /etc/default /etc/runit /etc/rc.d 2>/dev/null
+
+cat /etc/network/interfaces 2>/dev/null
+ls -la /etc/network/interfaces.d 2>/dev/null
+```
+
+Temporary cleanup if duplicate addresses appear again:
+
+```
+sudo ip addr del 192.168.254.129/24 dev eth0 2>/dev/null
+sudo ip addr del 192.168.4.128/24 dev eth1 2>/dev/null
+sudo ip route del 0.0.0.0 dev eth1 2>/dev/null
+sudo ip route del default dev eth1 2>/dev/null
+```
+
+Then re-check:
+
+```
+ip -4 addr
+ip route
+ip route get 1.1.1.1
+ip route get 192.168.4.1
+```
+
+29. Final reference: critical files created
+-------------------------------------------
+Windows:
+
+```
+F:\VM-SMB-Exchange\
+F:\VM-SMB-Exchange\01_From_Windows_To_VM\
+F:\VM-SMB-Exchange\02_From_VM_To_Windows\
+F:\VM-SMB-Exchange\03_Betterbird_Attachments\
+F:\VM-SMB-Exchange\99_Temp_Staging\
+SMB share: VMXFER
+Local user: DESKTOP-JPMLALG\smbvm
+Firewall rule: VMware Host-Only SMB3 to antiX VM only
+```
+
+antiX:
+
+```
+/root/.smbcredentials/vmxfer.cred
+/mnt/win-vmxfer
+/etc/fstab
+/usr/local/bin/mount-vmxfer
+/usr/local/bin/umount-vmxfer
+/usr/local/bin/mount-vmxfer-gui
+/usr/local/bin/umount-vmxfer-gui
+/usr/local/bin/vmxfer-control
+/usr/local/bin/vmxfer-tray
+/usr/local/bin/update-vmxfer-icons
+/usr/local/share/icons/vmxfer/vmxfer-mounted.svg
+/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg
+~/.icewm/menu
+~/.icewm/startup
+~/VMXFER-Icons/mounted.svg
+~/VMXFER-Icons/unmounted.svg
+```
+
+30. Final success criteria
+--------------------------
+The setup is complete when all of these are true:
+
+```
+1. antiX can run: nc -vz 192.168.4.1 445
+2. antiX can list VMXFER with smbclient.
+3. antiX can mount /mnt/win-vmxfer with /usr/local/bin/mount-vmxfer.
+4. antiX can read Windows test files from /mnt/win-vmxfer.
+5. antiX can write files to /mnt/win-vmxfer/02_From_VM_To_Windows.
+6. Windows can read files written by antiX on F:\VM-SMB-Exchange.
+7. /usr/local/bin/umount-vmxfer cleanly unmounts the share.
+8. zzzFM bookmark opens the mount point.
+9. IceWM menu can mount/open/unmount.
+10. YAD tray icon changes between unmounted and mounted status.
+11. After reboot, the tray starts automatically.
+12. Betterbird profile/Maildir/Logseq DB remain local to antiX, not on SMB.
+```

@@ -1,0 +1,388 @@
+Below is the clean **DIY guidebook** for a new antiX Linux **Runit** edition with **zzzFM-IceWM** running inside **VMware Workstation Pro on Windows 11**.
+
+This guide makes VMware Tools integration persistent after reboot/shutdown, especially:
+
+```text
+Windows 11 ⇄ antiX copy/paste
+auto-fit display
+VMware Tools running correctly
+Runit-managed root vmtoolsd service
+IceWM-managed user vmusr process
+```
+
+VMware’s own documentation says modern Linux guests should use integrated `open-vm-tools`, not the old tar/ISO tools, and copy/paste requires VMware Tools plus an X Windows/X11 session. It also documents `vmtoolsd -n vmusr` as the manual VMware user process command when session integration is not started automatically.   
+
+---
+
+# Complete DIY Guide: VMware Tools on antiX Runit + IceWM
+
+## 0. VMware Workstation settings on Windows host
+
+Power off the antiX VM first.
+
+In VMware Workstation:
+
+```text
+VM > Settings > Options > Guest Isolation
+```
+
+Enable:
+
+```text
+Enable copy and paste
+Enable drag and drop
+```
+
+Then:
+
+```text
+VM > Settings > Hardware > Display
+```
+
+Recommended:
+
+```text
+Accelerate 3D graphics: ON
+Graphics memory: 1 GB
+Use host setting for monitors: ON
+Start with 1 monitor
+```
+
+Boot antiX and log into IceWM.
+
+---
+
+# 1. Install required packages inside antiX
+
+Open terminal in antiX.
+
+Run:
+
+```bash
+sudo apt update
+sudo apt install -y open-vm-tools open-vm-tools-desktop fuse3 xserver-xorg-video-vmware mesa-utils x11-xserver-utils
+```
+
+Check that VMware Tools is installed:
+
+```bash
+vmtoolsd --version
+```
+
+Expected: version output, for example:
+
+```text
+VMware Tools daemon, version ...
+```
+
+Check graphics driver:
+
+```bash
+lsmod | grep vmwgfx
+glxinfo -B
+```
+
+Good signs:
+
+```text
+vmwgfx appears
+OpenGL vendor string: VMware, Inc.
+OpenGL renderer string: SVGA3D...
+```
+
+---
+
+# 2. Create the permanent Runit root service
+
+This is the part that fixes the root/system VMware daemon permanently.
+
+First stop any old/manual VMware Tools process:
+
+```bash
+sudo service open-vm-tools stop 2>/dev/null || true
+sudo pkill -x vmtoolsd 2>/dev/null || true
+sleep 2
+```
+
+Create the Runit service:
+
+```bash
+sudo mkdir -p /etc/sv/vmtoolsd
+
+sudo tee /etc/sv/vmtoolsd/run >/dev/null <<'EOF'
+#!/bin/sh
+exec 2>&1
+exec /usr/bin/vmtoolsd
+EOF
+
+sudo chmod 755 /etc/sv/vmtoolsd/run
+```
+
+Verify the file is clean:
+
+```bash
+head -n 5 /etc/sv/vmtoolsd/run
+```
+
+Expected:
+
+```text
+#!/bin/sh
+exec 2>&1
+exec /usr/bin/vmtoolsd
+```
+
+No blank line should appear before `#!/bin/sh`.
+
+---
+
+# 3. Enable the Runit service
+
+Check what Runit is watching:
+
+```bash
+ps -eo pid,ppid,cmd | grep -E 'runsvdir|runsv ' | grep -v grep
+readlink -f /etc/service
+```
+
+On antiX Runit, you should usually see something like:
+
+```text
+runsvdir -P /etc/service
+/etc/runit/runsvdir/default
+```
+
+Now enable the VMware Tools service:
+
+```bash
+sudo ln -s /etc/sv/vmtoolsd /etc/service/vmtoolsd 2>/dev/null || true
+sleep 3
+```
+
+Check:
+
+```bash
+sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E 'vmtoolsd|vmware-user' | grep -v grep
+```
+
+Correct result should include:
+
+```text
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+```
+
+Important: `runsv vmtoolsd` is not a duplicate problem. It is the Runit supervisor. `/usr/bin/vmtoolsd` is the actual VMware Tools daemon.
+
+---
+
+# 4. Start the user clipboard/display process now
+
+The root daemon is not enough for clipboard/autofit. You also need the user-session process.
+
+Run this as your normal user, **not sudo**:
+
+```bash
+if ! pgrep -xu "$USER" -f 'vmtoolsd.*vmusr|vmware-user' >/dev/null; then
+    nohup /usr/bin/vmtoolsd -n vmusr >/tmp/vmtoolsd-vmusr.log 2>&1 &
+fi
+
+sleep 2
+
+ps -eo user,pid,cmd | grep -E 'vmtoolsd|vmware-user' | grep -v grep
+```
+
+Correct live state:
+
+```text
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+atiq      ... /usr/bin/vmtoolsd -n vmusr
+```
+
+For another username, replace nothing. `$USER` handles it automatically.
+
+---
+
+# 5. Make the user process permanent in IceWM
+
+Now make `vmtoolsd -n vmusr` start automatically every time you log into IceWM.
+
+Run:
+
+```bash
+mkdir -p ~/.icewm
+touch ~/.icewm/startup
+cp -a ~/.icewm/startup ~/.icewm/startup.bak.$(date +%F-%H%M%S)
+```
+
+Append the VMware user process block:
+
+```bash
+grep -q 'VMware user session tools' ~/.icewm/startup || cat >> ~/.icewm/startup <<'EOF'
+
+# VMware user session tools: clipboard, drag/drop, auto-fit display
+if ! pgrep -xu "$USER" -f 'vmtoolsd.*vmusr|vmware-user' >/dev/null; then
+    nohup /usr/bin/vmtoolsd -n vmusr >/tmp/vmtoolsd-vmusr.log 2>&1 &
+fi
+EOF
+
+chmod +x ~/.icewm/startup
+```
+
+Log out of IceWM and log back in.
+
+Then check:
+
+```bash
+ps -eo user,pid,cmd | grep -E 'vmtoolsd|vmware-user' | grep -v grep
+```
+
+Expected:
+
+```text
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr
+```
+
+---
+
+# 6. Reboot test
+
+Now reboot:
+
+```bash
+sudo reboot
+```
+
+After reboot, log into IceWM and run:
+
+```bash
+sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E 'vmtoolsd|vmware-user' | grep -v grep
+```
+
+Correct final result:
+
+```text
+run: /etc/service/vmtoolsd: ...
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr
+```
+
+This means the setup is persistent.
+
+---
+
+# 7. Test copy/paste correctly
+
+Use plain text first.
+
+Test Windows → antiX:
+
+```text
+Open Windows Notepad
+Type: test from windows
+Copy it
+Paste into antiX text editor
+```
+
+Test antiX → Windows:
+
+```text
+Open antiX text editor
+Type: test from antix
+Copy it
+Paste into Windows Notepad
+```
+
+Do not test first with files, images, huge text, or formatted content. VMware’s documentation notes size/type restrictions for copy/paste and drag/drop. 
+
+---
+
+# 8. What commands to trust after this
+
+Use these:
+
+```bash
+sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E 'vmtoolsd|vmware-user' | grep -v grep
+```
+
+Do **not** use this as your main truth anymore:
+
+```bash
+sudo service open-vm-tools status
+```
+
+Why? Because that checks the old SysV service method. You are now managing root `vmtoolsd` with Runit.
+
+---
+
+# 9. Correct final architecture
+
+Your final setup should look like this:
+
+```text
+VMware Workstation Guest Isolation enabled
+        ↓
+antiX root Runit service
+        ↓
+root /usr/bin/vmtoolsd
+        ↓
+IceWM user startup
+        ↓
+youruser /usr/bin/vmtoolsd -n vmusr
+        ↓
+copy/paste + autofit + guest integration works
+```
+
+The root daemon gives system-level VMware Tools support. The user `vmusr` process gives desktop-session integration like clipboard and display behavior.
+
+---
+
+# 10. Fast repair checklist
+
+If copy/paste breaks later, run:
+
+```bash
+sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E 'vmtoolsd|vmware-user' | grep -v grep
+```
+
+If root daemon is missing:
+
+```bash
+sudo sv up /etc/service/vmtoolsd
+```
+
+If user process is missing:
+
+```bash
+nohup /usr/bin/vmtoolsd -n vmusr >/tmp/vmtoolsd-vmusr.log 2>&1 &
+```
+
+If both are running but copy/paste still fails, check VMware GUI:
+
+```text
+VM > Settings > Options > Guest Isolation
+Enable copy and paste
+Enable drag and drop
+```
+
+Final target:
+
+```text
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr
+```
+
+Once you see that after reboot, the setup is complete.

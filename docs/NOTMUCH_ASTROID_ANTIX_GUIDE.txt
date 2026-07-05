@@ -1,0 +1,229 @@
+# notmuch + Astroid Search Layer for antiX Maildir++
+
+Validated on 2026-07-05 for antiX Linux runit with zzzFM/IceWM.
+
+The reliable stack is:
+
+- notmuch for fast search.
+- The read-only localhost browser viewer for search/view.
+- Evolution Flatpak for normal account-based reply/send.
+- Astroid installed and configured, but experimental on this VM because message bodies stayed blank.
+
+Data safety overrides speed. The 59G archive is intentionally not indexed yet because a later audit showed count drift: `/mail/Mailstore/evolution/local-maildir` showed 48,564 `cur` files while the earlier verified restore ledger said 48,720.
+
+## Validated layout
+
+- notmuch config: `~/.config/notmuch/default/config`
+- notmuch database: `/mail/SearchIndex/notmuch/default`
+- notmuch mail root: `/mail/Mailstore`
+- Pilot scope: `/mail/Mailstore/mbsync/provider-live` plus `/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704`
+- Pilot count: 444 unique messages, 846 files
+- Safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`
+- Backups: `/mail/Backups/notmuch`
+- Browser viewer: `http://127.0.0.1:8765/`
+
+## Operating rules
+
+1. Never delete or rebuild Maildir data to fix notmuch.
+2. The notmuch database is disposable; the mail files are not.
+3. Pause mbsync before full reindex work, then resume it.
+4. Back up tags before reindex or scope changes.
+5. Keep `maildir.synchronize_flags=false`.
+6. Do not use `xdg-open` on raw Maildir files for Evolution. Validation showed Evolution opens the wrong Berkeley mbox import wizard.
+7. Use Evolution only from its configured Maildir accounts for reply, forward, edit, and send.
+
+## 1. Read-only status audit
+
+```sh
+CONFIG="$HOME/.config/notmuch/default/config"
+echo "== notmuch version and config =="
+notmuch --version
+notmuch --config="$CONFIG" config get database.path
+notmuch --config="$CONFIG" config get database.mail_root
+notmuch --config="$CONFIG" config get maildir.synchronize_flags
+notmuch --config="$CONFIG" config get index.decrypt
+
+echo
+echo "== pilot counts =="
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+
+echo
+echo "== pilot tmp folders =="
+for root in \
+  /mail/Mailstore/mbsync/provider-live \
+  /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+do
+  if [ -d "$root" ]; then
+    tmp_count="$(find "$root" -type d -name tmp -exec sh -c 'for d do find "$d" -mindepth 1 -type f; done' sh {} + | wc -l)"
+    echo "tmp_count $root = $tmp_count"
+  fi
+done
+
+echo
+echo "== mbsync loop status =="
+if [ -x "$HOME/.local/bin/mbsync-provider-live-control" ]; then
+  "$HOME/.local/bin/mbsync-provider-live-control" status || true
+fi
+```
+
+Expected pilot count is 444 messages and 846 files.
+
+## 2. Start the validated browser viewer
+
+```sh
+mkdir -p "$HOME/codex-runs"
+pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+nohup "$HOME/.local/bin/notmuch-browser-pilot" --port 8765 > "$HOME/codex-runs/notmuch-browser-pilot.log" 2>&1 &
+echo "browser_pid=$!"
+echo "browser_url=http://127.0.0.1:8765/"
+xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true
+```
+
+Search examples in the browser:
+
+- `tag:inbox`
+- `from:tagindustries.com.sg`
+- `date:2026..2026 and tag:attachment`
+- `id:0c579c18-0bcf-44b8-b571-3359f690c3db@tagindustries.com.sg`
+
+The viewer is read-only. It renders message bodies in the browser, lists attachments, and blocks remote/script execution. Use Evolution for reply/send.
+
+## 3. CLI search examples
+
+```sh
+CONFIG="$HOME/.config/notmuch/default/config"
+
+echo "== inbox count =="
+notmuch --config="$CONFIG" count 'tag:inbox'
+
+echo
+echo "== exact Message-ID proof =="
+MID='0c579c18-0bcf-44b8-b571-3359f690c3db@tagindustries.com.sg'
+notmuch --config="$CONFIG" count "id:$MID"
+notmuch --config="$CONFIG" count --output=files "id:$MID"
+notmuch --config="$CONFIG" search "id:$MID"
+notmuch --config="$CONFIG" search --output=files "id:$MID"
+
+echo
+echo "== sender/domain/date examples =="
+notmuch --config="$CONFIG" search --limit=10 'from:tagindustries.com.sg'
+notmuch --config="$CONFIG" search --limit=10 'date:2026..2026 and tag:attachment'
+```
+
+Duplicate Message-ID values are expected in preserved archives. One `id:` query can legitimately match multiple files.
+
+## 4. Back up notmuch tags
+
+```sh
+CONFIG="$HOME/.config/notmuch/default/config"
+BACKUP_DIR="/mail/Backups/notmuch"
+mkdir -p "$BACKUP_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="$BACKUP_DIR/notmuch-tags-$STAMP.batch-tag"
+
+notmuch --config="$CONFIG" dump --format=batch-tag > "$BACKUP"
+sha256sum "$BACKUP" > "$BACKUP.sha256"
+ls -lh "$BACKUP" "$BACKUP.sha256"
+echo "backup_file=$BACKUP"
+```
+
+Validated backup example:
+
+`/mail/Backups/notmuch/notmuch-tags-pilot-20260705-083433.batch-tag`
+
+## 5. Restore notmuch tags
+
+Use only with a known-good `.batch-tag` file.
+
+```sh
+CONFIG="$HOME/.config/notmuch/default/config"
+
+echo "Set BACKUP to the exact .batch-tag file you want to restore."
+BACKUP="/mail/Backups/notmuch/notmuch-tags-pilot-20260705-083433.batch-tag"
+
+test -f "$BACKUP"
+notmuch --config="$CONFIG" restore --format=batch-tag < "$BACKUP"
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+```
+
+The validation proof added a temporary tag, restored the backup, and confirmed the temporary tag returned from 1 to 0 while the indexed file paths stayed unchanged.
+
+## 6. Pilot-safe reindex
+
+This validated helper moves the old database to `/mail/Backups/notmuch/reindex-db`, rebuilds only `/mail/SearchIndex/notmuch/default`, restores tags, recreates Astroid compatibility symlinks, and verifies counts. It must not touch `/mail/Mailstore`.
+
+```sh
+mkdir -p "$HOME/codex-runs"
+"$HOME/.local/bin/notmuch-reindex-pilot" 2>&1 | tee "$HOME/codex-runs/notmuch-reindex-$(date +%Y%m%d-%H%M%S).log"
+```
+
+Validated reindex result:
+
+- Old DB moved to `/mail/Backups/notmuch/reindex-db/default-20260705-084026`
+- Tags restored from `/mail/Backups/notmuch/notmuch-tags-before-reindex-20260705-084026.batch-tag`
+- Count stayed 444 messages and 846 files
+- Pilot Maildir file list stayed unchanged
+- `tmp` folders stayed empty
+- mbsync resumed
+- Browser viewer relaunched
+
+## 7. Astroid experimental launch
+
+Astroid is installed and configured, but message bodies stayed blank on this antiX/IceWM/VMware setup. Use it only as experimental search/list UI.
+
+```sh
+mkdir -p "$HOME/codex-runs"
+echo "Astroid is experimental on this VM. Use browser viewer if body pane is blank."
+if [ -x "$HOME/.local/bin/astroid-notmuch-pilot" ]; then
+  "$HOME/.local/bin/astroid-notmuch-pilot" 2>&1 | tee "$HOME/codex-runs/astroid-pilot-$(date +%Y%m%d-%H%M%S).log"
+else
+  astroid 2>&1 | tee "$HOME/codex-runs/astroid-pilot-$(date +%Y%m%d-%H%M%S).log"
+fi
+```
+
+Known Astroid limitations from validation:
+
+- Astroid 0.16 listed/search mail but blanked body panes.
+- It needed symlink shims under `/mail/SearchIndex/notmuch/default` because it resolved paths under the database directory instead of honoring notmuch `database.mail_root`.
+- It is not primary until the body rendering issue is fixed or a later Astroid/WebKitGTK stack is validated.
+
+## 8. Full archive expansion preflight only
+
+Do not run archive expansion yet. This command only shows why it is deferred.
+
+```sh
+echo "Do not expand the 59G archive yet unless the count drift is accepted."
+echo "Earlier verified restore: 48,720 cur."
+echo "Later notmuch preflight saw: 48,564 cur."
+
+echo
+echo "== current local-maildir count =="
+find /mail/Mailstore/evolution/local-maildir -type f -path '*/cur/*' | wc -l
+
+echo
+echo "== current notmuch ignore rules =="
+notmuch --config="$HOME/.config/notmuch/default/config" config get new.ignore
+
+echo
+echo "If expansion is later approved, back up tags first and run only the validated expansion helper after a fresh read-only count audit."
+```
+
+## Recovery summary
+
+1. If search breaks, run the read-only status audit first.
+2. If only tags are wrong, restore from the latest known-good `/mail/Backups/notmuch/*.batch-tag`.
+3. If the index is corrupt, run `~/.local/bin/notmuch-reindex-pilot`.
+4. If Maildir counts change or `tmp` files appear unexpectedly, stop and investigate before indexing more mail.
+
+## Final recommendation
+
+Keep using this setup as:
+
+- notmuch: fast, accurate pilot search backend.
+- Browser viewer: validated read-only GUI for finding and reading exact messages.
+- Evolution Flatpak: reply, forward, edit, and send from configured Maildir accounts.
+- Astroid: installed but experimental on this VM.
+
+Do not expand to the 59G archive until the count drift is reviewed and accepted.

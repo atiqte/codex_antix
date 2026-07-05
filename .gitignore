@@ -45,7 +45,6 @@ temp/
 *.bak
 
 # Local reference material
-existing_DIY-Guide/
 codex-input/
 
 # Local secrets and credentials

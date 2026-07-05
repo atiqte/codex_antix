@@ -1,11 +1,11 @@
 antiX VM XFS Maildir Data Disk Setup Guide
 ==========================================
-Correct XFS formatting and mounting procedure for a second VMware VMDK dedicated to  Maildir, Logseq, search indexes, and backups.
+Correct XFS formatting and mounting procedure for a second VMware VMDK dedicated to Betterbird Maildir, Logseq, search indexes, and backups.
 Generated: 2026-06-14 16:32 UTC
 
 Purpose and target layout
 -------------------------
-This guide documents the complete procedure for preparing a second VMware virtual disk as an XFS data partition mounted at /mail inside an antiX Linux Runit VM. The intended use is email with Maildir/file-per-message storage, Logseq graph storage, search indexes, and backup staging.
+This guide documents the complete procedure for preparing a second VMware virtual disk as an XFS data partition mounted at /mail inside an antiX Linux Runit VM. The intended use is Betterbird with Maildir/file-per-message storage, Logseq graph storage, search indexes, and backup staging.
 
 Target VM folder on Windows host:
 
@@ -343,7 +343,9 @@ After the reboot test passes, create the directory layout.
 
 Recommended cleaner layout:
 
-mkdir -p /mail
+mkdir -p /mail/Betterbird/Profile/main
+mkdir -p /mail/Betterbird/Mail
+mkdir -p /mail/Betterbird/Indexes
 mkdir -p /mail/Logseq/graphs
 mkdir -p /mail/Logseq/backups
 mkdir -p /mail/SearchIndex/recoll
@@ -352,20 +354,23 @@ mkdir -p /mail/Backups
 
 Alternative minimal layout requested by user:
 
-mkdir -p /mail
-chmod -R 700 /mail
+mkdir -p /mail/Betterbird_Profile
+chmod -R 700 /mail/Betterbird_Profile
 
+Professional recommendation:
+
+Use /mail/Betterbird/Profile/main instead of /mail/Betterbird_Profile. It scales better because it separates profile, account mail, and indexes.
 
 Set private permissions:
 
-chmod -R 700 /mail
+chmod -R 700 /mail/Betterbird
 chmod -R 700 /mail/Logseq
 chmod -R 700 /mail/SearchIndex
 chmod -R 700 /mail/Backups
 
 If you choose the minimal directory:
 
-chmod -R 700 /mail
+chmod -R 700 /mail/Betterbird_Profile
 
 Step 17 — Install tree and verify layout
 ----------------------------------------
@@ -377,7 +382,21 @@ Show the layout:
 
 tree -a -L 3 /mail
 
+Expected professional layout:
 
+/mail
+├── Backups
+├── Betterbird
+│   ├── Indexes
+│   ├── Mail
+│   └── Profile
+│       └── main
+├── Logseq
+│   ├── backups
+│   └── graphs
+└── SearchIndex
+    ├── notmuch
+    └── recoll
 
 Step 18 — Install search, backup, and SMB tools
 -----------------------------------------------
@@ -406,9 +425,49 @@ Then install BorgBackup and Restic later:
 
 sudo nala install borgbackup restic
 
+Step 19 — Betterbird profile rule
+---------------------------------
+After /mail is mounted and tested, create the Betterbird profile on the XFS disk.
 
+Preferred profile path:
 
-Step 19 — Final verification checklist
+/mail/Betterbird/Profile/main
+
+Launch Betterbird profile manager using the command available on your system:
+
+betterbird -ProfileManager
+
+or:
+
+betterbird-bin -ProfileManager
+
+or:
+
+/opt/betterbird/betterbird -ProfileManager
+
+Create profile name:
+
+main
+
+Choose folder manually:
+
+/mail/Betterbird/Profile/main
+
+Before adding accounts, enable Maildir/file-per-message storage. In Betterbird Config Editor, set:
+
+mail.serverDefaultStoreContractID
+
+Value:
+
+@mozilla.org/msgstore/maildirstore;1
+
+Then add mail accounts. For each account, keep local storage under:
+
+/mail/Betterbird/Mail/<account-name>
+
+Do not store Betterbird live profile or Maildir on SMB, VMware Shared Folders, OneDrive, Google Drive, or a synced folder.
+
+Step 20 — Final verification checklist
 --------------------------------------
 Run this final diagnostic group:
 
@@ -448,6 +507,9 @@ Action: Confirm /mail is mounted and owned by your user. Run findmnt /mail and l
 Problem: fstrim does not work.
 Action: If cat /sys/block/sdb/queue/discard_max_bytes returns 0, TRIM is not exposed by VMware for this disk path. Ignore it. Do not use the discard mount option.
 
+Problem: Betterbird creates profile in /home.
+Action: Reopen Profile Manager and create/select the profile path manually under /mail/Betterbird/Profile/main.
+
 Problem: Millions of emails are slow.
 Action: Do not place all messages in one folder. Use year/month archive folders, keep Betterbird closed during bulk copy/backups, and use Recoll or Notmuch as external search support.
 
@@ -462,6 +524,8 @@ Data disk: /dev/sdb1, XFS, mounted at /mail
 Mount options: rw,noatime,nodiratime,nodiscard,inode64 0 0
 Owner: atiq:atiq
 Permissions: 700
+Betterbird profile: /mail/Betterbird/Profile/main
+Betterbird mail: /mail/Betterbird/Mail/<account-name>
 Logseq graphs: /mail/Logseq/graphs
 Search indexes: /mail/SearchIndex
 Backups: external target preferred; /mail/Backups only as staging

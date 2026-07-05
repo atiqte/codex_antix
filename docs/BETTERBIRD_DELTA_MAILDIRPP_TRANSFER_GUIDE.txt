@@ -189,6 +189,45 @@ python3 "$TRANSPORT" verify-archive --manifest "$EXPORT/manifest.json"
 du -sh "$EXPORT"
 ```
 
+Batch 7A: new aggregate Evolution visibility check
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```bash
+echo "=== Fedora Batch 7A: new aggregate Evolution visibility check ==="
+date -Is
+
+TARGET="$HOME/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827"
+
+test -d "$TARGET" || { echo "ERROR: target missing: $TARGET"; exit 1; }
+
+echo "target=$TARGET"
+echo "host_cur_count=$(find "$TARGET" -path '*/cur/*' -type f | wc -l)"
+echo "host_new_count=$(find "$TARGET" -path '*/new/*' -type f | wc -l)"
+echo "host_tmp_count=$(find "$TARGET" -path '*/tmp/*' -type f | wc -l)"
+du -sh "$TARGET"
+
+python3 - <<'PY'
+from pathlib import Path
+target = Path.home() / "Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827"
+for folder in sorted(p for p in target.rglob("cur") if p.is_dir()):
+    count = sum(1 for f in folder.iterdir() if f.is_file())
+    if count:
+        print(f"host_folder_count\t{count}\t{folder.parent.relative_to(target)}")
+PY
+
+flatpak info org.gnome.Evolution >/dev/null || { echo "ERROR: Evolution Flatpak not found"; exit 1; }
+
+flatpak run --command=sh org.gnome.Evolution -lc '
+TARGET="$HOME/Evolution-Mailstore/betterbird-post-main-archive-maildirpp-20260704-205827"
+test -d "$TARGET" || { echo "ERROR: Flatpak cannot see target: $TARGET"; exit 1; }
+echo "flatpak_cur_count=$(find "$TARGET" -path "*/cur/*" -type f | wc -l)"
+echo "flatpak_new_count=$(find "$TARGET" -path "*/new/*" -type f | wc -l)"
+echo "flatpak_tmp_count=$(find "$TARGET" -path "*/tmp/*" -type f | wc -l)"
+'
+
+echo "status=batch7a_visibility_check_complete"
+```
+
+
 Batch 7: Optional Google Drive ZIP Package
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

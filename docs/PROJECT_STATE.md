@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus planning/setup repository
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, and a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a pilot notmuch search layer with a validated read-only browser viewer fallback
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -36,6 +36,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
+- `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the validated notmuch pilot search layer, read-only browser viewer, Astroid limitations, backup/restore, and pilot-safe reindexing.
+- `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same validated notmuch/Astroid/browser-viewer guide.
 - `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.
 - `src/` utility folder for approved Python standard-library mail migration tools.
 - `.gitignore` with language-neutral local, cache, and generated-file exclusions.
@@ -98,6 +100,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`
   - `docs/MBSYNC_ANTIX_GUIDE.html`
   - `docs/MBSYNC_ANTIX_GUIDE.txt`
+  - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html`
+  - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.txt`
 - `.gitignore`
 - `.gitattributes`
 - `src/betterbird_profile_transport.py`
@@ -182,7 +186,13 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `scripts/mbsync_provider_inbox_setup.sh` now includes production helper commands for the validated setup: `production-layout`, `write-production-config`, `production-list`, `production-sync`, `production-status`, `write-autosync`, `install-autosync-startup`, `autosync-status`, `autosync-preflight`, `refresh-autosync`, `autosync-stale-lock-proof`, `autosync-validate`, and `autosync-log-rotation-proof`.
 - `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt` now include a clear `Start Here: Fresh Setup` sequence before the production reference material. Fresh antiX runs start with the INBOX validation helper sequence, then production `provider-live`, then Evolution GUI checks, then auto-sync validation. The production mbsync config block is explicitly labeled reference-only so it is not mistaken for a terminal command.
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
-- notmuch is installed on antiX but intentionally unconfigured; Astroid is not installed. notmuch/Astroid remain later sidecar search tests after the live Maildir layout is stable and the Betterbird archive migration is complete or clearly separated.
+- notmuch 0.39 is now configured on antiX as a sidecar pilot index. The config is at `~/.config/notmuch/default/config`, the disposable database is `/mail/SearchIndex/notmuch/default`, the mail root is `/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`.
+- The notmuch pilot currently indexes only `/mail/Mailstore/mbsync/provider-live` and the restored Betterbird delta scope, producing 444 unique messages and 846 files. The 59G archive remains ignored because a later audit showed `/mail/Mailstore/evolution/local-maildir` at 48,564 `cur` instead of the earlier verified 48,720, and the delta count also drifted from 248 to 247.
+- Astroid `0.16+20240629-1` is installed from Debian trixie APT and can list/search the pilot notmuch database, but it is not trusted as the primary viewer on this antiX/IceWM/VMware setup. It required compatibility symlinks because it resolved message paths under the notmuch database directory instead of honoring `database.mail_root`, and its message body pane remained blank despite successful CLI `notmuch show` body output and WebKitGTK workarounds.
+- Evolution Flatpak must not be used as a raw notmuch file opener. `xdg-open` on a selected Maildir file opened Evolution's wrong `Import Data - Berkeley Mailbox (mbox)` flow instead of a normal message viewer or reply/forward workflow. Evolution remains the normal read/reply/send mail client for its configured Maildir accounts.
+- The validated notmuch GUI path is the read-only localhost browser viewer at `~/.local/bin/notmuch-browser-pilot`, launched on `http://127.0.0.1:8765/`. Owner validation confirmed `tag:inbox`, thread click/open, visible message body rendering, and exact `id:<message-id>` search. This viewer is read/search/view only; reply/send stays in Evolution.
+- notmuch backup/restore/reindex helper validation has passed for the pilot scope. Corrected Chunk 8B-FIX1 passed shell/Python syntax checks, tag backup/restore, exact `id:` search, indexed path stability, and zero `tmp` changes. Chunk 8C then moved the old database to `/mail/Backups/notmuch/reindex-db/default-20260705-084026`, rebuilt only `/mail/SearchIndex/notmuch/default`, restored tags from `/mail/Backups/notmuch/notmuch-tags-before-reindex-20260705-084026.batch-tag`, recreated Astroid compatibility symlinks, preserved 444 messages and 846 files, kept the pilot Maildir file list unchanged, kept `tmp` folders empty, resumed mbsync, and relaunched the browser viewer.
+- `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt` now document the validated pilot path, including status checks, browser viewer launch, CLI search examples, tag backup/restore, pilot-safe reindexing, Astroid experimental use, and the deferred full-archive expansion preflight.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
@@ -197,19 +207,15 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 ## Next Actions
 
 1. Review the setup and memory files.
-2. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-3. Keep the verified staging package at `/mail/import-staging/maildirpp-archive-export-20260701-215204` until antiX Evolution GUI validation is complete.
-4. Add `/mail/Mailstore/evolution/local-maildir` to Evolution using `Maildir-format mail directories`.
-5. Validate the antiX Evolution archive account, especially `mail_tagindustries_com_sg.Inbox`, message counts, opening, HTML rendering, and absence of error popups.
-6. Keep a note that the restored archive is a local read/archive account and must not be merged into `/mail/Mailstore/mbsync/provider-live`.
-7. Keep the converted archive separate from `/mail/Mailstore/mbsync/provider-live`.
-8. Retain the main 38G split archive export until antiX Evolution validation is complete.
-9. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
-10. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup are explicitly planned.
-11. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-12. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-13. Consider later `PullFlags`, broader IMAP two-way behavior, or notmuch/Astroid only as separate controlled changes.
-14. Decide broader project type and future packaging only if needed.
+2. Keep the notmuch pilot scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
+3. Use the read-only browser viewer as the validated notmuch GUI for search/view and keep Evolution Flatpak as the reply/send client.
+4. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+5. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup are explicitly planned.
+6. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+7. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+8. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+9. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
+10. Decide broader project type and future packaging only if needed.
 
 ## Cross-Machine Restore Instructions
 

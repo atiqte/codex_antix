@@ -1,0 +1,194 @@
+antiX Runit zzzFM-IceWM WezTerm Manual Setup Guide
+====================================================
+
+Purpose
+-------
+Install and configure WezTerm on antiX Linux Runit edition with zzzFM-IceWM under VMware, while keeping ROXterm as the system default x-terminal-emulator for maximum stability and minimum system change.
+
+Final intended state
+--------------------
+WezTerm installed: yes
+WezTerm config: ~/.config/wezterm/wezterm.lua
+System default terminal: /usr/bin/roxterm
+Manual WezTerm command: wezterm
+No WezTerm wrapper required
+
+Why keep ROXterm as x-terminal-emulator?
+----------------------------------------
+antiX, IceWM, zzzFM, and older menu entries may call x-terminal-emulator using traditional arguments such as:
+
+  x-terminal-emulator -e command
+
+The package-provided /usr/bin/open-wezterm-here may open WezTerm normally, but it may fail as a full x-terminal-emulator replacement. Therefore the conservative professional setup is to keep ROXterm as x-terminal-emulator and launch WezTerm manually with wezterm or wezterm start.
+
+1. Install WezTerm
+------------------
+curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
+sudo chmod 644 /usr/share/keyrings/wezterm-fury.gpg
+sudo apt update
+sudo apt install nala
+sudo nala install wezterm
+
+2. Verify installation
+----------------------
+command -v wezterm
+wezterm --version
+apt policy wezterm
+
+3. Keep or restore ROXterm as system default terminal
+-----------------------------------------------------
+sudo update-alternatives --set x-terminal-emulator /usr/bin/roxterm
+update-alternatives --query x-terminal-emulator | grep -E 'Status:|Best:|Value:|Alternative:|Priority:'
+readlink -f /etc/alternatives/x-terminal-emulator
+
+4. Test ROXterm default behavior
+--------------------------------
+x-terminal-emulator
+x-terminal-emulator -e sh -lc 'echo "ROXterm default terminal test OK"; echo "Press Enter to close"; read dummy' 
+
+5. Launch WezTerm manually
+--------------------------
+wezterm
+wezterm start
+wezterm start --cwd "$HOME"
+
+6. Create the WezTerm config directory and backup old config
+------------------------------------------------------------
+mkdir -p ~/.config/wezterm
+[ -f ~/.config/wezterm/wezterm.lua ] && cp -a ~/.config/wezterm/wezterm.lua ~/.config/wezterm/wezterm.lua.bak.$(date +%F-%H%M%S) || true
+
+7. Write the WezTerm configuration file
+---------------------------------------
+cat > ~/.config/wezterm/wezterm.lua <<'EOF'
+local wezterm = require 'wezterm'
+local config = wezterm.config_builder()
+
+-- antiX zzzFM-IceWM under VMware should use X11, not Wayland.
+config.enable_wayland = false
+
+-- VMware-friendly rendering.
+-- If you see black window, flicker, crashes, or rendering glitches, change "OpenGL" to "Software".
+config.front_end = "OpenGL"
+
+-- Explicit theme. This makes WezTerm independent from desktop light/dark theme detection.
+-- If this scheme name is not recognized, use: "Builtin Solarized Dark"
+config.color_scheme = "Night Owl (Gogh)"
+
+-- Font.
+config.font = wezterm.font "JetBrains Mono"
+config.font_size = 11
+
+-- Cursor: I-beam/bar cursor with blinking.
+config.default_cursor_style = "BlinkingBar"
+config.cursor_blink_rate = 700
+config.cursor_thickness = "2px"
+
+-- Keep animation modest for VMware/low-power laptop efficiency.
+config.animation_fps = 10
+
+-- Visible scrollbar.
+config.enable_scroll_bar = true
+config.colors = {
+  scrollbar_thumb = "#5c6370",
+}
+
+-- Use login bash shell.
+config.default_prog = { "/bin/bash", "-l" }
+
+-- Window size.
+config.initial_cols = 112
+config.initial_rows = 30
+
+-- Scrollback.
+config.scrollback_lines = 10000
+
+-- Tabs.
+config.enable_tab_bar = true
+config.hide_tab_bar_if_only_one_tab = false
+config.mouse_wheel_scrolls_tabs = false
+
+-- UX behavior.
+config.window_close_confirmation = "NeverPrompt"
+config.audible_bell = "Disabled"
+
+-- Updates are handled by apt/nala, not by WezTerm itself.
+config.check_for_updates = false
+
+return config
+EOF
+
+8. Test WezTerm
+---------------
+wezterm
+wezterm start --cwd "$HOME"
+
+9. Check startup output for problems
+------------------------------------
+wezterm 2>&1 | tee /tmp/wezterm-startup.log
+grep -iE 'error|unknown|scheme|font|panic|failed' /tmp/wezterm-startup.log
+
+10. Fallback if OpenGL has rendering problems in VMware
+-------------------------------------------------------
+sed -i 's/config.front_end = "OpenGL"/config.front_end = "Software"/' ~/.config/wezterm/wezterm.lua
+wezterm
+
+11. Fallback if Night Owl scheme is not recognized
+--------------------------------------------------
+sed -i 's/config.color_scheme = "Night Owl (Gogh)"/config.color_scheme = "Builtin Solarized Dark"/' ~/.config/wezterm/wezterm.lua
+wezterm
+
+12. Update WezTerm later
+------------------------
+sudo nala update
+apt policy wezterm
+sudo nala upgrade
+wezterm --version
+
+13. Rollback only WezTerm config
+--------------------------------
+ls -1 ~/.config/wezterm/wezterm.lua.bak.* 2>/dev/null
+cp -a ~/.config/wezterm/wezterm.lua.bak.YYYY-MM-DD-HHMMSS ~/.config/wezterm/wezterm.lua
+
+14. Remove WezTerm package but keep repository
+----------------------------------------------
+sudo nala remove wezterm
+
+15. Remove WezTerm package and repository
+-----------------------------------------
+sudo nala remove wezterm
+sudo rm -f /etc/apt/sources.list.d/wezterm.list
+sudo rm -f /usr/share/keyrings/wezterm-fury.gpg
+sudo apt update
+
+16. Undo previous custom wrapper/default change
+-----------------------------------------------
+sudo update-alternatives --set x-terminal-emulator /usr/bin/roxterm
+sudo update-alternatives --remove x-terminal-emulator /usr/local/bin/wezterm-x-terminal-emulator 2>/dev/null || true
+sudo rm -f /usr/local/bin/wezterm-x-terminal-emulator
+readlink -f /etc/alternatives/x-terminal-emulator
+
+Final verification checklist
+----------------------------
+command -v wezterm
+wezterm --version
+readlink -f /etc/alternatives/x-terminal-emulator
+test "$(readlink -f /etc/alternatives/x-terminal-emulator)" = "/usr/bin/roxterm" && echo "OK: ROXterm is still default"
+wezterm
+
+Sources
+-------
+WezTerm official Linux installation documentation:
+https://wezterm.org/install/linux.html
+
+WezTerm official configuration file documentation:
+https://wezterm.org/config/files.html
+
+WezTerm official appearance/color scheme documentation:
+https://wezterm.org/config/appearance.html
+
+WezTerm official enable_wayland option documentation:
+https://wezterm.org/config/lua/config/enable_wayland.html
+
+WezTerm official cursor blink documentation:
+https://wezterm.org/config/lua/config/cursor_blink_rate.html

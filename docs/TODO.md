@@ -4,6 +4,8 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
+- [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
+- [ ] Keep Astroid installed but non-primary until the antiX/IceWM/VMware WebKitGTK blank-body issue is fixed or superseded by another tested GUI.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
 - [ ] Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
@@ -17,7 +19,6 @@
 
 - [ ] Consider moving the mbsync `PassCmd` from the current chmod `600` password file to GPG after unattended polling remains stable.
 - [ ] Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
-- [ ] Configure notmuch/Astroid only after the Betterbird archive and live Maildir layout are stable.
 - [ ] Define the first implementation milestone.
 - [ ] Choose language, runtime, and tooling only after the project type is explicit.
 - [ ] Add project-specific setup instructions after tooling is selected.
@@ -102,3 +103,10 @@
 - [x] Confirm the missing `Trash: 1` from the old 248-message delta is expected because that Trash email was manually deleted from Betterbird before the new aggregate run.
 - [x] Verify host and Evolution Flatpak sandbox visibility for dynamic aggregate `20260704-205827`.
 - [x] Validate dynamic aggregate `20260704-205827` in Fedora Evolution GUI as a separate `Maildir-format mail directories` account.
+- [x] Install and configure notmuch pilot indexing for `provider-live` plus the small restored delta, with the 59G archive ignored for safety.
+- [x] Install Astroid from Debian trixie APT and configure it against the pilot notmuch database.
+- [x] Reject Evolution raw-file handoff after it opened the wrong Berkeley mbox import workflow instead of a normal message viewer.
+- [x] Validate the read-only localhost notmuch browser viewer for `tag:inbox`, thread opening, body rendering, and exact `id:<message-id>` search.
+- [x] Validate corrected notmuch helper syntax and tag backup/restore without changing indexed Maildir file paths.
+- [x] Validate pilot-safe notmuch reindex by rebuilding only `/mail/SearchIndex/notmuch/default`, restoring tags, preserving 444 messages and 846 files, and keeping Maildir files unchanged.
+- [x] Create final notmuch/Astroid/browser-viewer DIY guide in HTML and plain text after helper and reindex validation passed.

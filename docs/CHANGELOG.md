@@ -4,6 +4,11 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-05
 
+- Added `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, documenting the validated notmuch pilot, read-only browser viewer, Astroid limitations, tag backup/restore, pilot-safe reindexing, and deferred full-archive expansion.
+- Recorded successful pilot-safe notmuch reindex validation: old DB moved to backup, database rebuilt only under `/mail/SearchIndex/notmuch/default`, tags restored, 444 messages and 846 files preserved, Maildir files unchanged, `tmp` empty, mbsync resumed, and browser viewer relaunched.
+- Recorded successful corrected notmuch helper validation: shell/Python syntax checks passed, tag backup/restore worked, exact Message-ID search still worked, indexed file paths stayed unchanged, and pilot Maildir `tmp` folders stayed empty.
+- Recorded the notmuch/Astroid pilot outcome: notmuch indexed 444 unique messages and 846 files safely, Evolution raw-file handoff was rejected, Astroid list/search worked but body rendering stayed blank, and the read-only localhost browser viewer was validated for search, thread opening, body rendering, and exact Message-ID search.
+- Updated project memory, TODO, decisions, and validation ledger to treat the browser viewer as the primary notmuch GUI path, keep Astroid experimental on this VM, and require corrected backup/restore/reindex helper validation before final guide generation or full-archive expansion.
 - Recorded owner-reported Fedora Evolution GUI validation of dynamic aggregate `20260704-205827`: Inbox 242, Sent 5, November2025 2, Trash 0, message open/HTML/attachments OK, and no error popup.
 
 ## 2026-07-04

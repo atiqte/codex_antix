@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VMware Tools DIY Guide for antiX Linux Runit + zzzFM-IceWM</title>
+<style>
+:root{--bg:#0f172a;--text:#111827;--muted:#475569;--border:#cbd5e1;--code-bg:#0b1020;--code-text:#e5e7eb;--accent:#2563eb;--accent-dark:#1d4ed8;--ok:#16a34a}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:linear-gradient(160deg,#e0f2fe 0%,#f8fafc 35%,#eef2ff 100%);line-height:1.55}header{background:var(--bg);color:white;padding:36px 20px}.header-inner{max-width:980px;margin:0 auto}h1{margin:0 0 8px;font-size:clamp(28px,4vw,44px);line-height:1.1}.subtitle{margin:0;color:#cbd5e1;font-size:17px}main{max-width:980px;margin:28px auto 60px;padding:0 20px}.notice{background:#fff7ed;border:1px solid #fed7aa;border-left:6px solid #f97316;padding:16px 18px;border-radius:12px;margin-bottom:22px}.notice strong{color:#9a3412}.toc,section{background:white;border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 25px rgba(15,23,42,.06)}.toc{padding:18px 22px;margin-bottom:22px}.toc h2{margin-top:0;font-size:20px}.toc ol{columns:2;padding-left:24px}.toc a{color:var(--accent);text-decoration:none}section{padding:22px;margin:18px 0}h2{margin-top:0;padding-bottom:10px;border-bottom:1px solid #e2e8f0}p{margin:12px 0}.code-wrap{border-radius:12px;overflow:hidden;border:1px solid #1f2937;margin:14px 0 18px;background:var(--code-bg)}.code-toolbar{display:flex;justify-content:space-between;align-items:center;background:#111827;padding:8px 10px;border-bottom:1px solid #1f2937}.code-label{color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:.04em}.copy-btn{appearance:none;border:0;border-radius:8px;background:var(--accent);color:white;padding:7px 11px;font-weight:650;cursor:pointer}.copy-btn:hover{background:var(--accent-dark)}.copy-btn.copied{background:var(--ok)}pre{margin:0;padding:16px;overflow-x:auto}code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;color:var(--code-text);font-size:14px;white-space:pre}.footer{color:var(--muted);text-align:center;margin-top:28px;font-size:14px}@media(max-width:720px){.toc ol{columns:1}section{padding:18px}pre{padding:13px}}@media print{body{background:white}header{background:white;color:black;padding:20px 0}.subtitle{color:#333}main{margin:0;max-width:none}section,.toc,.notice{box-shadow:none;break-inside:avoid}.copy-btn{display:none}}
+</style>
+</head>
+<body>
+<header><div class="header-inner"><h1>VMware Tools DIY Guide for antiX Linux Runit + zzzFM-IceWM</h1><p class="subtitle">Persistent VMware Tools, copy/paste, and display integration for antiX Linux Runit edition with zzzFM-IceWM.</p></div></header>
+<main>
+<div class="notice"><strong>Critical idea:</strong> you need two layers. Runit starts the root <code>vmtoolsd</code> service. IceWM starts the user <code>vmtoolsd -n vmusr</code> process. Clipboard usually fails when the user process is missing.</div>
+<nav class="toc"><h2>Contents</h2><ol><li><a href="#section-0">0. VMware Workstation settings on Windows host</a></li><li><a href="#section-1">1. Install required packages inside antiX</a></li><li><a href="#section-2">2. Create the permanent Runit root service</a></li><li><a href="#section-3">3. Enable the Runit service</a></li><li><a href="#section-4">4. Start the user clipboard/display process now</a></li><li><a href="#section-5">5. Make the user process permanent in IceWM</a></li><li><a href="#section-6">6. Reboot test</a></li><li><a href="#section-7">7. Test copy/paste correctly</a></li><li><a href="#section-8">8. Commands to trust after this setup</a></li><li><a href="#section-9">9. Correct final architecture</a></li><li><a href="#section-10">10. Fast repair checklist</a></li></ol></nav>
+<section id="section-0"><h2>0. VMware Workstation settings on Windows host</h2><p>Power off the antiX VM first. In VMware Workstation go to: VM &gt; Settings &gt; Options &gt; Guest Isolation. Enable both options below.</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="Enable copy and paste
+Enable drag and drop">Copy text</button></div><pre><code>Enable copy and paste
+Enable drag and drop</code></pre></div><p>Then go to: VM &gt; Settings &gt; Hardware &gt; Display. Recommended values:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="Accelerate 3D graphics: ON
+Graphics memory: 1 GB
+Use host setting for monitors: ON
+Start with 1 monitor">Copy text</button></div><pre><code>Accelerate 3D graphics: ON
+Graphics memory: 1 GB
+Use host setting for monitors: ON
+Start with 1 monitor</code></pre></div><p>Boot antiX and log into IceWM.</p></section><section id="section-1"><h2>1. Install required packages inside antiX</h2><p>Open a terminal in antiX and run:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo apt update
+sudo apt install -y open-vm-tools open-vm-tools-desktop fuse3 xserver-xorg-video-vmware mesa-utils x11-xserver-utils">Copy command</button></div><pre><code>sudo apt update
+sudo apt install -y open-vm-tools open-vm-tools-desktop fuse3 xserver-xorg-video-vmware mesa-utils x11-xserver-utils</code></pre></div><p>Check that VMware Tools is installed:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="vmtoolsd --version">Copy command</button></div><pre><code>vmtoolsd --version</code></pre></div><p>Check graphics driver:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="lsmod | grep vmwgfx
+glxinfo -B">Copy command</button></div><pre><code>lsmod | grep vmwgfx
+glxinfo -B</code></pre></div><p>Good signs:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="vmwgfx appears
+OpenGL vendor string: VMware, Inc.
+OpenGL renderer string: SVGA3D...">Copy text</button></div><pre><code>vmwgfx appears
+OpenGL vendor string: VMware, Inc.
+OpenGL renderer string: SVGA3D...</code></pre></div></section><section id="section-2"><h2>2. Create the permanent Runit root service</h2><p>Stop any old/manual VMware Tools process:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo service open-vm-tools stop 2&gt;/dev/null || true
+sudo pkill -x vmtoolsd 2&gt;/dev/null || true
+sleep 2">Copy command</button></div><pre><code>sudo service open-vm-tools stop 2&gt;/dev/null || true
+sudo pkill -x vmtoolsd 2&gt;/dev/null || true
+sleep 2</code></pre></div><p>Create the Runit service:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo mkdir -p /etc/sv/vmtoolsd
+
+sudo tee /etc/sv/vmtoolsd/run &gt;/dev/null &lt;&lt;&#x27;EOF&#x27;
+#!/bin/sh
+exec 2&gt;&amp;1
+exec /usr/bin/vmtoolsd
+EOF
+
+sudo chmod 755 /etc/sv/vmtoolsd/run">Copy command</button></div><pre><code>sudo mkdir -p /etc/sv/vmtoolsd
+
+sudo tee /etc/sv/vmtoolsd/run &gt;/dev/null &lt;&lt;&#x27;EOF&#x27;
+#!/bin/sh
+exec 2&gt;&amp;1
+exec /usr/bin/vmtoolsd
+EOF
+
+sudo chmod 755 /etc/sv/vmtoolsd/run</code></pre></div><p>Verify the file is clean:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="head -n 5 /etc/sv/vmtoolsd/run">Copy command</button></div><pre><code>head -n 5 /etc/sv/vmtoolsd/run</code></pre></div><p>Expected output:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="#!/bin/sh
+exec 2&gt;&amp;1
+exec /usr/bin/vmtoolsd">Copy text</button></div><pre><code>#!/bin/sh
+exec 2&gt;&amp;1
+exec /usr/bin/vmtoolsd</code></pre></div><p>There must be no blank line above #!/bin/sh.</p></section><section id="section-3"><h2>3. Enable the Runit service</h2><p>Check what Runit is watching:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="ps -eo pid,ppid,cmd | grep -E &#x27;runsvdir|runsv &#x27; | grep -v grep
+readlink -f /etc/service">Copy command</button></div><pre><code>ps -eo pid,ppid,cmd | grep -E &#x27;runsvdir|runsv &#x27; | grep -v grep
+readlink -f /etc/service</code></pre></div><p>On antiX Runit, you should usually see something like:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="runsvdir -P /etc/service
+/etc/runit/runsvdir/default">Copy text</button></div><pre><code>runsvdir -P /etc/service
+/etc/runit/runsvdir/default</code></pre></div><p>Enable the VMware Tools service:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo ln -s /etc/sv/vmtoolsd /etc/service/vmtoolsd 2&gt;/dev/null || true
+sleep 3">Copy command</button></div><pre><code>sudo ln -s /etc/sv/vmtoolsd /etc/service/vmtoolsd 2&gt;/dev/null || true
+sleep 3</code></pre></div><p>Check:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep">Copy command</button></div><pre><code>sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep</code></pre></div><p>Correct result should include:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd">Copy text</button></div><pre><code>root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd</code></pre></div><p>Important: runsv vmtoolsd is the supervisor. /usr/bin/vmtoolsd is the actual VMware Tools daemon. This is not a duplicate problem.</p></section><section id="section-4"><h2>4. Start the user clipboard/display process now</h2><p>The root daemon is not enough for clipboard/autofit. Run this as your normal user, not sudo:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="if ! pgrep -xu &quot;$USER&quot; -f &#x27;vmtoolsd.*vmusr|vmware-user&#x27; &gt;/dev/null; then
+    nohup /usr/bin/vmtoolsd -n vmusr &gt;/tmp/vmtoolsd-vmusr.log 2&gt;&amp;1 &amp;
+fi
+
+sleep 2
+
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep">Copy command</button></div><pre><code>if ! pgrep -xu &quot;$USER&quot; -f &#x27;vmtoolsd.*vmusr|vmware-user&#x27; &gt;/dev/null; then
+    nohup /usr/bin/vmtoolsd -n vmusr &gt;/tmp/vmtoolsd-vmusr.log 2&gt;&amp;1 &amp;
+fi
+
+sleep 2
+
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep</code></pre></div><p>Correct live state:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr">Copy text</button></div><pre><code>root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr</code></pre></div></section><section id="section-5"><h2>5. Make the user process permanent in IceWM</h2><p>Create or prepare the IceWM startup file:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="mkdir -p ~/.icewm
+touch ~/.icewm/startup
+cp -a ~/.icewm/startup ~/.icewm/startup.bak.$(date +%F-%H%M%S)">Copy command</button></div><pre><code>mkdir -p ~/.icewm
+touch ~/.icewm/startup
+cp -a ~/.icewm/startup ~/.icewm/startup.bak.$(date +%F-%H%M%S)</code></pre></div><p>Append the VMware user process block:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="grep -q &#x27;VMware user session tools&#x27; ~/.icewm/startup || cat &gt;&gt; ~/.icewm/startup &lt;&lt;&#x27;EOF&#x27;
+
+# VMware user session tools: clipboard, drag/drop, auto-fit display
+if ! pgrep -xu &quot;$USER&quot; -f &#x27;vmtoolsd.*vmusr|vmware-user&#x27; &gt;/dev/null; then
+    nohup /usr/bin/vmtoolsd -n vmusr &gt;/tmp/vmtoolsd-vmusr.log 2&gt;&amp;1 &amp;
+fi
+EOF
+
+chmod +x ~/.icewm/startup">Copy command</button></div><pre><code>grep -q &#x27;VMware user session tools&#x27; ~/.icewm/startup || cat &gt;&gt; ~/.icewm/startup &lt;&lt;&#x27;EOF&#x27;
+
+# VMware user session tools: clipboard, drag/drop, auto-fit display
+if ! pgrep -xu &quot;$USER&quot; -f &#x27;vmtoolsd.*vmusr|vmware-user&#x27; &gt;/dev/null; then
+    nohup /usr/bin/vmtoolsd -n vmusr &gt;/tmp/vmtoolsd-vmusr.log 2&gt;&amp;1 &amp;
+fi
+EOF
+
+chmod +x ~/.icewm/startup</code></pre></div><p>Log out of IceWM and log back in. Then check:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep">Copy command</button></div><pre><code>ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep</code></pre></div><p>Expected:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr">Copy text</button></div><pre><code>root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr</code></pre></div></section><section id="section-6"><h2>6. Reboot test</h2><p>Reboot:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo reboot">Copy command</button></div><pre><code>sudo reboot</code></pre></div><p>After reboot, log into IceWM and run:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep">Copy command</button></div><pre><code>sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep</code></pre></div><p>Correct final result:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="run: /etc/service/vmtoolsd: ...
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr">Copy text</button></div><pre><code>run: /etc/service/vmtoolsd: ...
+root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr</code></pre></div></section><section id="section-7"><h2>7. Test copy/paste correctly</h2><p>Use plain text first. Test Windows to antiX:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="Open Windows Notepad
+Type: test from windows
+Copy it
+Paste into antiX text editor">Copy text</button></div><pre><code>Open Windows Notepad
+Type: test from windows
+Copy it
+Paste into antiX text editor</code></pre></div><p>Test antiX to Windows:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="Open antiX text editor
+Type: test from antix
+Copy it
+Paste into Windows Notepad">Copy text</button></div><pre><code>Open antiX text editor
+Type: test from antix
+Copy it
+Paste into Windows Notepad</code></pre></div><p>Do not test first with files, images, huge text, or formatted content.</p></section><section id="section-8"><h2>8. Commands to trust after this setup</h2><p>Use these as your source of truth:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep">Copy command</button></div><pre><code>sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep</code></pre></div><p>Do not use this as your main truth anymore:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo service open-vm-tools status">Copy command</button></div><pre><code>sudo service open-vm-tools status</code></pre></div><p>Reason: that checks the old SysV service method. You are managing root vmtoolsd with Runit now.</p></section><section id="section-9"><h2>9. Correct final architecture</h2><p>Your final setup should look like this:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="VMware Workstation Guest Isolation enabled
+        ↓
+antiX root Runit service
+        ↓
+root /usr/bin/vmtoolsd
+        ↓
+IceWM user startup
+        ↓
+youruser /usr/bin/vmtoolsd -n vmusr
+        ↓
+copy/paste + autofit + guest integration works">Copy text</button></div><pre><code>VMware Workstation Guest Isolation enabled
+        ↓
+antiX root Runit service
+        ↓
+root /usr/bin/vmtoolsd
+        ↓
+IceWM user startup
+        ↓
+youruser /usr/bin/vmtoolsd -n vmusr
+        ↓
+copy/paste + autofit + guest integration works</code></pre></div><p>The root daemon gives system-level VMware Tools support. The user vmusr process gives desktop-session integration like clipboard and display behavior.</p></section><section id="section-10"><h2>10. Fast repair checklist</h2><p>If copy/paste breaks later, run:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep">Copy command</button></div><pre><code>sudo sv status /etc/service/vmtoolsd
+pgrep -a vmtoolsd
+ps -eo user,pid,cmd | grep -E &#x27;vmtoolsd|vmware-user&#x27; | grep -v grep</code></pre></div><p>If root daemon is missing:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="sudo sv up /etc/service/vmtoolsd">Copy command</button></div><pre><code>sudo sv up /etc/service/vmtoolsd</code></pre></div><p>If user process is missing:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">bash</span><button class="copy-btn" type="button" data-code="nohup /usr/bin/vmtoolsd -n vmusr &gt;/tmp/vmtoolsd-vmusr.log 2&gt;&amp;1 &amp;">Copy command</button></div><pre><code>nohup /usr/bin/vmtoolsd -n vmusr &gt;/tmp/vmtoolsd-vmusr.log 2&gt;&amp;1 &amp;</code></pre></div><p>If both are running but copy/paste still fails, check VMware GUI:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="VM &gt; Settings &gt; Options &gt; Guest Isolation
+Enable copy and paste
+Enable drag and drop">Copy text</button></div><pre><code>VM &gt; Settings &gt; Options &gt; Guest Isolation
+Enable copy and paste
+Enable drag and drop</code></pre></div><p>Final target:</p><div class="code-wrap"><div class="code-toolbar"><span class="code-label">text</span><button class="copy-btn" type="button" data-code="root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr">Copy text</button></div><pre><code>root      ... runsv vmtoolsd
+root      ... /usr/bin/vmtoolsd
+youruser  ... /usr/bin/vmtoolsd -n vmusr</code></pre></div></section>
+<p class="footer">Generated as a local HTML guide. Copy buttons work in modern browsers.</p>
+</main>
+<script>
+document.addEventListener('click', async function(event){
+  const button = event.target.closest('.copy-btn');
+  if(!button) return;
+  const code = button.getAttribute('data-code') || '';
+  const original = button.textContent;
+  try{
+    await navigator.clipboard.writeText(code);
+    button.textContent = 'Copied!';
+    button.classList.add('copied');
+    setTimeout(()=>{button.textContent=original;button.classList.remove('copied')},1400);
+  }catch(err){
+    const t=document.createElement('textarea');
+    t.value=code;t.style.position='fixed';t.style.left='-9999px';document.body.appendChild(t);t.focus();t.select();
+    try{document.execCommand('copy');button.textContent='Copied!';button.classList.add('copied')}catch(e){button.textContent='Copy failed'}
+    document.body.removeChild(t);
+    setTimeout(()=>{button.textContent=original;button.classList.remove('copied')},1400);
+  }
+});
+</script>
+</body>
+</html>

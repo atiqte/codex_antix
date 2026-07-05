@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows 11 25H2 Host + antiX Runit Guest SMB3 Transfer Guide</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --paper: #ffffff;
+  --ink: #111827;
+  --muted: #4b5563;
+  --line: #d1d5db;
+  --codebg: #0b1220;
+  --codefg: #e5e7eb;
+  --accent: #2563eb;
+  --ok: #16a34a;
+  --warn: #b45309;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.6;
+  color: var(--ink);
+  background: #e5e7eb;
+}
+header {
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  color: white;
+  padding: 36px 24px;
+}
+header .inner, main { max-width: 1120px; margin: 0 auto; }
+h1 { margin: 0 0 8px; font-size: 2rem; line-height: 1.2; }
+.subtitle { margin: 0; color: #dbeafe; font-size: 1.05rem; }
+.version { margin-top: 12px; color: #bfdbfe; font-size: 0.95rem; }
+main { background: var(--paper); padding: 24px; }
+nav {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 28px;
+}
+nav h2 { margin-top: 0; }
+nav ol { columns: 2; column-gap: 40px; padding-left: 20px; }
+nav li { break-inside: avoid; margin-bottom: 5px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+section {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  margin-top: 24px;
+}
+h2 { color: #0f172a; margin: 0 0 12px; font-size: 1.45rem; }
+p { margin: 0 0 14px; }
+.codewrap {
+  position: relative;
+  margin: 14px 0 22px;
+}
+pre {
+  background: var(--codebg);
+  color: var(--codefg);
+  padding: 16px;
+  border-radius: 9px;
+  overflow-x: auto;
+  border: 1px solid #1f2937;
+  white-space: pre;
+}
+code { font-family: "Cascadia Mono", "Consolas", "Liberation Mono", monospace; font-size: 0.93rem; }
+.copybtn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border: 1px solid #93c5fd;
+  background: #1d4ed8;
+  color: white;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.copybtn:hover { background: #2563eb; }
+footer { max-width: 1120px; margin: 0 auto 40px; padding: 20px 24px; color: var(--muted); background: #f8fafc; border-top: 1px solid var(--line); }
+.note { background: #fff7ed; border-left: 4px solid var(--warn); padding: 12px 14px; }
+@media (max-width: 800px) { nav ol { columns: 1; } main { padding: 16px; } }
+@media print {
+  body { background: white; }
+  header { color: black; background: white; border-bottom: 2px solid #000; }
+  main { padding: 0; }
+  .copybtn { display: none; }
+  nav { page-break-after: always; }
+  pre { white-space: pre-wrap; color: black; background: #f4f4f4; border: 1px solid #aaa; }
+}
+</style>
+<script>
+function copyCode(btn) {
+  const code = btn.parentElement.querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const old = btn.innerText;
+    btn.innerText = 'Copied';
+    setTimeout(() => btn.innerText = old, 1200);
+  }).catch(() => {
+    const range = document.createRange();
+    range.selectNodeContents(btn.parentElement.querySelector('code'));
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+}
+</script>
+</head>
+<body>
+<header><div class="inner">
+<h1>Windows 11 25H2 Host + antiX Runit Guest SMB3 Transfer Guide</h1>
+<p class="subtitle">VMware Workstation Pro 26H1, host-only VMnet1, Windows SMB3 server, antiX CIFS/SMB3 client, zzzFM-IceWM integration</p>
+<p class="version">Version 1.0 — built from the confirmed working setup · Generated 2026-06-17 01:57</p>
+</div></header>
+<main>
+<nav>
+<h2>Table of contents</h2>
+<ol>
+<li><a href="#section-1">0. Scope, confirmed values, and design rules</a></li><li><a href="#section-2">1. VMware Workstation Pro 26H1 network topology</a></li><li><a href="#section-3">2. Windows firewall rule for host-only SMB3</a></li><li><a href="#section-4">3. Windows SMB server baseline</a></li><li><a href="#section-5">4. Create the dedicated Windows SMB user</a></li><li><a href="#section-6">5. Confirm Windows computer name</a></li><li><a href="#section-7">6. Use F: drive for the SMB exchange folder</a></li><li><a href="#section-8">7. Create Windows folder structure on F:</a></li><li><a href="#section-9">8. Apply NTFS permissions</a></li><li><a href="#section-10">9. Create the Windows SMB share</a></li><li><a href="#section-11">10. antiX network checks</a></li><li><a href="#section-12">11. Install antiX SMB/CIFS client tools</a></li><li><a href="#section-13">12. Test SMB3 authentication from antiX before mounting</a></li><li><a href="#section-14">13. Create antiX credentials file</a></li><li><a href="#section-15">14. Create the antiX mount point</a></li><li><a href="#section-16">15. Add the antiX fstab entry with noauto</a></li><li><a href="#section-17">16. Test the fstab mount</a></li><li><a href="#section-18">17. Create the robust mount script</a></li><li><a href="#section-19">18. Create the robust unmount script</a></li><li><a href="#section-20">19. zzzFM bookmark for /mnt/win-vmxfer</a></li><li><a href="#section-21">20. IceWM menu entries for mount/open/unmount</a></li><li><a href="#section-22">21. YAD live tray indicator without changing taskbar size</a></li><li><a href="#section-23">22. Add YAD tray indicator to IceWM startup</a></li><li><a href="#section-24">23. Change the SVG tray icons later</a></li><li><a href="#section-25">24. Betterbird usage rules</a></li><li><a href="#section-26">25. Daily operating procedure</a></li><li><a href="#section-27">26. Complete verification checklist</a></li><li><a href="#section-28">27. Troubleshooting</a></li><li><a href="#section-29">28. antiX duplicate IP cleanup and reboot check</a></li><li><a href="#section-30">29. Final reference: critical files created</a></li><li><a href="#section-31">30. Final success criteria</a></li>
+</ol>
+</nav>
+<section id="section-1"><h2>0. Scope, confirmed values, and design rules</h2>
+<p>This document describes the complete end-to-end procedure for configuring a robust SMB3 transfer channel between a Windows 11 25H2 host and an antiX Linux Runit zzzFM-IceWM guest running inside VMware Workstation Pro 26H1.</p>
+<p>The intended use is frequent two-way file transfer for Betterbird attachments, PDFs, Excel files, images, exported documents, scanned files, and mixed small/medium/large files. The SMB share is not designed to hold the active Betterbird profile, active Maildir store, Logseq database, or any continuously indexed database. Keep those on the antiX VM local virtual disk. Use this SMB share only as an exchange/staging area.</p>
+<p>Confirmed values from the completed setup:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Windows computer name: DESKTOP-JPMLALG
+Windows VMnet1 host-only IP: 192.168.4.1/24
+Windows SMB share name: VMXFER
+Windows SMB share path: F:\VM-SMB-Exchange
+Windows SMB local user: smbvm
+antiX mount point: /mnt/win-vmxfer
+antiX user and group: uid=1000(atiq), gid=1000(atiq)
+VMware topology: NAT on Adapter 1, host-only VMnet1 on Adapter 2</code></pre></div>
+<p>If your VMnet1 IP, Windows computer name, username, or mount point is different, adjust the commands consistently. In this confirmed setup, use `192.168.4.1`, not `192.168.56.1`.</p>
+<p>The professional design is:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Adapter 1: NAT / VMnet8
+  Purpose: Internet access for antiX.
+  Default route: allowed.
+
+Adapter 2: Host-only / VMnet1
+  Purpose: private SMB3 transfer path between Windows host and antiX guest.
+  Default route: not needed.
+
+Windows host:
+  SMB3 server.
+  Share only F:\VM-SMB-Exchange as VMXFER.
+  Firewall allows TCP 445 only on VMware Network Adapter VMnet1.
+
+antiX guest:
+  SMB/CIFS client.
+  noauto fstab entry.
+  On-demand mount/unmount scripts.
+  zzzFM bookmark.
+  IceWM menu entries.
+  YAD live tray status indicator.</code></pre></div>
+<p>Do not use bridged networking for the SMB transfer path unless you intentionally want the share exposed on the physical LAN. Host-only VMnet1 is the correct private design.</p>
+</section><section id="section-2"><h2>1. VMware Workstation Pro 26H1 network topology</h2>
+<p>Power off the antiX VM before changing virtual network adapters.</p>
+<p>Open VMware Workstation Pro and configure the antiX VM as follows.</p>
+<p>Network Adapter 1:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Network Adapter 1:
+  NAT: used to share the host&#x27;s IP address
+  Prefer VMnet8
+  Connect at power on: enabled</code></pre></div>
+<p>Network Adapter 2:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Network Adapter 2:
+  Host-only: private network shared with the host
+  Prefer VMnet1
+  Connect at power on: enabled</code></pre></div>
+<p>Critical rule: Adapter 1 is for Internet. Adapter 2 is for SMB3 transfer. Do not use the Internet/NAT adapter as your SMB path if the dedicated host-only adapter is working.</p>
+<p>After booting Windows, confirm that VMnet1 exists and has an IPv4 address. Run PowerShell as Administrator:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-NetAdapter | Where-Object {$_.Name -like &quot;*VMnet*&quot;} |
+  Format-Table Name,InterfaceDescription,Status,ifIndex,MacAddress
+
+Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {$_.InterfaceAlias -like &quot;*VMnet1*&quot;} |
+  Format-Table InterfaceAlias,IPAddress,PrefixLength</code></pre></div>
+<p>Expected for this specific machine:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>InterfaceAlias                  IPAddress      PrefixLength
+--------------                  ---------      ------------
+VMware Network Adapter VMnet1    192.168.4.1    24</code></pre></div>
+<p>The antiX guest should later receive an address like `192.168.4.x` on its host-only interface.</p>
+</section><section id="section-3"><h2>2. Windows firewall rule for host-only SMB3</h2>
+<p>Windows firewall must allow SMB only on VMnet1, not on Wi-Fi/Ethernet/bridged public networks.</p>
+<p>Run PowerShell as Administrator:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>$RuleName = &quot;VMware Host-Only SMB3 to antiX VM only&quot;
+Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
+New-NetFirewallRule `
+  -DisplayName &quot;VMware Host-Only SMB3 to antiX VM only&quot; `
+  -Direction Inbound `
+  -Action Allow `
+  -Protocol TCP `
+  -LocalPort 445 `
+  -InterfaceAlias &quot;VMware Network Adapter VMnet1&quot; `
+  -RemoteAddress 192.168.4.0/24 `
+  -Profile Any</code></pre></div>
+<p>Verify the rule:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-NetFirewallRule -DisplayName &quot;VMware Host-Only SMB3 to antiX VM only&quot; |
+  Format-List DisplayName,Enabled,Direction,Action,Profile
+
+Get-NetFirewallRule -DisplayName &quot;VMware Host-Only SMB3 to antiX VM only&quot; |
+  Get-NetFirewallPortFilter |
+  Format-List Protocol,LocalPort
+
+Get-NetFirewallRule -DisplayName &quot;VMware Host-Only SMB3 to antiX VM only&quot; |
+  Get-NetFirewallAddressFilter |
+  Format-List RemoteAddress
+
+Get-NetFirewallRule -DisplayName &quot;VMware Host-Only SMB3 to antiX VM only&quot; |
+  Get-NetFirewallInterfaceFilter |
+  Format-List InterfaceAlias</code></pre></div>
+<p>Correct characteristics:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Enabled: True
+Direction: Inbound
+Action: Allow
+Profile: Any
+Protocol: TCP
+LocalPort: 445
+RemoteAddress: 192.168.4.0/24
+InterfaceAlias: VMware Network Adapter VMnet1</code></pre></div>
+<p>Using `Profile Any` is acceptable here because the rule is constrained by interface alias and remote subnet. This is important because Windows may not show a normal network profile for VMnet1.</p>
+</section><section id="section-4"><h2>3. Windows SMB server baseline</h2>
+<p>Confirm the Windows SMB server service is running:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-Service LanmanServer</code></pre></div>
+<p>Confirm that Windows is listening on TCP port 445:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-NetTCPConnection -LocalPort 445 -State Listen</code></pre></div>
+<p>Configure the SMB protocol baseline:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Set-SmbServerConfiguration `
+  -EnableSMB1Protocol $false `
+  -EnableSMB2Protocol $true `
+  -Confirm:$false
+
+Get-SmbServerConfiguration |
+  Select-Object EnableSMB1Protocol,EnableSMB2Protocol,EncryptData,RejectUnencryptedAccess,RequireSecuritySignature,EnableSecuritySignature</code></pre></div>
+<p>Expected baseline:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>EnableSMB1Protocol       : False
+EnableSMB2Protocol       : True
+EncryptData              : False
+RejectUnencryptedAccess  : True
+RequireSecuritySignature : True
+EnableSecuritySignature  : False</code></pre></div>
+<p>`EnableSMB2Protocol=True` is correct. Windows uses this setting for SMB2 and SMB3. Do not disable it.</p>
+<p>SMB signing and SMB encryption are not the same thing. Signing protects message integrity. Encryption protects confidentiality over the network. Because this transfer path is a private VMware host-only link, the share is configured with `EncryptData $false` for performance. If you ever expose the share over bridged/LAN networking, reassess this choice.</p>
+</section><section id="section-5"><h2>4. Create the dedicated Windows SMB user</h2>
+<p>Use a dedicated Windows local user for the VM. Do not use your main Windows administrator account for routine SMB transfers.</p>
+<p>PowerShell `else` blocks are easy to break if pasted line-by-line. The robust method below avoids `else` entirely. Run PowerShell as Administrator and paste the whole block.</p>
+<p>Important: Windows local-user description has a 48-character limit. Use the short description below.</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>$User = &quot;smbvm&quot;
+$FullName = &quot;VM SMB Transfer User&quot;
+$Desc = &quot;antiX VM SMB file transfer&quot;
+$Pass = Read-Host &quot;Enter a strong password for smbvm&quot; -AsSecureString
+
+$ExistingUser = Get-LocalUser -Name $User -ErrorAction SilentlyContinue
+
+if ($null -eq $ExistingUser) {
+    New-LocalUser `
+      -Name $User `
+      -Password $Pass `
+      -FullName $FullName `
+      -Description $Desc `
+      -AccountNeverExpires `
+      -PasswordNeverExpires
+}
+
+$CheckUser = Get-LocalUser -Name $User -ErrorAction Stop
+
+Set-LocalUser `
+  -Name $User `
+  -Password $Pass `
+  -FullName $FullName `
+  -Description $Desc `
+  -PasswordNeverExpires $true
+
+Enable-LocalUser -Name $User
+
+net user smbvm /passwordreq:yes
+net user smbvm /active:yes
+net user smbvm /expires:never
+
+Get-LocalUser -Name $User | Format-List Name,Enabled,FullName,Description,PasswordRequired,PasswordLastSet
+net user smbvm</code></pre></div>
+<p>Correct checkpoint:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Name             : smbvm
+Enabled          : True
+FullName         : VM SMB Transfer User
+Description      : antiX VM SMB file transfer
+PasswordRequired : True
+
+Account active               Yes
+Account expires              Never
+Password required            Yes
+Password expires             Never</code></pre></div>
+<p>Write down the password safely. It will be stored on antiX in `/root/.smbcredentials/vmxfer.cred` with root-only permission.</p>
+</section><section id="section-6"><h2>5. Confirm Windows computer name</h2>
+<p>Run:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>$env:COMPUTERNAME</code></pre></div>
+<p>Confirmed value in this setup:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>DESKTOP-JPMLALG</code></pre></div>
+<p>This value is used as the SMB domain/workstation name in antiX:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>domain=DESKTOP-JPMLALG</code></pre></div>
+</section><section id="section-7"><h2>6. Use F: drive for the SMB exchange folder</h2>
+<p>The completed setup uses `F:\VM-SMB-Exchange`. This keeps the exchange folder away from the Windows system partition.</p>
+<p>Confirm that `F:` is accessible:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Test-Path F:\</code></pre></div>
+<p>Expected:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>True</code></pre></div>
+<p>Check BitLocker state:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-BitLockerVolume -MountPoint &quot;F:&quot; |
+  Format-List MountPoint,VolumeStatus,ProtectionStatus,LockStatus,EncryptionPercentage</code></pre></div>
+<p>Confirmed result:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>MountPoint           : F:
+VolumeStatus         : FullyEncrypted
+ProtectionStatus     : Off
+LockStatus           : Unlocked
+EncryptionPercentage : 100</code></pre></div>
+<p>Interpretation: the drive is fully encrypted and currently unlocked, so it is usable for SMB. `ProtectionStatus: Off` means BitLocker protection is suspended/off for that volume; it does not block SMB operation. Later, you may re-enable BitLocker protection if desired. For SMB setup, the important line is `LockStatus: Unlocked`.</p>
+<p>Operational rule: after reboot, Windows must have `F:` unlocked before antiX can access the SMB share.</p>
+</section><section id="section-8"><h2>7. Create Windows folder structure on F:</h2>
+<p>Run PowerShell as Administrator:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>$Root = &quot;F:\VM-SMB-Exchange&quot;
+
+New-Item -ItemType Directory -Force -Path $Root
+New-Item -ItemType Directory -Force -Path &quot;$Root\01_From_Windows_To_VM&quot;
+New-Item -ItemType Directory -Force -Path &quot;$Root\02_From_VM_To_Windows&quot;
+New-Item -ItemType Directory -Force -Path &quot;$Root\03_Betterbird_Attachments&quot;
+New-Item -ItemType Directory -Force -Path &quot;$Root\99_Temp_Staging&quot;
+
+Get-ChildItem $Root</code></pre></div>
+<p>Folder purpose:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>01_From_Windows_To_VM       Files staged on Windows for antiX
+02_From_VM_To_Windows       Files exported from antiX to Windows
+03_Betterbird_Attachments   Attachments exchange/staging folder
+99_Temp_Staging             Temporary scratch/staging area</code></pre></div>
+</section><section id="section-9"><h2>8. Apply NTFS permissions</h2>
+<p>NTFS permissions are the real filesystem permissions. SMB share permissions sit on top of NTFS permissions. Both must allow access.</p>
+<p>Run PowerShell as Administrator:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>$User = &quot;smbvm&quot;
+$Root = &quot;F:\VM-SMB-Exchange&quot;
+$Account = &quot;$env:COMPUTERNAME\$User&quot;
+
+icacls $Root /inheritance:r
+icacls $Root /grant:r &quot;${Account}:(OI)(CI)M&quot; &quot;*S-1-5-32-544:(OI)(CI)F&quot; &quot;*S-1-5-18:(OI)(CI)F&quot;
+icacls $Root /remove:g &quot;Users&quot; &quot;Authenticated Users&quot; &quot;Everyone&quot;
+icacls $Root</code></pre></div>
+<p>The `${Account}` syntax is intentional. Without braces, PowerShell can misread the colon after the variable.</p>
+<p>Correct result:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>F:\VM-SMB-Exchange NT AUTHORITY\SYSTEM:(OI)(CI)(F)
+                   BUILTIN\Administrators:(OI)(CI)(F)
+                   DESKTOP-JPMLALG\smbvm:(OI)(CI)(M)</code></pre></div>
+<p>Meaning:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>SYSTEM: full control
+Administrators: full control
+smbvm: modify, inherited to files/folders</code></pre></div>
+</section><section id="section-10"><h2>9. Create the Windows SMB share</h2>
+<p>Create the share named `VMXFER` pointing to `F:\VM-SMB-Exchange`.</p>
+<p>Run PowerShell as Administrator:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>$ShareName = &quot;VMXFER&quot;
+$Root = &quot;F:\VM-SMB-Exchange&quot;
+$User = &quot;smbvm&quot;
+$Account = &quot;$env:COMPUTERNAME\$User&quot;
+
+if (Get-SmbShare -Name $ShareName -ErrorAction SilentlyContinue) {
+    Remove-SmbShare -Name $ShareName -Force
+}
+
+New-SmbShare `
+  -Name $ShareName `
+  -Path $Root `
+  -ChangeAccess $Account `
+  -FullAccess &quot;BUILTIN\Administrators&quot; `
+  -CachingMode None `
+  -FolderEnumerationMode AccessBased `
+  -EncryptData $false
+
+Get-SmbShare -Name VMXFER
+Get-SmbShareAccess -Name VMXFER</code></pre></div>
+<p>Correct result:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Name   ScopeName Path
+----   --------- ----
+VMXFER *         F:\VM-SMB-Exchange
+
+Name   AccountName              AccessRight
+----   -----------              -----------
+VMXFER BUILTIN\Administrators   Full
+VMXFER DESKTOP-JPMLALG\smbvm    Change</code></pre></div>
+<p>Create a Windows-side test file:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>&quot;SMB test from Windows host on F drive&quot; |
+  Out-File F:\VM-SMB-Exchange\01_From_Windows_To_VM\host-test.txt -Encoding utf8
+
+Get-Content F:\VM-SMB-Exchange\01_From_Windows_To_VM\host-test.txt</code></pre></div>
+</section><section id="section-11"><h2>10. antiX network checks</h2>
+<p>On antiX, the expected design is:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>eth0: NAT / VMnet8 / Internet
+  Example: 192.168.254.x/24
+  Default route allowed through 192.168.254.2
+
+eth1: Host-only / VMnet1 / SMB path
+  Example: 192.168.4.x/24
+  No default route required
+
+Windows VMnet1 host IP:
+  192.168.4.1</code></pre></div>
+<p>Check antiX network state:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ip -4 addr
+ip route
+ip route get 1.1.1.1
+ip route get 192.168.4.1</code></pre></div>
+<p>Correct routing pattern:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Internet traffic: via eth0 / 192.168.254.2
+SMB host traffic: directly via eth1 / 192.168.4.0/24</code></pre></div>
+<p>Do not rely on ping to Windows VMnet1. Windows may block ICMP. Use TCP port 445 as the real SMB reachability test:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>nc -vz 192.168.4.1 445</code></pre></div>
+<p>Correct result:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Connection to 192.168.4.1 445 port [tcp/microsoft-ds] succeeded!</code></pre></div>
+</section><section id="section-12"><h2>11. Install antiX SMB/CIFS client tools</h2>
+<p>Install required tools:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo apt update
+sudo apt install cifs-utils smbclient rsync netcat-openbsd yad</code></pre></div>
+<p>If you prefer Nala:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo nala install cifs-utils smbclient rsync netcat-openbsd yad</code></pre></div>
+<p>Check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>command -v smbclient
+command -v mount.cifs
+command -v nc
+command -v yad</code></pre></div>
+</section><section id="section-13"><h2>12. Test SMB3 authentication from antiX before mounting</h2>
+<p>This is the most important client-side test. It confirms network path, firewall, SMB authentication, share listing, and permissions before `/etc/fstab` is introduced.</p>
+<p>List shares:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>smbclient -L //192.168.4.1 -m SMB3 -U &#x27;DESKTOP-JPMLALG\smbvm&#x27;</code></pre></div>
+<p>Expected share list includes:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>VMXFER          Disk
+SMB1 disabled -- no workgroup available</code></pre></div>
+<p>The `SMB1 disabled -- no workgroup available` message is normal and good. SMB1 browsing is disabled. You are connecting directly by IP using SMB3.</p>
+<p>Connect to the share:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>smbclient //192.168.4.1/VMXFER -m SMB3 -U &#x27;DESKTOP-JPMLALG\smbvm&#x27;</code></pre></div>
+<p>Inside the `smb:` prompt:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ls
+cd 01_From_Windows_To_VM
+ls
+get host-test.txt
+cd ..
+cd 02_From_VM_To_Windows
+put /etc/hostname antix-hostname-test.txt
+ls
+quit</code></pre></div>
+<p>Verify on Windows:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-ChildItem F:\VM-SMB-Exchange\02_From_VM_To_Windows
+Get-Content F:\VM-SMB-Exchange\02_From_VM_To_Windows\antix-hostname-test.txt</code></pre></div>
+<p>Correct checkpoint:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>antiX can read host-test.txt from Windows.
+antiX can write antix-hostname-test.txt to Windows.
+Windows can read the file written by antiX.</code></pre></div>
+</section><section id="section-14"><h2>13. Create antiX credentials file</h2>
+<p>Create a root-only credentials file. Do not put the SMB password directly in `/etc/fstab`.</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkdir -p /root/.smbcredentials
+sudo fresh /root/.smbcredentials/vmxfer.cred</code></pre></div>
+<p>If `fresh` is not available, use:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo nano /root/.smbcredentials/vmxfer.cred</code></pre></div>
+<p>File content:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>username=smbvm
+password=YOUR_SMBVM_PASSWORD
+domain=DESKTOP-JPMLALG</code></pre></div>
+<p>Secure it:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod 600 /root/.smbcredentials/vmxfer.cred
+sudo chown root:root /root/.smbcredentials/vmxfer.cred
+sudo ls -l /root/.smbcredentials/vmxfer.cred</code></pre></div>
+<p>Expected:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>-rw------- 1 root root ... /root/.smbcredentials/vmxfer.cred</code></pre></div>
+<p>Verify structure without exposing the password:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo sh -c &#x27;sed -E &quot;s/^password=.*/password=&lt;hidden&gt;/&quot; /root/.smbcredentials/vmxfer.cred&#x27;</code></pre></div>
+</section><section id="section-15"><h2>14. Create the antiX mount point</h2>
+<p>Confirm user ID:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>id</code></pre></div>
+<p>Confirmed setup:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>uid=1000(atiq) gid=1000(atiq)</code></pre></div>
+<p>Create mount point:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkdir -p /mnt/win-vmxfer
+sudo chown atiq:atiq /mnt/win-vmxfer</code></pre></div>
+</section><section id="section-16"><h2>15. Add the antiX fstab entry with noauto</h2>
+<p>Use a manual/on-demand mount. Do not auto-mount this SMB share at boot.</p>
+<p>Reason: antiX Runit does not provide the same systemd-style network-online automount behavior. SMB mount during boot can race with VMware adapters, DHCP, Windows SMB service, firewall readiness, or BitLocker unlock state. `noauto,_netdev,nofail` keeps boot clean and lets the user mount only when needed.</p>
+<p>Edit `/etc/fstab`:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /etc/fstab</code></pre></div>
+<p>Fallback:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo nano /etc/fstab</code></pre></div>
+<p>Add this one-line entry:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>//192.168.4.1/VMXFER /mnt/win-vmxfer cifs credentials=/root/.smbcredentials/vmxfer.cred,vers=3.1.1,uid=1000,gid=1000,file_mode=0660,dir_mode=0770,iocharset=utf8,noperm,serverino,actimeo=5,cache=strict,mfsymlinks,nosharesock,_netdev,nofail,noauto 0 0</code></pre></div>
+<p>Meaning of key options:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>credentials=...       Use root-only credential file.
+vers=3.1.1            Prefer SMB 3.1.1.
+uid=1000,gid=1000     Show files as owned by antiX user atiq.
+file_mode=0660        Files writable by owner/group.
+dir_mode=0770         Directories accessible by owner/group.
+iocharset=utf8        Correct Unicode filename handling.
+noperm                Let Windows SMB/NTFS permissions decide access.
+serverino             Use server-provided inode numbers.
+actimeo=5             Short attribute cache, good balance for two-way transfer.
+cache=strict          Safer cache behavior.
+mfsymlinks            Map symlinks in a Windows-compatible way.
+nosharesock           Avoid shared socket reuse issues.
+_netdev,nofail        Network filesystem, do not block boot.
+noauto                Do not mount automatically at boot.</code></pre></div>
+</section><section id="section-17"><h2>16. Test the fstab mount</h2>
+<p>Mount using the fstab definition:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo mount /mnt/win-vmxfer
+findmnt /mnt/win-vmxfer
+ls -la /mnt/win-vmxfer
+cat /mnt/win-vmxfer/01_From_Windows_To_VM/host-test.txt</code></pre></div>
+<p>Write a test file through the mounted filesystem:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>echo &quot;SMB mounted write test from antiX&quot; &gt; /mnt/win-vmxfer/02_From_VM_To_Windows/antix-mounted-test.txt
+sync</code></pre></div>
+<p>Verify from Windows:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-Content F:\VM-SMB-Exchange\02_From_VM_To_Windows\antix-mounted-test.txt</code></pre></div>
+<p>Unmount:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sync
+sudo umount /mnt/win-vmxfer
+ls -la /mnt/win-vmxfer</code></pre></div>
+<p>After unmount, `/mnt/win-vmxfer` should look like an empty local directory. That is normal.</p>
+<p>Avoid running `sudo mount /mnt/win-vmxfer` twice. Linux can stack mounts on the same mount point. If you accidentally mount twice, one `umount` removes only one layer. The robust unmount script later handles this.</p>
+</section><section id="section-18"><h2>17. Create the robust mount script</h2>
+<p>This script uses TCP port 445 reachability with `nc`, not ping. Ping can fail even when SMB works because Windows may block ICMP.</p>
+<p>Create:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/mount-vmxfer</code></pre></div>
+<p>Fallback:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo nano /usr/local/bin/mount-vmxfer</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+HOST_IP=&quot;192.168.4.1&quot;
+MNT=&quot;/mnt/win-vmxfer&quot;
+CREDS=&quot;/root/.smbcredentials/vmxfer.cred&quot;
+
+mkdir -p &quot;$MNT&quot;
+
+if mountpoint -q &quot;$MNT&quot;; then
+    echo &quot;$MNT is already mounted.&quot;
+    exit 0
+fi
+
+if [ ! -f &quot;$CREDS&quot; ]; then
+    echo &quot;ERROR: SMB credentials file is missing: $CREDS&quot;
+    exit 1
+fi
+
+CREDS_PERM=&quot;$(stat -c &#x27;%a&#x27; &quot;$CREDS&quot; 2&gt;/dev/null)&quot;
+if [ &quot;$CREDS_PERM&quot; != &quot;600&quot; ]; then
+    echo &quot;WARNING: $CREDS permission is $CREDS_PERM, recommended is 600.&quot;
+    echo &quot;Fix with: sudo chmod 600 $CREDS&quot;
+fi
+
+if ! awk &#x27;$2 == &quot;/mnt/win-vmxfer&quot; {found=1} END {exit !found}&#x27; /etc/fstab; then
+    echo &quot;ERROR: $MNT is not defined in /etc/fstab.&quot;
+    exit 1
+fi
+
+nc -z -w 2 &quot;$HOST_IP&quot; 445 &gt;/dev/null 2&gt;&amp;1 || {
+    echo &quot;ERROR: SMB TCP/445 on $HOST_IP is not reachable.&quot;
+    echo &quot;Check Windows, F: drive unlock state, VMware VMnet1, and firewall.&quot;
+    exit 1
+}
+
+if mount &quot;$MNT&quot;; then
+    echo &quot;Mounted $MNT&quot;
+else
+    echo &quot;ERROR: Failed to mount $MNT&quot;
+    echo &quot;Diagnostic commands:&quot;
+    echo &quot;  sudo mount -v $MNT&quot;
+    echo &quot;  smbclient -L //$HOST_IP -m SMB3 -U &#x27;DESKTOP-JPMLALG\\smbvm&#x27;&quot;
+    exit 1
+fi</code></pre></div>
+<p>Make it executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/mount-vmxfer</code></pre></div>
+</section><section id="section-19"><h2>18. Create the robust unmount script</h2>
+<p>This version handles accidental stacked/double mounts by looping until the mount point is actually unmounted.</p>
+<p>Create:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/umount-vmxfer</code></pre></div>
+<p>Fallback:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo nano /usr/local/bin/umount-vmxfer</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+MNT=&quot;/mnt/win-vmxfer&quot;
+
+if ! mountpoint -q &quot;$MNT&quot;; then
+    echo &quot;$MNT is not mounted.&quot;
+    exit 0
+fi
+
+sync
+
+COUNT=0
+while mountpoint -q &quot;$MNT&quot;; do
+    COUNT=$((COUNT + 1))
+
+    if [ &quot;$COUNT&quot; -gt 5 ]; then
+        echo &quot;ERROR: $MNT is still mounted after 5 unmount attempts.&quot;
+        echo &quot;Most likely cause: zzzFM, terminal, Betterbird file picker, or another process is using it.&quot;
+        echo
+        echo &quot;Check with:&quot;
+        echo &quot;  fuser -vm $MNT&quot;
+        echo
+        echo &quot;Then close the process or leave the directory and retry:&quot;
+        echo &quot;  cd ~&quot;
+        echo &quot;  sudo umount $MNT&quot;
+        exit 1
+    fi
+
+    if ! umount &quot;$MNT&quot;; then
+        echo &quot;ERROR: Failed to unmount $MNT&quot;
+        echo &quot;Most likely cause: a process is using the mount.&quot;
+        echo
+        echo &quot;Check with:&quot;
+        echo &quot;  fuser -vm $MNT&quot;
+        exit 1
+    fi
+done
+
+echo &quot;Unmounted $MNT&quot;
+exit 0</code></pre></div>
+<p>Make it executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/umount-vmxfer</code></pre></div>
+<p>Test:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo /usr/local/bin/mount-vmxfer
+findmnt /mnt/win-vmxfer
+sudo /usr/local/bin/umount-vmxfer
+findmnt /mnt/win-vmxfer || echo &quot;Cleanly unmounted&quot;</code></pre></div>
+</section><section id="section-20"><h2>19. zzzFM bookmark for /mnt/win-vmxfer</h2>
+<p>The zzzFM bookmark is only a shortcut to the mount point. It does not mount SMB by itself. Mount first, then open the bookmark.</p>
+<p>First mount:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo /usr/local/bin/mount-vmxfer</code></pre></div>
+<p>Open the folder in zzzFM:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>zzzfm /mnt/win-vmxfer</code></pre></div>
+<p>Then in zzzFM:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>1. Confirm the current path is /mnt/win-vmxfer.
+2. Open the Bookmarks menu.
+3. Choose Add Bookmark, New Bookmark, or Bookmark Current Folder.
+4. Set the bookmark name/label/title to: Windows VMXFER
+5. Set or confirm the path/location as: /mnt/win-vmxfer
+6. Save.</code></pre></div>
+<p>If zzzFM creates a bookmark named `win-vmxfer`, right-click it in the left-side bookmark panel and choose Rename/Edit/Properties. Rename it to:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Windows VMXFER</code></pre></div>
+<p>Fallback method if zzzFM bookmark naming is awkward:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ln -sfn /mnt/win-vmxfer &quot;$HOME/Windows VMXFER&quot;
+zzzfm &quot;$HOME/Windows VMXFER&quot;</code></pre></div>
+<p>Then bookmark `$HOME/Windows VMXFER`.</p>
+<p>Daily rule:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Mount VMXFER first.
+Then click the Windows VMXFER zzzFM bookmark.
+Unmount when finished.</code></pre></div>
+</section><section id="section-21"><h2>20. IceWM menu entries for mount/open/unmount</h2>
+<p>Do not use a raw IceWM command like `prog ... sudo /usr/local/bin/mount-vmxfer`. It may fail silently because IceWM menu commands do not provide a terminal for the sudo password prompt.</p>
+<p>Use terminal wrapper scripts.</p>
+<p>Confirm terminal launcher:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>command -v x-terminal-emulator</code></pre></div>
+<p>Expected:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>/usr/bin/x-terminal-emulator</code></pre></div>
+<p>Create mount GUI wrapper:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/mount-vmxfer-gui</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+sudo /usr/local/bin/mount-vmxfer
+
+echo
+echo &quot;Press Enter to close this window...&quot;
+read dummy</code></pre></div>
+<p>Make executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/mount-vmxfer-gui</code></pre></div>
+<p>Create unmount GUI wrapper:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/umount-vmxfer-gui</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+sudo /usr/local/bin/umount-vmxfer
+
+echo
+echo &quot;Press Enter to close this window...&quot;
+read dummy</code></pre></div>
+<p>Make executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/umount-vmxfer-gui</code></pre></div>
+<p>Test wrappers:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>x-terminal-emulator -e /usr/local/bin/mount-vmxfer-gui
+x-terminal-emulator -e /usr/local/bin/umount-vmxfer-gui</code></pre></div>
+<p>Now prepare IceWM menu:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p ~/.icewm
+
+if [ ! -f ~/.icewm/menu ]; then
+    if [ -f /etc/X11/icewm/menu ]; then
+        cp /etc/X11/icewm/menu ~/.icewm/menu
+    elif [ -f /usr/share/icewm/menu ]; then
+        cp /usr/share/icewm/menu ~/.icewm/menu
+    else
+        touch ~/.icewm/menu
+    fi
+fi
+
+cp ~/.icewm/menu ~/.icewm/menu.bak.$(date +%F-%H%M%S)
+fresh ~/.icewm/menu</code></pre></div>
+<p>Fallback:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>nano ~/.icewm/menu</code></pre></div>
+<p>Add this block near the top or near file-manager/tools entries:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>separator
+menu &quot;Windows SMB Share&quot; folder {
+    prog &quot;Mount VMXFER&quot; folder x-terminal-emulator -e /usr/local/bin/mount-vmxfer-gui
+    prog &quot;Open VMXFER Folder&quot; folder zzzfm /mnt/win-vmxfer
+    prog &quot;Unmount VMXFER&quot; folder x-terminal-emulator -e /usr/local/bin/umount-vmxfer-gui
+}
+separator</code></pre></div>
+<p>Reload IceWM:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>IceWM menu -&gt; Logout -&gt; Restart IceWM</code></pre></div>
+<p>If no restart option exists, log out and log back in.</p>
+</section><section id="section-22"><h2>21. YAD live tray indicator without changing taskbar size</h2>
+<p>This creates a live tray icon in IceWM showing the present state of `/mnt/win-vmxfer`.</p>
+<p>Design:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Green check icon = mounted
+Red cross icon = unmounted
+Click tray icon = open control dialog
+Control dialog when unmounted = Mount button
+Control dialog when mounted = Open Folder + Unmount buttons</code></pre></div>
+<p>This guide intentionally does not enlarge the IceWM taskbar. To keep the default taskbar size readable, use simple icons with no tiny text.</p>
+<p>Check YAD:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>command -v yad
+type -a yad
+ls -l /usr/local/bin/yad /usr/bin/yad 2&gt;/dev/null
+yad --version
+yad --title=&quot;YAD Test&quot; --text=&quot;YAD is working.&quot; --button=&quot;OK:0&quot;</code></pre></div>
+<p>Create icon directory:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkdir -p /usr/local/share/icons/vmxfer</code></pre></div>
+<p>Create mounted icon:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo tee /usr/local/share/icons/vmxfer/vmxfer-mounted.svg &gt;/dev/null &lt;&lt;&#x27;EOF&#x27;
+&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;128&quot; height=&quot;128&quot; viewBox=&quot;0 0 128 128&quot;&gt;
+  &lt;rect width=&quot;128&quot; height=&quot;128&quot; rx=&quot;24&quot; fill=&quot;#101418&quot;/&gt;
+  &lt;circle cx=&quot;64&quot; cy=&quot;64&quot; r=&quot;48&quot; fill=&quot;#22c55e&quot;/&gt;
+  &lt;path d=&quot;M42 64l15 15 32-38&quot;
+        fill=&quot;none&quot;
+        stroke=&quot;#ffffff&quot;
+        stroke-width=&quot;14&quot;
+        stroke-linecap=&quot;round&quot;
+        stroke-linejoin=&quot;round&quot;/&gt;
+&lt;/svg&gt;
+EOF</code></pre></div>
+<p>Create unmounted icon:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo tee /usr/local/share/icons/vmxfer/vmxfer-unmounted.svg &gt;/dev/null &lt;&lt;&#x27;EOF&#x27;
+&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;128&quot; height=&quot;128&quot; viewBox=&quot;0 0 128 128&quot;&gt;
+  &lt;rect width=&quot;128&quot; height=&quot;128&quot; rx=&quot;24&quot; fill=&quot;#101418&quot;/&gt;
+  &lt;circle cx=&quot;64&quot; cy=&quot;64&quot; r=&quot;48&quot; fill=&quot;#ef4444&quot;/&gt;
+  &lt;path d=&quot;M45 45l38 38M83 45L45 83&quot;
+        fill=&quot;none&quot;
+        stroke=&quot;#ffffff&quot;
+        stroke-width=&quot;14&quot;
+        stroke-linecap=&quot;round&quot;/&gt;
+&lt;/svg&gt;
+EOF</code></pre></div>
+<p>Verify:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ls -lh /usr/local/share/icons/vmxfer/</code></pre></div>
+<p>Create tray control dialog:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/vmxfer-control</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+MNT=&quot;/mnt/win-vmxfer&quot;
+YAD=&quot;$(command -v yad)&quot;
+TERM_CMD=&quot;$(command -v x-terminal-emulator)&quot;
+
+ICON_ON=&quot;/usr/local/share/icons/vmxfer/vmxfer-mounted.svg&quot;
+ICON_OFF=&quot;/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg&quot;
+
+if [ -z &quot;$YAD&quot; ]; then
+    echo &quot;ERROR: yad not found.&quot;
+    exit 1
+fi
+
+if [ -z &quot;$TERM_CMD&quot; ]; then
+    echo &quot;ERROR: x-terminal-emulator not found.&quot;
+    exit 1
+fi
+
+if mountpoint -q &quot;$MNT&quot;; then
+    &quot;$YAD&quot; \
+      --title=&quot;Windows VMXFER&quot; \
+      --window-icon=&quot;$ICON_ON&quot; \
+      --text=&quot;Windows VMXFER is currently MOUNTED.&quot; \
+      --button=&quot;Open Folder:10&quot; \
+      --button=&quot;Unmount:20&quot; \
+      --button=&quot;Cancel:1&quot;
+
+    ACTION=&quot;$?&quot;
+
+    case &quot;$ACTION&quot; in
+        10)
+            zzzfm &quot;$MNT&quot; &gt;/dev/null 2&gt;&amp;1 &amp;
+            ;;
+        20)
+            &quot;$TERM_CMD&quot; -e /usr/local/bin/umount-vmxfer-gui &amp;
+            ;;
+    esac
+else
+    &quot;$YAD&quot; \
+      --title=&quot;Windows VMXFER&quot; \
+      --window-icon=&quot;$ICON_OFF&quot; \
+      --text=&quot;Windows VMXFER is currently NOT mounted.&quot; \
+      --button=&quot;Mount:10&quot; \
+      --button=&quot;Cancel:1&quot;
+
+    ACTION=&quot;$?&quot;
+
+    case &quot;$ACTION&quot; in
+        10)
+            &quot;$TERM_CMD&quot; -e /usr/local/bin/mount-vmxfer-gui &amp;
+            ;;
+    esac
+fi</code></pre></div>
+<p>Make executable and test:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/vmxfer-control
+/usr/local/bin/vmxfer-control</code></pre></div>
+<p>Create live tray indicator:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/vmxfer-tray</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+MNT=&quot;/mnt/win-vmxfer&quot;
+YAD=&quot;$(command -v yad)&quot;
+
+ICON_ON=&quot;/usr/local/share/icons/vmxfer/vmxfer-mounted.svg&quot;
+ICON_OFF=&quot;/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg&quot;
+
+if [ -z &quot;$YAD&quot; ]; then
+    echo &quot;ERROR: yad not found.&quot;
+    exit 1
+fi
+
+(
+    LAST_STATE=&quot;&quot;
+
+    while true; do
+        if mountpoint -q &quot;$MNT&quot;; then
+            STATE=&quot;mounted&quot;
+            ICON=&quot;$ICON_ON&quot;
+            TIP=&quot;Windows VMXFER: MOUNTED&quot;
+        else
+            STATE=&quot;unmounted&quot;
+            ICON=&quot;$ICON_OFF&quot;
+            TIP=&quot;Windows VMXFER: NOT mounted&quot;
+        fi
+
+        if [ &quot;$STATE&quot; != &quot;$LAST_STATE&quot; ]; then
+            echo &quot;icon:$ICON&quot;
+            echo &quot;tooltip:$TIP&quot;
+            LAST_STATE=&quot;$STATE&quot;
+        fi
+
+        sleep 2
+    done
+) | &quot;$YAD&quot; \
+      --notification \
+      --listen \
+      --image=&quot;$ICON_OFF&quot; \
+      --text=&quot;Windows VMXFER: starting...&quot; \
+      --command=&quot;/usr/local/bin/vmxfer-control&quot;</code></pre></div>
+<p>Make executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/vmxfer-tray</code></pre></div>
+<p>Manual tray test:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>/usr/local/bin/vmxfer-tray &amp;</code></pre></div>
+<p>Test status change:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo /usr/local/bin/umount-vmxfer
+sleep 3
+mountpoint /mnt/win-vmxfer &amp;&amp; echo &quot;Mounted&quot; || echo &quot;Unmounted&quot;
+
+sudo /usr/local/bin/mount-vmxfer
+sleep 3
+mountpoint /mnt/win-vmxfer &amp;&amp; echo &quot;Mounted&quot; || echo &quot;Unmounted&quot;</code></pre></div>
+<p>Stop the manual tray test before adding startup:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>pkill -f /usr/local/bin/vmxfer-tray
+pgrep -af vmxfer-tray</code></pre></div>
+</section><section id="section-23"><h2>22. Add YAD tray indicator to IceWM startup</h2>
+<p>Create/edit IceWM startup:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p ~/.icewm
+
+if [ ! -f ~/.icewm/startup ]; then
+    printf &#x27;#!/bin/sh\n&#x27; &gt; ~/.icewm/startup
+fi
+
+cp ~/.icewm/startup ~/.icewm/startup.bak.$(date +%F-%H%M%S)
+fresh ~/.icewm/startup</code></pre></div>
+<p>Fallback:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>nano ~/.icewm/startup</code></pre></div>
+<p>Add near the end:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code># Windows VMXFER live tray status indicator
+if ! pgrep -u &quot;$USER&quot; -f &#x27;/usr/local/bin/vmxfer-tray&#x27; &gt;/dev/null 2&gt;&amp;1; then
+    /usr/local/bin/vmxfer-tray &amp;
+fi</code></pre></div>
+<p>Make executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>chmod +x ~/.icewm/startup</code></pre></div>
+<p>Restart IceWM or log out/in:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>IceWM menu -&gt; Logout -&gt; Restart IceWM</code></pre></div>
+<p>After restart, the VMXFER tray icon should appear automatically.</p>
+<p>If it does not appear, check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>pgrep -af vmxfer-tray
+pgrep -af yad</code></pre></div>
+<p>If no tray icon appears but processes are running, the IceWM tray may be hidden. Enable tray display without changing taskbar size:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p ~/.icewm
+touch ~/.icewm/prefoverride
+
+grep -q &#x27;^TaskBarShowTray=&#x27; ~/.icewm/prefoverride || echo &#x27;TaskBarShowTray=1&#x27; &gt;&gt; ~/.icewm/prefoverride
+grep -q &#x27;^TaskBarEnableSystemTray=&#x27; ~/.icewm/prefoverride || echo &#x27;TaskBarEnableSystemTray=1&#x27; &gt;&gt; ~/.icewm/prefoverride</code></pre></div>
+<p>Then restart IceWM again.</p>
+</section><section id="section-24"><h2>23. Change the SVG tray icons later</h2>
+<p>Professional method: do not edit the tray script every time. Keep the tray script fixed and replace only these two files:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>/usr/local/share/icons/vmxfer/vmxfer-mounted.svg
+/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg</code></pre></div>
+<p>Create an editable source folder in your home directory:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p &quot;$HOME/VMXFER-Icons&quot;
+fresh &quot;$HOME/VMXFER-Icons/mounted.svg&quot;
+fresh &quot;$HOME/VMXFER-Icons/unmounted.svg&quot;</code></pre></div>
+<p>Recommended tray icon design rules:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Use large simple shapes.
+Use thick strokes.
+Use strong contrast.
+Avoid tiny text.
+Avoid complex gradients.
+Avoid detailed file/folder drawings.
+Use green/check for mounted and red/cross for unmounted.</code></pre></div>
+<p>Create a reusable icon update script:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /usr/local/bin/update-vmxfer-icons</code></pre></div>
+<p>Paste:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>#!/bin/sh
+
+SRC_DIR=&quot;$HOME/VMXFER-Icons&quot;
+DST_DIR=&quot;/usr/local/share/icons/vmxfer&quot;
+
+SRC_ON=&quot;$SRC_DIR/mounted.svg&quot;
+SRC_OFF=&quot;$SRC_DIR/unmounted.svg&quot;
+
+DST_ON=&quot;$DST_DIR/vmxfer-mounted.svg&quot;
+DST_OFF=&quot;$DST_DIR/vmxfer-unmounted.svg&quot;
+
+STAMP=&quot;$(date +%F-%H%M%S)&quot;
+
+if [ ! -f &quot;$SRC_ON&quot; ]; then
+    echo &quot;ERROR: Missing mounted icon: $SRC_ON&quot;
+    exit 1
+fi
+
+if [ ! -f &quot;$SRC_OFF&quot; ]; then
+    echo &quot;ERROR: Missing unmounted icon: $SRC_OFF&quot;
+    exit 1
+fi
+
+sudo mkdir -p &quot;$DST_DIR&quot;
+
+if [ -f &quot;$DST_ON&quot; ]; then
+    sudo cp &quot;$DST_ON&quot; &quot;$DST_ON.bak.$STAMP&quot;
+fi
+
+if [ -f &quot;$DST_OFF&quot; ]; then
+    sudo cp &quot;$DST_OFF&quot; &quot;$DST_OFF.bak.$STAMP&quot;
+fi
+
+sudo install -m 0644 &quot;$SRC_ON&quot; &quot;$DST_ON&quot;
+sudo install -m 0644 &quot;$SRC_OFF&quot; &quot;$DST_OFF&quot;
+
+pkill -f /usr/local/bin/vmxfer-tray 2&gt;/dev/null || true
+pkill -f &quot;Windows VMXFER&quot; 2&gt;/dev/null || true
+
+nohup /usr/local/bin/vmxfer-tray &gt;/dev/null 2&gt;&amp;1 &amp;
+
+echo &quot;VMXFER icons updated and tray restarted.&quot;
+echo &quot;Mounted icon:   $DST_ON&quot;
+echo &quot;Unmounted icon: $DST_OFF&quot;</code></pre></div>
+<p>Make executable:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo chmod +x /usr/local/bin/update-vmxfer-icons</code></pre></div>
+<p>Future workflow to change icons:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>fresh &quot;$HOME/VMXFER-Icons/mounted.svg&quot;
+fresh &quot;$HOME/VMXFER-Icons/unmounted.svg&quot;
+update-vmxfer-icons</code></pre></div>
+<p>This updates icons, backs up old icons, and restarts only the VMXFER tray indicator.</p>
+</section><section id="section-25"><h2>24. Betterbird usage rules</h2>
+<p>For Betterbird, use this SMB share for attachments and file exchange only.</p>
+<p>Recommended pattern:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Incoming files from Windows:
+  F:\VM-SMB-Exchange\01_From_Windows_To_VM
+  visible in antiX as /mnt/win-vmxfer/01_From_Windows_To_VM
+
+Outgoing files from antiX:
+  /mnt/win-vmxfer/02_From_VM_To_Windows
+  visible in Windows as F:\VM-SMB-Exchange\02_From_VM_To_Windows
+
+Betterbird attachments staging:
+  /mnt/win-vmxfer/03_Betterbird_Attachments</code></pre></div>
+<p>Do not put these on SMB:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Betterbird profile
+Betterbird Maildir store
+Thunderbird/Betterbird global-messages-db.sqlite
+Logseq DB
+millions of .eml files
+active search indexes
+SQLite databases</code></pre></div>
+<p>Reason: SMB is excellent for file exchange but not ideal for active database/index/maildir workloads inside a VM. For millions of `.eml` messages and fast searching, keep the store local on the antiX virtual disk and use SMB only to import/export files.</p>
+</section><section id="section-26"><h2>25. Daily operating procedure</h2>
+<p>Use this simple routine.</p>
+<p>Graphical workflow:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>1. Click the red VMXFER tray icon.
+2. Click Mount.
+3. If sudo asks for a password, enter the antiX sudo password.
+4. Click green VMXFER tray icon.
+5. Click Open Folder.
+6. Transfer files with zzzFM.
+7. Close zzzFM or leave /mnt/win-vmxfer.
+8. Click green VMXFER tray icon.
+9. Click Unmount.</code></pre></div>
+<p>Terminal workflow:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo /usr/local/bin/mount-vmxfer
+zzzfm /mnt/win-vmxfer
+sudo /usr/local/bin/umount-vmxfer</code></pre></div>
+<p>Always unmount before:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Suspending the VM
+Pausing the VM
+Taking a VMware snapshot during file transfer
+Shutting down Windows host
+Locking or disconnecting the F: drive
+Heavy host sleep/resume cycles</code></pre></div>
+</section><section id="section-27"><h2>26. Complete verification checklist</h2>
+<p>Windows checks:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {$_.InterfaceAlias -like &quot;*VMnet1*&quot;} |
+  Format-Table InterfaceAlias,IPAddress,PrefixLength
+
+Get-Service LanmanServer
+Get-SmbShare -Name VMXFER
+Get-SmbShareAccess -Name VMXFER
+icacls F:\VM-SMB-Exchange
+Get-Content F:\VM-SMB-Exchange\01_From_Windows_To_VM\host-test.txt</code></pre></div>
+<p>antiX checks:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>nc -vz 192.168.4.1 445
+smbclient -L //192.168.4.1 -m SMB3 -U &#x27;DESKTOP-JPMLALG\smbvm&#x27;
+grep -n &#x27;VMXFER\|win-vmxfer&#x27; /etc/fstab
+sudo sh -c &#x27;sed -E &quot;s/^password=.*/password=&lt;hidden&gt;/&quot; /root/.smbcredentials/vmxfer.cred&#x27;
+sudo /usr/local/bin/mount-vmxfer
+findmnt /mnt/win-vmxfer
+ls -la /mnt/win-vmxfer
+sudo /usr/local/bin/umount-vmxfer
+findmnt /mnt/win-vmxfer || echo &quot;Cleanly unmounted&quot;
+pgrep -af vmxfer-tray</code></pre></div>
+</section><section id="section-28"><h2>27. Troubleshooting</h2>
+<p>Problem: `ping 192.168.4.1` fails, but `nc -vz 192.168.4.1 445` succeeds.<br>Meaning: not a problem. Windows is probably blocking ICMP. SMB works over TCP 445.</p>
+<p>Problem: `SMB1 disabled -- no workgroup available` appears.<br>Meaning: normal. You are using direct SMB3 by IP. Workgroup browsing is unnecessary.</p>
+<p>Problem: `smbclient` authentication fails.<br>Check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Windows computer name: DESKTOP-JPMLALG
+Username: smbvm
+Command format: smbclient //192.168.4.1/VMXFER -m SMB3 -U &#x27;DESKTOP-JPMLALG\smbvm&#x27;
+Password: exact smbvm password
+Windows account active: net user smbvm</code></pre></div>
+<p>Problem: access denied after login.<br>Check both permission layers:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-SmbShareAccess -Name VMXFER
+icacls F:\VM-SMB-Exchange</code></pre></div>
+<p>Problem: fstab mount fails but smbclient works.<br>Check credential file:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo sh -c &#x27;sed -E &quot;s/^password=.*/password=&lt;hidden&gt;/&quot; /root/.smbcredentials/vmxfer.cred&#x27;
+sudo ls -l /root/.smbcredentials/vmxfer.cred
+sudo mount -v /mnt/win-vmxfer</code></pre></div>
+<p>Problem: findmnt still shows the mount after one unmount.<br>Likely cause: you mounted the same mount point twice. Use the robust script:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo /usr/local/bin/umount-vmxfer</code></pre></div>
+<p>Problem: unmount says target is busy.<br>Check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>fuser -vm /mnt/win-vmxfer
+cd ~
+sudo /usr/local/bin/umount-vmxfer</code></pre></div>
+<p>Close zzzFM, Betterbird file picker, or terminals currently inside `/mnt/win-vmxfer`.</p>
+<p>Problem: tray icon does not appear.<br>Check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>command -v yad
+pgrep -af vmxfer-tray
+pgrep -af yad</code></pre></div>
+<p>Enable tray display without changing taskbar size:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>mkdir -p ~/.icewm
+touch ~/.icewm/prefoverride
+grep -q &#x27;^TaskBarShowTray=&#x27; ~/.icewm/prefoverride || echo &#x27;TaskBarShowTray=1&#x27; &gt;&gt; ~/.icewm/prefoverride
+grep -q &#x27;^TaskBarEnableSystemTray=&#x27; ~/.icewm/prefoverride || echo &#x27;TaskBarEnableSystemTray=1&#x27; &gt;&gt; ~/.icewm/prefoverride</code></pre></div>
+<p>Problem: the icon is too small.<br>Do not rely on tiny text in the SVG. Use large check/cross icons. This guide intentionally avoids changing the default taskbar size.</p>
+<p>Problem: Windows F: drive is locked.<br>Unlock F: in Windows first. Then remount from antiX.</p>
+<p>Problem: VMnet1 IP changes.<br>Re-check Windows VMnet1 IP and update all locations if needed:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>Get-NetIPAddress -AddressFamily IPv4 |
+  Where-Object {$_.InterfaceAlias -like &quot;*VMnet1*&quot;} |
+  Format-Table InterfaceAlias,IPAddress,PrefixLength</code></pre></div>
+<p>Then update antiX:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo fresh /etc/fstab
+sudo fresh /usr/local/bin/mount-vmxfer</code></pre></div>
+</section><section id="section-29"><h2>28. antiX duplicate IP cleanup and reboot check</h2>
+<p>Earlier, the antiX VM showed duplicate static and DHCP IPs. The correct permanent state is one IP per interface:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>eth0: DHCP from VMnet8 NAT, default route allowed
+eth1: DHCP from VMnet1 host-only, no default route</code></pre></div>
+<p>After reboot, check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ip -4 addr
+ip route</code></pre></div>
+<p>Correct pattern:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>default route only via eth0 / 192.168.254.2
+192.168.4.0/24 route via eth1
+no duplicate 192.168.254.129/24 static address
+no duplicate 192.168.4.128/24 static address
+no default route via eth1</code></pre></div>
+<p>If duplicates return, diagnose before editing randomly:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ps -ef | grep -E &#x27;connmand|dhclient|dhcpcd|NetworkManager|wicd|ifplugd&#x27; | grep -v grep
+
+sudo grep -R &quot;192.168.254.129\|192.168.4.128\|eth0\|eth1&quot; \
+  /etc/network /etc/connman /etc/ceni /etc/default /etc/runit /etc/rc.d 2&gt;/dev/null
+
+cat /etc/network/interfaces 2&gt;/dev/null
+ls -la /etc/network/interfaces.d 2&gt;/dev/null</code></pre></div>
+<p>Temporary cleanup if duplicate addresses appear again:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>sudo ip addr del 192.168.254.129/24 dev eth0 2&gt;/dev/null
+sudo ip addr del 192.168.4.128/24 dev eth1 2&gt;/dev/null
+sudo ip route del 0.0.0.0 dev eth1 2&gt;/dev/null
+sudo ip route del default dev eth1 2&gt;/dev/null</code></pre></div>
+<p>Then re-check:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>ip -4 addr
+ip route
+ip route get 1.1.1.1
+ip route get 192.168.4.1</code></pre></div>
+</section><section id="section-30"><h2>29. Final reference: critical files created</h2>
+<p>Windows:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>F:\VM-SMB-Exchange\
+F:\VM-SMB-Exchange\01_From_Windows_To_VM\
+F:\VM-SMB-Exchange\02_From_VM_To_Windows\
+F:\VM-SMB-Exchange\03_Betterbird_Attachments\
+F:\VM-SMB-Exchange\99_Temp_Staging\
+SMB share: VMXFER
+Local user: DESKTOP-JPMLALG\smbvm
+Firewall rule: VMware Host-Only SMB3 to antiX VM only</code></pre></div>
+<p>antiX:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>/root/.smbcredentials/vmxfer.cred
+/mnt/win-vmxfer
+/etc/fstab
+/usr/local/bin/mount-vmxfer
+/usr/local/bin/umount-vmxfer
+/usr/local/bin/mount-vmxfer-gui
+/usr/local/bin/umount-vmxfer-gui
+/usr/local/bin/vmxfer-control
+/usr/local/bin/vmxfer-tray
+/usr/local/bin/update-vmxfer-icons
+/usr/local/share/icons/vmxfer/vmxfer-mounted.svg
+/usr/local/share/icons/vmxfer/vmxfer-unmounted.svg
+~/.icewm/menu
+~/.icewm/startup
+~/VMXFER-Icons/mounted.svg
+~/VMXFER-Icons/unmounted.svg</code></pre></div>
+</section><section id="section-31"><h2>30. Final success criteria</h2>
+<p>The setup is complete when all of these are true:</p>
+<div class="codewrap"><button class="copybtn" onclick="copyCode(this)">Copy</button><pre><code>1. antiX can run: nc -vz 192.168.4.1 445
+2. antiX can list VMXFER with smbclient.
+3. antiX can mount /mnt/win-vmxfer with /usr/local/bin/mount-vmxfer.
+4. antiX can read Windows test files from /mnt/win-vmxfer.
+5. antiX can write files to /mnt/win-vmxfer/02_From_VM_To_Windows.
+6. Windows can read files written by antiX on F:\VM-SMB-Exchange.
+7. /usr/local/bin/umount-vmxfer cleanly unmounts the share.
+8. zzzFM bookmark opens the mount point.
+9. IceWM menu can mount/open/unmount.
+10. YAD tray icon changes between unmounted and mounted status.
+11. After reboot, the tray starts automatically.
+12. Betterbird profile/Maildir/Logseq DB remain local to antiX, not on SMB.</code></pre></div>
+</section>
+</main>
+<footer>
+This guide uses the confirmed working values from the configured VM. Replace IP addresses, user names, and paths only if your environment changes.
+</footer>
+</body>
+</html>
