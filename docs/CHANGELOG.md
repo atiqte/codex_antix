@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-05
 
+- Retired Astroid from the antiX notmuch workflow: settings were backed up, the package and Astroid-only dependencies were purged, Astroid-only compatibility symlinks were removed, and the browser viewer was converted to validated single-email mode.
+- Added `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html` and `.txt` as the active browser-only notmuch DIY guides, and marked the older Astroid guide as retired historical context.
 - Expanded the notmuch/Astroid HTML and text guides with full Chunk 8B helper creation, Chunk 8B-FIX1 corrected helper/tag validation, and Chunk 8C pilot-safe reindex validation.
 - Expanded the notmuch/Astroid HTML and text guides with the full Chunk 8A browser-viewer bootstrap that writes `~/.local/bin/notmuch-browser-pilot`, plus separate daily start and stop commands.
 - Added `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, documenting the validated notmuch pilot, read-only browser viewer, Astroid limitations, tag backup/restore, pilot-safe reindexing, and deferred full-archive expansion.

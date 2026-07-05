@@ -4,12 +4,19 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
-### 2026-07-05: Use notmuch Pilot Index with Read-Only Browser Viewer as the Primary Search GUI
+### 2026-07-05: Retire Astroid and Use Browser-Only Single-Email notmuch Viewer
 
 - Status: accepted
+- Context: Astroid 0.16 could list/search the pilot notmuch database only after compatibility symlinks, but message bodies stayed blank on this antiX/IceWM/VMware setup. The owner decided not to use Astroid anymore and requested a normal single-email browser view instead of the earlier thread-based browser view.
+- Decision: Purge Astroid and its user settings after backing them up, remove the Astroid-only notmuch database compatibility symlinks, and make `~/.local/bin/notmuch-browser-pilot` the only supported notmuch GUI viewer. The browser viewer lists individual emails from `notmuch search --output=messages`, opens `/message?id=<message-id>`, and remains read-only.
+- Consequence: notmuch remains the search backend and Evolution remains the reply/forward/send client. The active guide is now `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html` and `.txt`; the old Astroid guide is retained only as historical context with a retired warning. The 59G archive remains excluded until count drift is reviewed.
+
+### 2026-07-05: Use notmuch Pilot Index with Read-Only Browser Viewer as the Primary Search GUI
+
+- Status: superseded by "Retire Astroid and Use Browser-Only Single-Email notmuch Viewer"
 - Context: The owner requested notmuch plus Astroid as a fast search layer for millions of Maildir++ messages, with Evolution used for viewing/replying/sending when practical. The pilot notmuch index succeeded for `provider-live` plus the restored small delta, but the 59G archive count drift made full expansion unsafe. Evolution raw-file handoff through `xdg-open` opened the wrong `Import Data - Berkeley Mailbox (mbox)` workflow. Astroid 0.16 could list/search after a compatibility symlink shim, but its message body pane remained blank on antiX/IceWM/VMware despite valid `notmuch show` output and WebKitGTK workarounds.
-- Decision: Keep notmuch as the fast, lightweight sidecar search backend with database `/mail/SearchIndex/notmuch/default`, mail root `/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`. Use the read-only localhost browser viewer `~/.local/bin/notmuch-browser-pilot` as the validated notmuch GUI for search/view in the pilot phase. Keep Evolution Flatpak as the normal account-based client for reply/send. Keep Astroid installed/configured as experimental only until its blank-body rendering issue is fixed or a later version is validated.
-- Consequence: Data safety stays ahead of speed. The 59G archive remains ignored until count drift is reviewed. Final documentation should present notmuch plus the browser viewer as the proven path, clearly label Astroid as non-primary on this VM, and include backup/restore/reindex procedures before any full-archive indexing.
+- Decision: Keep notmuch as the fast, lightweight sidecar search backend with database `/mail/SearchIndex/notmuch/default`, mail root `/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`. Use the read-only localhost browser viewer `~/.local/bin/notmuch-browser-pilot` as the validated notmuch GUI for search/view in the pilot phase. At the time, Astroid was kept installed/configured as experimental only until its blank-body rendering issue was fixed or superseded.
+- Consequence: This decision was later superseded the same day after the owner chose to retire Astroid entirely and replace the thread-oriented browser viewer with single-email mode. The notmuch backend, Evolution reply/send split, data-safety posture, and deferred 59G archive expansion remain in effect.
 
 ### 2026-07-04: Use Dynamic Post-Main-Archive Aggregate Delta for Future Betterbird Runs
 

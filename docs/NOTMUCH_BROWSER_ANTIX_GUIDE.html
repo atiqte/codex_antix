@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>notmuch Browser-Only antiX Maildir++ Guide</title>
+  <style>
+    :root { color-scheme: light; --bg:#f6f7f8; --panel:#fff; --text:#172026; --muted:#5c6670; --line:#d7dde2; --accent:#165a72; --code-bg:#101820; --code-text:#e8eef2; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Arial, Helvetica, sans-serif; line-height:1.5; }
+    header { background:#22313a; color:#fff; padding:22px 28px; border-bottom:4px solid var(--accent); }
+    main { width:min(1180px, calc(100% - 32px)); margin:20px auto 48px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:18px 20px; margin:16px 0; }
+    h1 { margin:0 0 8px; font-size:28px; line-height:1.2; }
+    h2 { margin:22px 0 10px; font-size:21px; color:#22313a; line-height:1.2; }
+    p { margin:8px 0; }
+    ul, ol { margin-top:8px; padding-left:24px; }
+    li { margin:5px 0; }
+    code { background:#edf1f4; padding:1px 4px; border-radius:4px; font-family:Consolas, "Liberation Mono", monospace; font-size:.95em; }
+    .cmd { margin:14px 0; border:1px solid #26323a; border-radius:6px; overflow:hidden; background:var(--code-bg); }
+    .cmd-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; background:#26323a; color:#fff; font-weight:700; }
+    button { border:1px solid #b8c2cc; background:#fff; color:#172026; border-radius:5px; padding:5px 9px; cursor:pointer; font-weight:700; }
+    pre { margin:0; padding:13px 14px; overflow:auto; color:var(--code-text); background:var(--code-bg); font-family:Consolas, "Liberation Mono", monospace; font-size:13px; line-height:1.45; white-space:pre; }
+    .banner { border-left:5px solid #17633a; background:#eef8f1; padding:12px 14px; margin:14px 0; }
+    footer { color:var(--muted); font-size:13px; margin:24px 0; }
+  </style>
+</head>
+<body>
+<header><h1>notmuch Browser-Only Search Layer for antiX Maildir++</h1><p>Astroid retired; notmuch browser pilot is the validated single-email GUI viewer.</p></header>
+<main><section><div class="banner">This is the active browser-only guide. The old Astroid guide is retained only as historical context.</div>
+<h1>notmuch Browser-Only Search Layer for antiX Maildir++</h1>
+<p>Validated on 2026-07-05 for antiX Linux runit with zzzFM/IceWM.</p>
+<p>Current result:</p>
+<ul>
+<li>Astroid was purged and its user settings were backed up before removal.</li>
+<li>notmuch remains the fast search backend.</li>
+<li>`notmuch-browser-pilot` is now the primary GUI viewer.</li>
+<li>The browser viewer is single-email mode, not threaded mode.</li>
+<li>Evolution Flatpak remains the normal reply/forward/send client through configured Maildir accounts.</li>
+<li>The 59G archive remains excluded until count drift is reviewed.</li>
+</ul>
+<p>Validated final pilot state:</p>
+<ul>
+<li>notmuch config: `~/.config/notmuch/default/config`</li>
+<li>database: `/mail/SearchIndex/notmuch/default`</li>
+<li>mail root: `/mail/Mailstore`</li>
+<li>safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`</li>
+<li>indexed files after refresh: 867</li>
+<li>unique messages after refresh: 457</li>
+<li>indexed provider-live files: 620</li>
+<li>indexed restored delta files: 247</li>
+<li>indexed 59G archive files: 0</li>
+<li>browser URL: `http://127.0.0.1:8765/`</li>
+<li>viewer mode: `single_email`</li>
+</ul>
+<p>Data safety rules:</p>
+<ol>
+<li>Never delete or rebuild Maildir data to fix notmuch.</li>
+<li>The notmuch database is disposable; the mail files are not.</li>
+<li>Back up tags before reindex or scope changes.</li>
+<li>Keep `maildir.synchronize_flags=false`.</li>
+<li>Use browser viewer for search/view only.</li>
+<li>Use Evolution for reply/forward/edit/send.</li>
+<li>Do not use Evolution as a raw Maildir file opener from notmuch.</li>
+</ol>
+<h2>Chunk 9A: Read-only Astroid/notmuch/browser audit</h2>
+<p>Run this first before uninstalling Astroid or replacing the viewer.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-1">Copy</button></div><pre data-pre="cmd-1"></pre></div>
+<h2>Chunk 9B: Simulate Astroid removal</h2>
+<p>Review this output before any real purge.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-2">Copy</button></div><pre data-pre="cmd-2"></pre></div>
+<h2>Chunk 9C: Back up and purge Astroid</h2>
+<p>Run only after Chunk 9B shows no important package removals.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-3">Copy</button></div><pre data-pre="cmd-3"></pre></div>
+<h2>Chunk 9D: Install single-email browser viewer</h2>
+<p>This replaces the old thread-based viewer. It also runs `notmuch new` for the current pilot scope.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-4">Copy</button></div><pre data-pre="cmd-4"></pre></div>
+<h2>Chunk 9F: Remove Astroid-only compatibility shims</h2>
+<p>Run only after Chunk 9D is validated.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-5">Copy</button></div><pre data-pre="cmd-5"></pre></div>
+<h2>Daily start</h2>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-6">Copy</button></div><pre data-pre="cmd-6"></pre></div>
+<h2>Daily stop</h2>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-7">Copy</button></div><pre data-pre="cmd-7"></pre></div>
+<h2>CLI search examples</h2>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-8">Copy</button></div><pre data-pre="cmd-8"></pre></div>
+<h2>Back up notmuch tags</h2>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-9">Copy</button></div><pre data-pre="cmd-9"></pre></div>
+<h2>Restore notmuch tags</h2>
+<p>Set `BACKUP` to the exact `.batch-tag` file you want to restore.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-10">Copy</button></div><pre data-pre="cmd-10"></pre></div>
+<h2>Pilot-safe reindex</h2>
+<p>This rebuilds only the disposable notmuch database. It must not touch `/mail/Mailstore`.</p>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-11">Copy</button></div><pre data-pre="cmd-11"></pre></div>
+<h2>Archive expansion remains deferred</h2>
+<div class="cmd"><div class="cmd-head"><span>Command chunk</span><button data-copy="cmd-12">Copy</button></div><pre data-pre="cmd-12"></pre></div>
+</section><footer>Generated from docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt. Keep with docs/WORK_VALIDATION_LEDGER.md.</footer></main>
+<script type="text/plain" id="cmd-1">set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-browser-chunk9a-retire-astroid-audit-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 9A: read-only Astroid/notmuch/browser audit =="
+date -Ins 2>/dev/null || date
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+VIEWER="$HOME/.local/bin/notmuch-browser-pilot"
+DBROOT="/mail/SearchIndex/notmuch/default"
+
+echo "== Required commands =="
+for c in notmuch python3 dpkg-query apt-cache pgrep pkill find readlink sha256sum sed awk; do
+  if command -v "$c" >/dev/null 2>&1; then
+    printf '%s=%s\n' "$c" "$(command -v "$c")"
+  else
+    printf '%s=MISSING\n' "$c"
+  fi
+done
+echo
+
+echo "== notmuch config and counts =="
+if [ -r "$CONFIG" ]; then
+  echo "notmuch_config_present=yes"
+  notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages=/'
+  notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files=/'
+  notmuch --config="$CONFIG" config get database.path | sed 's/^/database.path=/'
+  notmuch --config="$CONFIG" config get database.mail_root | sed 's/^/database.mail_root=/'
+  notmuch --config="$CONFIG" config get maildir.synchronize_flags | sed 's/^/maildir.synchronize_flags=/'
+  notmuch --config="$CONFIG" config get index.decrypt | sed 's/^/index.decrypt=/'
+else
+  echo "notmuch_config_present=no"
+fi
+echo
+
+echo "== Astroid package and user files =="
+dpkg-query -W -f='${db:Status-Abbrev} ${Package} ${Version}\n' 'astroid*' 2>/dev/null || true
+command -v astroid >/dev/null 2>&1 && echo "astroid_command=$(command -v astroid)" || echo "astroid_command=absent"
+for p in "$HOME/.config/astroid" "$HOME/.cache/astroid" "$HOME/.local/share/astroid" "$HOME/.local/bin/astroid-notmuch-pilot"; do
+  if [ -e "$p" ] || [ -L "$p" ]; then
+    echo "exists=$p"
+    ls -ld "$p" || true
+  else
+    echo "absent=$p"
+  fi
+done
+echo
+
+echo "== Processes =="
+pgrep -af 'astroid|WebKit|notmuch-browser-pilot|notmuch|mbsync|isync|evolution' || true
+echo
+
+echo "== Astroid compatibility shims =="
+for shim in "$DBROOT/mbsync" "$DBROOT/evolution"; do
+  if [ -L "$shim" ]; then
+    echo "shim_symlink=$shim target=$(readlink "$shim")"
+  elif [ -e "$shim" ]; then
+    echo "shim_exists_but_not_symlink=$shim"
+  else
+    echo "shim_absent=$shim"
+  fi
+done
+echo
+
+echo "== Viewer mode markers =="
+if [ -f "$VIEWER" ]; then
+  grep -nE '(/thread|thread:|render_thread|MAX_THREAD_FILES|/message|output=messages|single-email)' "$VIEWER" || true
+else
+  echo "viewer_present=no"
+fi
+echo
+
+echo "== Maildir tmp safety =="
+tmp_total=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 /mail/Mailstore/evolution/local-maildir; do
+  if [ -d "$root" ]; then
+    c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+    echo "tmp_count $root $c"
+    tmp_total=$((tmp_total + c))
+  fi
+done
+echo "tmp_total=$tmp_total"
+
+if [ ! -r "$CONFIG" ]; then
+  echo "status=blocked_missing_notmuch_config"
+elif [ "$tmp_total" -ne 0 ]; then
+  echo "status=blocked_tmp_files_present"
+else
+  echo "status=chunk_9a_audit_complete"
+fi
+echo "log_file=$LOG_FILE"
+} 2>&1 | tee "$LOG_FILE"</script>
+<script type="text/plain" id="cmd-2">set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-browser-chunk9b-astroid-purge-simulation-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 9B: simulate Astroid removal only =="
+date -Ins 2>/dev/null || date
+echo
+
+echo "== Current Astroid package status =="
+dpkg-query -W -f='${db:Status-Abbrev} ${Package} ${Version}\n' 'astroid*' 2>/dev/null || true
+command -v astroid >/dev/null 2>&1 && echo "astroid_command=$(command -v astroid)" || echo "astroid_command=absent"
+echo
+
+echo "== Simulation: purge astroid only =="
+apt-get -s purge astroid > /tmp/astroid-purge-only-sim.txt 2>&1 || true
+sed -n '1,160p' /tmp/astroid-purge-only-sim.txt
+grep -E '^(Remv|Purg|Inst|Conf) ' /tmp/astroid-purge-only-sim.txt || true
+echo
+
+echo "== Simulation: purge astroid plus auto-remove =="
+apt-get -s --auto-remove purge astroid > /tmp/astroid-purge-autoremove-sim.txt 2>&1 || true
+sed -n '1,200p' /tmp/astroid-purge-autoremove-sim.txt
+grep -E '^(Remv|Purg|Inst|Conf) ' /tmp/astroid-purge-autoremove-sim.txt || true
+echo
+
+echo "== Safety after simulation =="
+CONFIG="$HOME/.config/notmuch/default/config"
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files=/'
+tmp_total=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 /mail/Mailstore/evolution/local-maildir; do
+  if [ -d "$root" ]; then
+    c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+    echo "tmp_count $root $c"
+    tmp_total=$((tmp_total + c))
+  fi
+done
+echo "tmp_total=$tmp_total"
+echo "status=chunk_9b_simulation_complete"
+echo "log_file=$LOG_FILE"
+} 2>&1 | tee "$LOG_FILE"</script>
+<script type="text/plain" id="cmd-3">set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-browser-chunk9c-backup-purge-astroid-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 9C: back up and purge Astroid =="
+date -Ins 2>/dev/null || date
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+BACKUP_DIR="/mail/Backups/notmuch/astroid-retired-$(date +%Y%m%d-%H%M%S)"
+
+[ -r "$CONFIG" ] || { echo "status=blocked_missing_notmuch_config"; exit 1; }
+
+echo "== Maildir tmp safety =="
+tmp_total=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 /mail/Mailstore/evolution/local-maildir; do
+  if [ -d "$root" ]; then
+    c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+    echo "tmp_count $root $c"
+    tmp_total=$((tmp_total + c))
+  fi
+done
+echo "tmp_total=$tmp_total"
+[ "$tmp_total" -eq 0 ] || { echo "status=blocked_tmp_files_present"; exit 1; }
+echo
+
+echo "== Stop Astroid if running =="
+pkill -x astroid 2>/dev/null || true
+sleep 1
+pgrep -af '/usr/bin/astroid|WebKit' || true
+echo
+
+echo "== Back up Astroid user settings/helper =="
+mkdir -p "$BACKUP_DIR/home/.config" "$BACKUP_DIR/home/.cache" "$BACKUP_DIR/home/.local/share" "$BACKUP_DIR/home/.local/bin"
+backup_items=0
+for pair in \
+  "$HOME/.config/astroid:$BACKUP_DIR/home/.config/astroid" \
+  "$HOME/.cache/astroid:$BACKUP_DIR/home/.cache/astroid" \
+  "$HOME/.local/share/astroid:$BACKUP_DIR/home/.local/share/astroid" \
+  "$HOME/.local/bin/astroid-notmuch-pilot:$BACKUP_DIR/home/.local/bin/astroid-notmuch-pilot"
+do
+  src="${pair%%:*}"
+  dst="${pair#*:}"
+  if [ -e "$src" ] || [ -L "$src" ]; then
+    cp -a "$src" "$dst"
+    backup_items=$((backup_items + 1))
+  fi
+done
+echo "backup_dir=$BACKUP_DIR"
+echo "backup_items=$backup_items"
+find "$BACKUP_DIR" -mindepth 1 -maxdepth 5 -printf '%y %p\n' 2>/dev/null | sed -n '1,160p'
+echo
+
+echo "== Real APT purge =="
+sudo apt-get purge --auto-remove -y astroid
+echo
+
+echo "== Remove backed-up Astroid user paths =="
+rm -rf "$HOME/.config/astroid" "$HOME/.cache/astroid" "$HOME/.local/share/astroid" "$HOME/.local/bin/astroid-notmuch-pilot"
+echo
+
+echo "== Post-purge verification =="
+command -v astroid >/dev/null 2>&1 && echo "astroid_command_still_present=$(command -v astroid)" || echo "astroid_command=absent"
+dpkg-query -W -f='${db:Status-Abbrev} ${Package} ${Version}\n' astroid 2>/dev/null || true
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files=/'
+tmp_total_after=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 /mail/Mailstore/evolution/local-maildir; do
+  if [ -d "$root" ]; then
+    c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+    echo "tmp_count_after $root $c"
+    tmp_total_after=$((tmp_total_after + c))
+  fi
+done
+echo "tmp_total_after=$tmp_total_after"
+[ "$tmp_total_after" -eq 0 ] || { echo "status=blocked_tmp_files_present_after_purge"; exit 1; }
+
+echo "status=chunk_9c_astroid_purged"
+echo "backup_dir=$BACKUP_DIR"
+echo "log_file=$LOG_FILE"
+} 2>&1 | tee "$LOG_FILE"</script>
+<script type="text/plain" id="cmd-4">set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-browser-chunk9d-single-email-viewer-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 9D: install single-email notmuch browser viewer =="
+date -Ins 2>/dev/null || date
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+BIN_DIR="$HOME/.local/bin"
+VIEWER="$BIN_DIR/notmuch-browser-pilot"
+VIEWER_LOG="/tmp/notmuch-browser-pilot.log"
+PORT="${NOTMUCH_BROWSER_PORT:-8765}"
+BACKUP_DIR="/mail/Backups/notmuch/browser-viewer-before-single-message-$(date +%Y%m%d-%H%M%S)"
+
+[ -r "$CONFIG" ] || { echo "status=blocked_missing_notmuch_config"; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "status=blocked_missing_python3"; exit 1; }
+command -v notmuch >/dev/null 2>&1 || { echo "status=blocked_missing_notmuch"; exit 1; }
+command -v astroid >/dev/null 2>&1 && { echo "status=blocked_astroid_command_still_present"; exit 1; } || echo "astroid_command=absent"
+echo
+
+echo "== Maildir tmp safety before refresh =="
+tmp_total=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 /mail/Mailstore/evolution/local-maildir; do
+  if [ -d "$root" ]; then
+    c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+    echo "tmp_count_before $root $c"
+    tmp_total=$((tmp_total + c))
+  fi
+done
+echo "tmp_total_before=$tmp_total"
+[ "$tmp_total" -eq 0 ] || { echo "status=blocked_tmp_files_present_before"; exit 1; }
+echo
+
+echo "== notmuch refresh =="
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages_before=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files_before=/'
+notmuch --config="$CONFIG" new
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages_after=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files_after=/'
+echo
+
+echo "== Back up old viewer =="
+mkdir -p "$BACKUP_DIR"
+if [ -f "$VIEWER" ]; then
+  cp -a "$VIEWER" "$BACKUP_DIR/notmuch-browser-pilot.previous"
+  sha256sum "$VIEWER" > "$BACKUP_DIR/notmuch-browser-pilot.previous.sha256" 2>/dev/null || true
+fi
+echo "backup_dir=$BACKUP_DIR"
+echo
+
+echo "== Write single-email viewer =="
+mkdir -p "$BIN_DIR"
+cat > "$VIEWER" <<'PY'
+#!/usr/bin/env python3
+import argparse, html, socket, subprocess, sys, time, urllib.parse, webbrowser, threading
+from email import policy
+from email.parser import BytesParser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+CONFIG = Path.home() / ".config/notmuch/default/config"
+DEFAULT_QUERY = "tag:inbox"
+MAX_RESULTS = 200
+
+CSS = """
+:root { color-scheme: light; font-family: system-ui, sans-serif; }
+body { margin:0; background:#f5f5f2; color:#222; }
+header { background:#263238; color:white; padding:10px 16px; display:flex; gap:12px; align-items:center; }
+header a { color:#d8eefc; text-decoration:none; }
+main { padding:14px 18px 32px; }
+form.search { display:flex; gap:8px; margin:12px 0 16px; }
+input[type=text] { flex:1; padding:8px 10px; font:15px ui-monospace, monospace; }
+button,.button { padding:8px 10px; border:1px solid #87929b; background:#fff; border-radius:4px; color:#111; text-decoration:none; }
+table { border-collapse:collapse; width:100%; background:white; }
+th,td { border-bottom:1px solid #ddd; padding:6px 8px; vertical-align:top; }
+tr:hover { background:#eef6ff; }
+.code,pre { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+.notice { background:#fff8d8; border:1px solid #e0c75a; padding:10px; margin:10px 0; border-radius:4px; }
+.ok { background:#e7f7e7; border-color:#74b974; }
+.bad { background:#ffe7e7; border-color:#c77; }
+.message { background:white; border:1px solid #d5d5d5; margin:14px 0; border-radius:5px; overflow:hidden; }
+.meta { background:#eef0f2; padding:10px 12px; font-size:14px; }
+.body { padding:12px; }
+.body iframe { width:100%; min-height:460px; border:1px solid #ccc; background:white; }
+.body pre { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.35; }
+.path { color:#555; font-size:12px; overflow-wrap:anywhere; }
+.small { color:#666; font-size:13px; }
+.tag { display:inline-block; background:#fff0a8; border:1px solid #d6bd55; padding:1px 5px; margin:0 3px 2px 0; border-radius:3px; font-size:12px; }
+"""
+
+def nm(args, timeout=90):
+    return subprocess.run(["notmuch", "--config", str(CONFIG)] + args, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+
+def page(title, body):
+    return f"""<!doctype html><html><head><meta charset='utf-8'>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; frame-src 'self' about:; script-src 'none'; object-src 'none'">
+<title>{html.escape(title)}</title><style>{CSS}</style></head><body>
+<header><strong>notmuch browser pilot</strong><a href='/'>Search</a><a href='/status'>Status</a><span class='small'>single-email read-only viewer; use Evolution for reply/send</span></header>
+<main>{body}</main></body></html>"""
+
+def form(q):
+    return f"""<form class='search' method='get' action='/'><input type='text' name='q' value='{html.escape(q, quote=True)}' autofocus><button>Search</button></form>
+<div class='small code'>Examples: tag:inbox | from:tagindustries.com.sg | date:2026..2026 and tag:attachment | id:&lt;message-id&gt;</div>"""
+
+def mid_line(line):
+    line = line.strip()
+    return line[3:] if line.startswith("id:") else line
+
+def files_for(mid):
+    r = nm(["search", "--output=files", "id:" + mid])
+    if r.returncode != 0:
+        return [], r.stderr.strip()
+    seen, out = set(), []
+    for line in r.stdout.splitlines():
+        if line and line not in seen:
+            seen.add(line); out.append(line)
+    return out, ""
+
+def tags_for(mid):
+    r = nm(["search", "--output=tags", "id:" + mid])
+    return [x.strip() for x in r.stdout.splitlines() if x.strip()] if r.returncode == 0 else []
+
+def parse_file(path):
+    with Path(path).open("rb") as fh:
+        return BytesParser(policy=policy.default).parse(fh)
+
+def hv(msg, name):
+    v = msg.get(name, "")
+    return str(v) if v else ""
+
+def summary(mid):
+    files, err = files_for(mid)
+    if not files:
+        return {"id": mid, "date": "", "from": "", "subject": "(file missing)", "tags": [], "file_count": 0, "error": err or "notmuch returned no files"}
+    try:
+        msg = parse_file(files[0])
+        return {"id": mid, "date": hv(msg, "Date"), "from": hv(msg, "From"), "subject": hv(msg, "Subject") or "(no subject)", "tags": tags_for(mid), "file_count": len(files), "error": ""}
+    except Exception as e:
+        return {"id": mid, "date": "", "from": "", "subject": "(parse error)", "tags": tags_for(mid), "file_count": len(files), "error": str(e)}
+
+def render_search(q):
+    c = nm(["count", q]); f = nm(["count", "--output=files", q]); ids = nm(["search", "--output=messages", "--limit", str(MAX_RESULTS), q])
+    body = form(q)
+    if c.returncode or ids.returncode:
+        return page("notmuch search error", body + "<div class='notice bad'><pre>" + html.escape(c.stderr or ids.stderr) + "</pre></div>")
+    mids = [mid_line(x) for x in ids.stdout.splitlines() if x.strip()]
+    body += f"<div class='notice ok'>Unique messages: <strong>{html.escape(c.stdout.strip())}</strong>; files: <strong>{html.escape(f.stdout.strip())}</strong>; showing first {MAX_RESULTS} individual messages.</div>"
+    if not mids:
+        return page("notmuch search", body + "<div class='notice'>No results.</div>")
+    rows = []
+    for mid in mids:
+        s = summary(mid)
+        url = "/message?" + urllib.parse.urlencode({"id": mid})
+        tag_html = "".join(f"<span class='tag'>{html.escape(t)}</span>" for t in s["tags"])
+        err = f"<div class='small bad'>Error: {html.escape(s['error'])}</div>" if s["error"] else ""
+        rows.append(f"<tr><td class='small'>{html.escape(s['date'])}</td><td>{html.escape(s['from'])}</td><td><a href='{url}'>{html.escape(s['subject'])}</a>{err}<div class='path code'>{html.escape(mid)}</div></td><td>{tag_html}</td><td class='code'>{s['file_count']}</td></tr>")
+    return page("notmuch search", body + "<table><thead><tr><th>Date</th><th>From</th><th>Subject / Message-ID</th><th>Tags</th><th>Files</th></tr></thead><tbody>" + "\n".join(rows) + "</tbody></table>")
+
+def body_part(msg):
+    part = msg.get_body(preferencelist=("html", "plain")) if msg.is_multipart() else msg
+    if part is None:
+        return "<div class='notice'>No text/html or text/plain body part found.</div>"
+    try:
+        content = part.get_content()
+    except Exception as e:
+        return f"<div class='notice bad'>Could not decode body: {html.escape(str(e))}</div>"
+    if part.get_content_type() == "text/html":
+        return "<div class='small'>HTML part shown in a sandboxed iframe; remote network/script execution is blocked.</div><iframe sandbox srcdoc=\"" + html.escape(str(content), quote=True) + "\"></iframe>"
+    return "<pre>" + html.escape(str(content)) + "</pre>"
+
+def render_message(mid, file_index):
+    files, err = files_for(mid)
+    body = "<p><a class='button' href='/'>Back to search</a></p><h2>Message</h2><pre>" + html.escape("id:" + mid) + "</pre>"
+    if err:
+        return page("message error", body + "<div class='notice bad'><pre>" + html.escape(err) + "</pre></div>")
+    if not files:
+        return page("message missing", body + "<div class='notice bad'>No files found for this Message-ID.</div>")
+    try:
+        idx = int(file_index or "0")
+    except ValueError:
+        idx = 0
+    idx = idx if 0 <= idx < len(files) else 0
+    if len(files) > 1:
+        choices = []
+        for i, path in enumerate(files[:40]):
+            url = "/message?" + urllib.parse.urlencode({"id": mid, "file": str(i)})
+            label = f"{i + 1}: {path}"
+            choices.append("<strong>" + html.escape(label) + "</strong>" if i == idx else f"<a href='{url}'>{html.escape(label)}</a>")
+        body += "<div class='notice'>Duplicate/copy files for this Message-ID: " + str(len(files)) + ". Showing selected file only.<br>" + "<br>".join(choices) + "</div>"
+    msg = parse_file(files[idx])
+    headers = "".join(f"<div><strong>{name}:</strong> {html.escape(hv(msg, name))}</div>" for name in ("Subject", "From", "To", "Cc", "Date", "Message-ID") if hv(msg, name))
+    attaches = [html.escape(p.get_filename() or p.get_content_type()) for p in msg.walk() if p.get_filename() or p.get_content_disposition() == "attachment"]
+    attach_html = "<div><strong>Attachments:</strong> " + ", ".join(attaches) + "</div>" if attaches else ""
+    tag_html = "".join(f"<span class='tag'>{html.escape(t)}</span>" for t in tags_for(mid))
+    body += f"<section class='message'><div class='meta'>{headers}<div><strong>Tags:</strong> {tag_html}</div><div class='path'><strong>Selected file:</strong> {html.escape(files[idx])}</div>{attach_html}</div><div class='body'>{body_part(msg)}</div></section>"
+    return page("message", body)
+
+def render_status():
+    c = nm(["count", "*"]); f = nm(["count", "--output=files", "*"]); tags = nm(["search", "--output=tags", "*"])
+    return page("status", f"<h2>Status</h2><div class='notice ok'>Viewer mode: <strong>single-email</strong><br>Config: <span class='code'>{html.escape(str(CONFIG))}</span><br>Unique messages: {html.escape(c.stdout.strip())}<br>Indexed files: {html.escape(f.stdout.strip())}</div><h3>Tags</h3><pre>{html.escape(tags.stdout)}</pre><h3>Data Safety</h3><ul><li>Read-only viewer.</li><li>No tag edits.</li><li>No mail file writes.</li><li>Use Evolution for reply/send.</li></ul>")
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        sys.stderr.write("[%s] %s\n" % (self.log_date_time_string(), fmt % args))
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path); qs = urllib.parse.parse_qs(parsed.query)
+        try:
+            if parsed.path == "/":
+                content = render_search(qs.get("q", [DEFAULT_QUERY])[0].strip() or DEFAULT_QUERY)
+            elif parsed.path == "/message":
+                mid = qs.get("id", [""])[0].strip()
+                content = render_message(mid, qs.get("file", ["0"])[0].strip()) if mid else page("missing message", "<div class='notice bad'>Missing message id.</div>")
+            elif parsed.path == "/status":
+                content = render_status()
+            else:
+                self.send_response(404); self.end_headers(); self.wfile.write(b"not found"); return
+            data = content.encode("utf-8", "replace")
+            self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+        except Exception as e:
+            data = page("error", "<div class='notice bad'><pre>" + html.escape(repr(e)) + "</pre></div>").encode()
+            self.send_response(500); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+
+def pick_port(start):
+    for port in range(start, start + 20):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port)); return port
+            except OSError:
+                pass
+    raise SystemExit("no free localhost port found")
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--port", type=int, default=8765); ap.add_argument("--no-open", action="store_true"); args = ap.parse_args()
+    if not CONFIG.exists():
+        raise SystemExit(f"missing notmuch config: {CONFIG}")
+    port = pick_port(args.port)
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    url = f"http://127.0.0.1:{port}/"
+    print(f"notmuch_browser_url={url}", flush=True)
+    print("viewer_mode=single_email", flush=True)
+    print("read_only=yes", flush=True)
+    if not args.no_open:
+        threading.Thread(target=lambda: (time.sleep(0.8), webbrowser.open(url)), daemon=True).start()
+    server.serve_forever()
+
+if __name__ == "__main__":
+    main()
+PY
+
+chmod 755 "$VIEWER"
+python3 -m py_compile "$VIEWER"
+if grep -nE '(/thread|thread:|render_thread|MAX_THREAD_FILES|showing first .*threads|click a thread)' "$VIEWER"; then
+  echo "status=blocked_thread_view_markers_remain"
+  exit 1
+else
+  echo "thread_view_markers=absent"
+fi
+echo
+
+echo "== Launch viewer =="
+pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+sleep 1
+rm -f "$VIEWER_LOG"
+nohup "$VIEWER" --port "$PORT" > "$VIEWER_LOG" 2>&1 &
+echo "viewer_pid=$!"
+sleep 3
+sed -n '1,80p' "$VIEWER_LOG" || true
+url="$(sed -n 's/^notmuch_browser_url=//p' "$VIEWER_LOG" | sed -n '1p')"
+mode="$(sed -n 's/^viewer_mode=//p' "$VIEWER_LOG" | sed -n '1p')"
+echo "viewer_url=$url"
+echo "viewer_mode=$mode"
+[ "$mode" = "single_email" ] || { echo "status=blocked_viewer_not_single_email"; exit 1; }
+
+sample="$(notmuch --config="$CONFIG" search --output=messages --limit 1 tag:inbox | sed 's/^id://' | sed -n '1p')"
+echo "sample_exact_query=id:$sample"
+
+echo "status=chunk_9d_single_email_viewer_launched"
+echo "log_file=$LOG_FILE"
+echo "OPERATOR_CHECK_REQUIRED:"
+echo "1. Did a browser page open?"
+echo "2. Search tag:inbox. Do you see individual email rows, not thread IDs?"
+echo "3. Click one message. Does it open only one selected email body?"
+echo "4. Search sample_exact_query. Does it return and open that exact email?"
+echo "5. Does Status say Viewer mode: single-email?"
+} 2>&1 | tee "$LOG_FILE"</script>
+<script type="text/plain" id="cmd-5">set -eu
+
+LOG_DIR="$HOME/codex-runs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/notmuch-browser-chunk9f-remove-astroid-shims-$(date +%Y%m%d-%H%M%S).log"
+
+{
+echo "== Chunk 9F: remove Astroid-only compatibility shims =="
+date -Ins 2>/dev/null || date
+echo
+
+CONFIG="$HOME/.config/notmuch/default/config"
+DBROOT="/mail/SearchIndex/notmuch/default"
+VIEWER="$HOME/.local/bin/notmuch-browser-pilot"
+VIEWER_LOG="/tmp/notmuch-browser-pilot.log"
+PORT="${NOTMUCH_BROWSER_PORT:-8765}"
+
+[ -r "$CONFIG" ] || { echo "status=blocked_missing_notmuch_config"; exit 1; }
+[ -x "$VIEWER" ] || { echo "status=blocked_missing_browser_viewer"; exit 1; }
+command -v astroid >/dev/null 2>&1 && { echo "status=blocked_astroid_command_still_present"; exit 1; } || echo "astroid_command=absent"
+echo
+
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages_before=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files_before=/'
+echo
+
+remove_count=0
+for shim in "$DBROOT/mbsync" "$DBROOT/evolution"; do
+  if [ -L "$shim" ]; then
+    target="$(readlink "$shim")"
+    echo "verified_symlink=$shim target=$target"
+    case "$shim:$target" in
+      "$DBROOT/mbsync:/mail/Mailstore/mbsync"|"$DBROOT/evolution:/mail/Mailstore/evolution")
+        rm -- "$shim"
+        echo "removed_symlink=$shim"
+        remove_count=$((remove_count + 1))
+        ;;
+      *)
+        echo "status=blocked_unexpected_symlink_target shim=$shim target=$target"
+        exit 1
+        ;;
+    esac
+  elif [ -e "$shim" ]; then
+    echo "status=blocked_shim_exists_but_not_symlink path=$shim"
+    exit 1
+  else
+    echo "shim_already_absent=$shim"
+  fi
+done
+echo "removed_symlink_count=$remove_count"
+echo
+
+notmuch --config="$CONFIG" count '*' | sed 's/^/notmuch_unique_messages_after=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/notmuch_indexed_files_after=/'
+TMP_INDEX_LIST="$(mktemp)"
+notmuch --config="$CONFIG" search --output=files '*' > "$TMP_INDEX_LIST"
+awk '
+  index($0,"/mail/Mailstore/mbsync/provider-live/")==1 { provider++ }
+  index($0,"/mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704/")==1 { delta++ }
+  index($0,"/mail/Mailstore/evolution/local-maildir/")==1 { archive++ }
+  index($0,"/mail/SearchIndex/notmuch/default/mbsync/")==1 { shim_provider++ }
+  index($0,"/mail/SearchIndex/notmuch/default/evolution/")==1 { shim_evolution++ }
+  END {
+    print "indexed_provider_live=" provider+0
+    print "indexed_delta=" delta+0
+    print "indexed_local_archive=" archive+0
+    print "indexed_via_mbsync_shim=" shim_provider+0
+    print "indexed_via_evolution_shim=" shim_evolution+0
+  }
+' "$TMP_INDEX_LIST"
+rm -f "$TMP_INDEX_LIST"
+echo
+
+python3 -m py_compile "$VIEWER"
+if grep -nE '(/thread|thread:|render_thread|MAX_THREAD_FILES|showing first .*threads|click a thread)' "$VIEWER"; then
+  echo "status=blocked_thread_view_markers_returned"
+  exit 1
+else
+  echo "thread_view_markers=absent"
+fi
+echo
+
+pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+sleep 1
+rm -f "$VIEWER_LOG"
+nohup "$VIEWER" --port "$PORT" > "$VIEWER_LOG" 2>&1 &
+echo "viewer_pid=$!"
+sleep 3
+sed -n '1,80p' "$VIEWER_LOG" || true
+url="$(sed -n 's/^notmuch_browser_url=//p' "$VIEWER_LOG" | sed -n '1p')"
+mode="$(sed -n 's/^viewer_mode=//p' "$VIEWER_LOG" | sed -n '1p')"
+echo "viewer_url=$url"
+echo "viewer_mode=$mode"
+[ "$mode" = "single_email" ] || { echo "status=blocked_viewer_not_single_email"; exit 1; }
+
+tmp_total=0
+for root in /mail/Mailstore/mbsync/provider-live /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704 /mail/Mailstore/evolution/local-maildir; do
+  if [ -d "$root" ]; then
+    c="$(find "$root" -type f -path '*/tmp/*' 2>/dev/null | wc -l)"
+    echo "tmp_count $root $c"
+    tmp_total=$((tmp_total + c))
+  fi
+done
+echo "tmp_total=$tmp_total"
+[ "$tmp_total" -eq 0 ] || { echo "status=blocked_tmp_files_present"; exit 1; }
+
+sample="$(notmuch --config="$CONFIG" search --output=messages --limit 1 tag:inbox | sed 's/^id://' | sed -n '1p')"
+echo "sample_exact_query=id:$sample"
+
+echo "status=chunk_9f_astroid_shims_removed"
+echo "viewer_url=$url"
+echo "log_file=$LOG_FILE"
+echo "OPERATOR_CHECK_REQUIRED:"
+echo "1. Browser viewer reopened?"
+echo "2. Search tag:inbox still works?"
+echo "3. Click one message. Does one selected email body still open?"
+echo "4. Does sample_exact_query still open the exact email?"
+} 2>&1 | tee "$LOG_FILE"</script>
+<script type="text/plain" id="cmd-6">mkdir -p "$HOME/codex-runs"
+pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+nohup "$HOME/.local/bin/notmuch-browser-pilot" --port 8765 > "$HOME/codex-runs/notmuch-browser-pilot.log" 2>&1 &
+echo "browser_pid=$!"
+echo "browser_url=http://127.0.0.1:8765/"
+xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true</script>
+<script type="text/plain" id="cmd-7">pkill -f 'notmuch-browser-pilot' 2>/dev/null || true
+pgrep -af 'notmuch-browser-pilot' || echo "notmuch browser viewer stopped"</script>
+<script type="text/plain" id="cmd-8">CONFIG="$HOME/.config/notmuch/default/config"
+
+notmuch --config="$CONFIG" count 'tag:inbox'
+notmuch --config="$CONFIG" search --limit=20 'tag:inbox'
+notmuch --config="$CONFIG" search --limit=20 'from:tagindustries.com.sg'
+notmuch --config="$CONFIG" search --limit=20 'date:2026..2026 and tag:attachment'
+
+MID='003201dd0c93$1e8fa880$5baef980$@tagindustries.com.sg'
+notmuch --config="$CONFIG" count "id:$MID"
+notmuch --config="$CONFIG" count --output=files "id:$MID"
+notmuch --config="$CONFIG" search --output=files "id:$MID"</script>
+<script type="text/plain" id="cmd-9">CONFIG="$HOME/.config/notmuch/default/config"
+BACKUP_DIR="/mail/Backups/notmuch"
+mkdir -p "$BACKUP_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="$BACKUP_DIR/notmuch-tags-$STAMP.batch-tag"
+notmuch --config="$CONFIG" dump --format=batch-tag > "$BACKUP"
+sha256sum "$BACKUP" > "$BACKUP.sha256"
+ls -lh "$BACKUP" "$BACKUP.sha256"
+echo "backup_file=$BACKUP"</script>
+<script type="text/plain" id="cmd-10">CONFIG="$HOME/.config/notmuch/default/config"
+BACKUP="/mail/Backups/notmuch/notmuch-tags-YYYYMMDD-HHMMSS.batch-tag"
+test -f "$BACKUP"
+notmuch --config="$CONFIG" restore --format=batch-tag < "$BACKUP"
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'</script>
+<script type="text/plain" id="cmd-11">set -eu
+CONFIG="$HOME/.config/notmuch/default/config"
+DB="/mail/SearchIndex/notmuch/default"
+BACKUP_ROOT="/mail/Backups/notmuch/reindex-db"
+TAG_BACKUP_DIR="/mail/Backups/notmuch"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$BACKUP_ROOT" "$TAG_BACKUP_DIR"
+
+test "$(notmuch --config="$CONFIG" config get database.path)" = "$DB"
+test "$(notmuch --config="$CONFIG" config get database.mail_root)" = "/mail/Mailstore"
+test "$(notmuch --config="$CONFIG" config get maildir.synchronize_flags)" = "false"
+test "$(notmuch --config="$CONFIG" config get index.decrypt)" = "false"
+
+before_msg="$(notmuch --config="$CONFIG" count '*')"
+before_files="$(notmuch --config="$CONFIG" count --output=files '*')"
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$HOME/codex-runs/notmuch-before-$STAMP.paths"
+
+TAG_BACKUP="$TAG_BACKUP_DIR/notmuch-tags-before-reindex-$STAMP.batch-tag"
+notmuch --config="$CONFIG" dump --format=batch-tag > "$TAG_BACKUP"
+sha256sum "$TAG_BACKUP" > "$TAG_BACKUP.sha256"
+
+DB_BACKUP="$BACKUP_ROOT/default-$STAMP"
+mv -- "$DB" "$DB_BACKUP"
+mkdir -p "$DB"
+notmuch --config="$CONFIG" new
+notmuch --config="$CONFIG" restore --format=batch-tag < "$TAG_BACKUP"
+
+after_msg="$(notmuch --config="$CONFIG" count '*')"
+after_files="$(notmuch --config="$CONFIG" count --output=files '*')"
+notmuch --config="$CONFIG" search --output=files '*' | LC_ALL=C sort > "$HOME/codex-runs/notmuch-after-$STAMP.paths"
+
+echo "before_messages=$before_msg"
+echo "before_files=$before_files"
+echo "after_messages=$after_msg"
+echo "after_files=$after_files"
+cmp -s "$HOME/codex-runs/notmuch-before-$STAMP.paths" "$HOME/codex-runs/notmuch-after-$STAMP.paths"
+echo "status=reindex_pilot_complete"
+echo "db_backup=$DB_BACKUP"
+echo "tag_backup=$TAG_BACKUP"</script>
+<script type="text/plain" id="cmd-12">echo "Do not expand the 59G archive yet unless the count drift is accepted."
+echo "Earlier verified restore: 48,720 cur."
+echo "Later notmuch preflight saw: 48,564 cur."
+find /mail/Mailstore/evolution/local-maildir -type f -path '*/cur/*' | wc -l
+notmuch --config="$HOME/.config/notmuch/default/config" config get new.ignore
+echo "status=archive_expansion_deferred"</script>
+<script>
+function textFor(id) { const node = document.getElementById(id); return node ? node.textContent.replace(/^
+/, '').replace(/
+$/, '') : ''; }
+document.querySelectorAll('pre[data-pre]').forEach((pre) => { pre.textContent = textFor(pre.getAttribute('data-pre')); });
+document.querySelectorAll('button[data-copy]').forEach((button) => { button.addEventListener('click', async () => { const old = button.textContent; await navigator.clipboard.writeText(textFor(button.getAttribute('data-copy'))); button.textContent = 'Copied'; setTimeout(() => { button.textContent = old; }, 1200); }); });
+</script>
+</body>
+</html>

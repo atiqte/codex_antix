@@ -5,7 +5,6 @@
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
 - [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
-- [ ] Keep Astroid installed but non-primary until the antiX/IceWM/VMware WebKitGTK blank-body issue is fixed or superseded by another tested GUI.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
 - [ ] Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
@@ -112,3 +111,6 @@
 - [x] Create final notmuch/Astroid/browser-viewer DIY guide in HTML and plain text after helper and reindex validation passed.
 - [x] Add full Chunk 8A browser-viewer bootstrap and daily start/stop commands to the notmuch HTML/TXT guides for rebuilding on another antiX VM.
 - [x] Add full Chunk 8B helper creation, Chunk 8B-FIX1 helper/tag validation, and Chunk 8C safe reindex validation to the notmuch HTML/TXT guides.
+- [x] Retire Astroid after backing up its settings, purge the package and Astroid-only dependencies, and remove Astroid-only notmuch compatibility symlinks.
+- [x] Replace the notmuch browser viewer's threaded UI with single-email search/result opening and validate exact Message-ID search.
+- [x] Create browser-only notmuch DIY guide in HTML and plain text, and mark the old Astroid guide as retired historical context.

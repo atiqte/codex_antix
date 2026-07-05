@@ -1,3 +1,7 @@
+# RETIRED HISTORICAL GUIDE
+
+Astroid was purged on 2026-07-05 and the active workflow is now the browser-only single-email viewer. Use `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt` instead of copying commands from this historical Astroid guide.
+
 # notmuch + Astroid Search Layer for antiX Maildir++
 
 Validated on 2026-07-05 for antiX Linux runit with zzzFM/IceWM.
