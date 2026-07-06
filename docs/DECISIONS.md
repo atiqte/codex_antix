@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-06: Install antiX Go Toolchain Under `/mail/AppData`
+
+- Status: accepted
+- Context: The Go notmuch browser service needs antiX-side compilation and tests. The Windows workspace did not have Go installed, and the antiX VM has a large `/mail` disk intended for application data. The owner requested use of `kerolloz/go-installer`, but direct `curl | bash` was avoided in favor of a pinned, audited script.
+- Decision: Use pinned `kerolloz/go-installer` v3.0.0 after audit, with installer SHA256 `1bc7a17931b0e7966c6440155752ffaf33ded7194f48eda7db844839e9e9d2fe`. Install Go under `GOROOT=/mail/AppData/go/goroot`, set `GOPATH=/mail/AppData/go/workspace`, and keep the environment in the installer-managed block in `/home/atiq/.profile`.
+- Consequence: antiX now has Go 1.26.4 available for validating and building the read-only notmuch browser service without using root-owned `/usr/local/go` or consuming extra space under the home filesystem. The repository still needs to be cloned or pulled on antiX before `go test ./...` and the service build can run there.
+
 ### 2026-07-06: Build Read-Only notmuch Browser as a Go Standard-Library Service
 
 - Status: accepted
@@ -160,9 +167,8 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Pending Decisions
 
-- Broader project type beyond the mail migration utility
-- Packaging/runtime policy beyond Python 3 standard library
-- Framework or no-framework direction
 - Git hosting provider: GitHub or GitLab
-- First implementation milestone
-- Dependency installation policy after project type is chosen
+- Whether the Go browser service should start through IceWM startup or reviewed root-level runit service after antiX validation
+- Packaging/install workflow for the Go browser service after antiX validation
+- Next implementation milestone after the read-only Go notmuch browser service is validated
+- Dependency installation policy beyond the current approved Python standard-library utilities, Go standard-library service, and local vendored HTMX asset

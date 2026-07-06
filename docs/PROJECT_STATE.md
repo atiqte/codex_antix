@@ -213,6 +213,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The next notmuch browser implementation is now the Go standard-library service in `cmd/notmuch-browser` and `internal/notmuchbrowser`. It exposes `GET /`, `/search`, `/message`, `/status`, and `/healthz`, executes notmuch through argument-array `exec.CommandContext` calls, parses notmuch JSON, renders server-side HTML, embeds local CSS and HTMX 2.0.10, refuses non-localhost binds by default, and checks startup safety for `database.path=/mail/SearchIndex/notmuch/default`, `database.mail_root=/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`.
 - `scripts/notmuch_browser_control.sh` is the installable antiX control source for the Go browser service. It expects the compiled binary at `~/.local/bin/notmuch-browser`, uses logs under `/mail/Logs/notmuch-browser`, stores state under `/mail/AppData/notmuch-browser`, keeps Windows access on an SSH tunnel, and makes `refresh-index` skip when `/mail/AppData/isync/provider-live-loop/lock` is present so it does not overlap the provider-live mbsync loop.
 - The local Windows workspace used for the initial implementation did not have Go installed, so Go compilation and `go test ./...` must be run on antiX or another machine with Go available before treating the service as validated.
+- On 2026-07-06, antiX operator chunks inspected the pinned `kerolloz/go-installer` v3.0.0 script and installed Go 1.26.4 under `/mail/AppData/go/goroot`, with GOPATH `/mail/AppData/go/workspace` and a managed block in `/home/atiq/.profile`.
+- The first antiX Go test/build chunk loaded Go successfully but stopped before validation with `status=blocked_repo_not_found`; the repository was not cloned under the searched `/home/atiq` paths. The next antiX step is to clone or pull `https://github.com/atiqte/codex_antix.git`, then rerun `go test ./...` and build the notmuch browser binary.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
@@ -226,16 +228,17 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 ## Next Actions
 
-1. Run `go test ./...` and build `cmd/notmuch-browser` on antiX or another machine with Go installed.
-2. Install the compiled binary as `~/.local/bin/notmuch-browser` and `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` on antiX, then validate `start`, `status`, `logs`, `/healthz`, search, message view, duplicate selector, and SSH tunnel access from Windows 11.
-3. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
-4. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
-5. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
-6. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup are explicitly planned.
-7. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-8. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-9. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-10. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
+1. Clone or pull the repository on antiX from `https://github.com/atiqte/codex_antix.git`, then rerun the Go test/build chunk from inside the clone.
+2. Run `go test ./...` and build `cmd/notmuch-browser` on antiX with the installed Go 1.26.4 toolchain.
+3. Install the compiled binary as `~/.local/bin/notmuch-browser` and `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` on antiX, then validate `start`, `status`, `logs`, `/healthz`, search, message view, duplicate selector, and SSH tunnel access from Windows 11.
+4. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
+5. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
+6. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+7. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup is explicitly planned.
+8. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+9. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+10. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+11. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
 
 ## Cross-Machine Restore Instructions
 
