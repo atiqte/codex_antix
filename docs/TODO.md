@@ -11,8 +11,7 @@
 - [ ] After validating the newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
-- [ ] Build `cmd/notmuch-browser` on antiX and install it as `~/.local/bin/notmuch-browser`.
-- [ ] Install `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` on antiX and validate `start`, `status`, `logs`, `refresh-index`, and `tunnel-hint`.
+- [ ] Validate the installed Go notmuch browser service controls: `start`, running `status`, `logs`, and `refresh-index`.
 - [ ] Browser-validate the Go notmuch service on antiX: `/healthz`, `tag:inbox` search, single-message view, HTML iframe rendering, attachment-name display, duplicate selector, and Status page.
 - [ ] Validate Windows 11 access through SSH tunnel while the service remains bound to antiX `127.0.0.1:8765`.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
@@ -123,3 +122,5 @@
 - [x] Install Go 1.26.4 on antiX under `/mail/AppData/go/goroot` with GOPATH `/mail/AppData/go/workspace`.
 - [x] Transfer the minimal Go notmuch browser source bundle to antiX without cloning the full repository.
 - [x] Run `go test ./...` for the Go notmuch browser service on antiX and build a temporary Linux binary.
+- [x] Install the Go notmuch browser binary as `~/.local/bin/notmuch-browser`.
+- [x] Install `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` and validate stopped `status` plus `tunnel-hint`.

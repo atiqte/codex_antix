@@ -216,6 +216,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - On 2026-07-06, antiX operator chunks inspected the pinned `kerolloz/go-installer` v3.0.0 script and installed Go 1.26.4 under `/mail/AppData/go/goroot`, with GOPATH `/mail/AppData/go/workspace` and a managed block in `/home/atiq/.profile`.
 - The first antiX Go test/build chunk loaded Go successfully but stopped before validation with `status=blocked_repo_not_found`; the repository was not cloned under the searched `/home/atiq` paths. A later minimal raw-file download attempt from pinned commit `34479bdf9312b3fd714af00bd34890578bf0b18a` stopped immediately with HTTP 404, and a sparse checkout attempt failed because GitHub HTTPS password authentication is not supported. The successful path was a credential-free minimal source bundle copied to `/mail/notmuch-browser-min-src-efc2990.tar.gz`.
 - On 2026-07-06, antiX validated the minimal Go browser source bundle: SHA256 matched, `scripts/notmuch_browser_control.sh` passed `sh -n`, `go test ./...` passed, and a temporary Linux binary was built at `/home/atiq/codex-runs/notmuch-browser-build-20260706-212117/notmuch-browser`.
+- On 2026-07-06, antiX installed the tested binary as `/home/atiq/.local/bin/notmuch-browser` and the control script as `/home/atiq/.local/bin/notmuch-browser-control`. Install validation confirmed the notmuch safety baseline, control-script `status` and `tunnel-hint`, no mbsync/refresh locks, 457 messages, 867 indexed files, and no listener on port 8765 before service start.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
@@ -229,7 +230,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 ## Next Actions
 
-1. Install the compiled binary as `~/.local/bin/notmuch-browser` and `scripts/notmuch_browser_control.sh` as `~/.local/bin/notmuch-browser-control` on antiX, then validate `start`, `status`, `logs`, `/healthz`, search, message view, duplicate selector, and SSH tunnel access from Windows 11.
+1. Start the installed Go notmuch browser service and validate `start`, `status`, `logs`, `/healthz`, search, message view, duplicate selector, and SSH tunnel access from Windows 11.
 2. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
 3. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
 4. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
