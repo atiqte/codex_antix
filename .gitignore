@@ -52,6 +52,7 @@ temp/
 
 # Local reference material
 codex-input/
+codex-output/
 
 # Local secrets and credentials
 *.pem
