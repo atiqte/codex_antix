@@ -222,6 +222,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - antiX IP/SSH discovery showed `sshd` running and listening on port 22. Candidate VM IPs are `192.168.254.129`, `192.168.254.128`, `192.168.4.128`, and `192.168.4.129`; the best first Windows tunnel target is `192.168.254.128` because it is the DHCP source address on the default route via `192.168.254.2`.
 - Windows 11 SSH tunnel validation succeeded with `ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128`. With the tunnel open, `http://127.0.0.1:8765/` worked from Win11 and the owner validated `tag:inbox` search, opening an email, body/HTML rendering, attachments, duplicate selector, and Status page through the tunnel.
 - IceWM startup integration was installed and validated with neutral markers `# BEGIN NOTMUCH BROWSER SERVICE` and `# END NOTMUCH BROWSER SERVICE`, not `CODEX`. The block in `/home/atiq/.icewm/startup` runs `~/.local/bin/notmuch-browser-control start` in the background and passed idempotency checks. The service remained healthy afterward; the remaining proof is a fresh antiX login/reboot auto-start check.
+- Post-reboot proof passed: after rebooting antiX, `~/.local/bin/notmuch-browser-control status` showed the Go browser running as pid 2121, and `/healthz` returned OK/read-only/single-email mode with 457 messages and 867 files. The read-only Go notmuch browser service is now validated end to end for IceWM-session auto-start and Win11 SSH-tunnel access.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
@@ -235,15 +236,14 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 ## Next Actions
 
-1. After the next antiX logout/login or VM reboot, verify the IceWM startup block automatically starts the Go notmuch browser service.
-2. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
-3. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
-4. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
-5. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup is explicitly planned.
-6. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-7. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-8. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-9. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
+1. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
+2. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
+3. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+4. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup is explicitly planned.
+5. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+6. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+7. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
+8. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
 
 ## Cross-Machine Restore Instructions
 
