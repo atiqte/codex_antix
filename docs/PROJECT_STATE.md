@@ -220,6 +220,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - On 2026-07-06, antiX started and locally validated the installed Go browser service. It listened only on `127.0.0.1:8765`, `/healthz` returned OK/read-only/single-email mode, status/search/message/duplicate views rendered, logs were written under `/mail/Logs/notmuch-browser`, and read-only proof passed with unchanged message count, indexed file count, indexed file hash, tag hash, and Maildir `tmp` count.
 - The owner manually validated the antiX browser UI at `http://127.0.0.1:8765/`: `tag:inbox` search worked, opening one email worked, body/HTML rendering, attachments, duplicate selector, and Status page looked correct. The first Windows tunnel attempt failed only because `ANTI_X_VM_IP` was used literally; the next step is to discover the actual antiX VM IP and verify SSH reachability from Windows.
 - antiX IP/SSH discovery showed `sshd` running and listening on port 22. Candidate VM IPs are `192.168.254.129`, `192.168.254.128`, `192.168.4.128`, and `192.168.4.129`; the best first Windows tunnel target is `192.168.254.128` because it is the DHCP source address on the default route via `192.168.254.2`.
+- Windows 11 SSH tunnel validation succeeded with `ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128`. With the tunnel open, `http://127.0.0.1:8765/` worked from Win11 and the owner validated `tag:inbox` search, opening an email, body/HTML rendering, attachments, duplicate selector, and Status page through the tunnel.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
@@ -233,7 +234,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 ## Next Actions
 
-1. Discover the actual antiX VM IP and validate Windows 11 SSH tunnel access while the Go notmuch service remains bound to antiX `127.0.0.1:8765`.
+1. Install and validate the IceWM startup block so `~/.local/bin/notmuch-browser-control start` runs automatically after logging into the antiX IceWM session.
 2. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
 3. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
 4. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
