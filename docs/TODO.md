@@ -129,3 +129,4 @@
 - [x] Validate the read-only Go notmuch browser service end to end for antiX IceWM auto-start and Win11 SSH-tunnel access.
 - [x] Repair stale notmuch index paths after provider-live Maildir changes and restore `tag:inbox` browser search.
 - [x] Install and validate the user-level notmuch browser index-refresh loop on antiX.
+- [x] Update the Go notmuch browser service HTML/TXT DIY guides with stale-index repair and automatic index refresh loop instructions.

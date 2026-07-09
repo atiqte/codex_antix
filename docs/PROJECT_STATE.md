@@ -38,7 +38,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`, an offline browser DIY guide with visible embedded command blocks and copy buttons for retiring Astroid, installing the single-email read-only notmuch browser viewer, daily start/stop, CLI search, tag backup/restore, and pilot-safe reindexing.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same browser-only notmuch guide.
-- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt`, the implementation and antiX validation guide for the new Go standard-library notmuch browser service.
+- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html`, an offline browser DIY guide with visible copy-button command blocks for rebuilding the Go standard-library notmuch browser service, validating read-only behavior, installing IceWM startup, repairing stale notmuch paths, installing the automatic index-refresh loop, and validating Windows SSH tunnel access.
+- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt`, a terminal-friendly plain text version of the same Go browser service rebuild guide.
 - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, retained only as retired historical guides with warnings pointing to the active browser-only guide.
 - `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.
 - `src/` utility folder for approved Python standard-library mail migration tools.
@@ -108,6 +109,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.txt`
   - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`
   - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`
+  - `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html`
   - `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt`
   - `.gitignore`
   - `.gitattributes`
@@ -228,6 +230,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - Post-reboot proof passed: after rebooting antiX, `~/.local/bin/notmuch-browser-control status` showed the Go browser running as pid 2121, and `/healthz` returned OK/read-only/single-email mode with 457 messages and 867 files. The read-only Go notmuch browser service is now validated end to end for IceWM-session auto-start and Win11 SSH-tunnel access.
 - A 2026-07-09 repair run explained a later browser error after provider-live changed behind the notmuch database: before refresh, `tag:inbox` search failed because 12 indexed files under `/mail/Mailstore/mbsync/provider-live/new/` no longer existed. `refresh-index` ran without mbsync overlap, processed 174 files, detected 12 renames, added 102 new messages, left Maildir `tmp` count at 0, and restored `/healthz` plus `/search?q=tag%3Ainbox` behavior with 559 messages and 1,025 files.
 - The user-level notmuch browser index-refresh loop was installed and validated on 2026-07-09 as `/home/atiq/.local/bin/notmuch-browser-index-control`. It runs every 60 seconds, skips while the provider-live mbsync lock or notmuch refresh lock is present, calls the existing locked `notmuch-browser-control refresh-index`, writes `/mail/Logs/notmuch-browser/notmuch-browser-index-loop.log`, and starts from neutral IceWM markers `# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE` / `# END NOTMUCH BROWSER INDEX REFRESH SERVICE`. Validation showed the loop running as pid 14998, a no-new-mail refresh completed successfully, `/healthz` remained OK with 559 messages and 1,025 files, the browser search endpoint returned HTML, and Maildir `tmp` count stayed 0.
+- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` were updated after the 2026-07-09 validation so a future antiX VM can recreate the same Go service setup. The guide now includes required source paths, safety audit, build/install, browser validation, IceWM startup blocks, stale-index repair, automatic index-refresh loop validation, Windows SSH tunnel commands, monitor commands, and the completion checklist.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 

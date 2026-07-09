@@ -1,62 +1,400 @@
 # Go notmuch Browser Service for antiX
 
-This is the implementation guide for the read-only Go notmuch browser service.
-It supersedes the Python pilot viewer as the next implementation direction, but
-it keeps the same safety posture: search/view only, localhost bind, Evolution
-for reply/forward/send, and no Maildir mutation.
+Updated: 2026-07-09
 
-## Scope
+This is the rebuild guide for the read-only Go notmuch browser service on antiX
+Linux runit with zzzFM/IceWM. It supersedes the Python pilot viewer as the
+current service path and preserves the same safety posture:
 
-- Backend: Go standard library `net/http`, no Gin, Flask, uv, Node, npm, or CDN.
-- Frontend: server-rendered HTML, local CSS, and vendored local HTMX.
-- Binding: `127.0.0.1:8765` inside antiX.
-- Host access: SSH tunnel from Windows 11.
-- notmuch database: `/mail/SearchIndex/notmuch/default`.
-- mail root: `/mail/Mailstore`.
-- Safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`.
-- Full 59G archive expansion remains deferred until the count drift is accepted
-  or explained.
+- Search and view only.
+- Evolution remains reply, forward, compose, and send.
+- The HTTP service binds only to `127.0.0.1:8765`.
+- Windows 11 access uses an SSH tunnel.
+- No React, npm, CDN, Gin, Flask, uv runtime, or tmux supervisor.
+- notmuch is the search database; there is no custom mail database.
+- The browser must not mutate Maildir data.
 
-## Build on antiX
+## Validated Current State
 
-Run from the repository root on antiX after Go is installed or available.
+Validated on antiX after the 2026-07-09 stale-index repair and refresh-loop
+install:
+
+- Browser binary: `~/.local/bin/notmuch-browser`
+- Browser control: `~/.local/bin/notmuch-browser-control`
+- Index loop control: `~/.local/bin/notmuch-browser-index-control`
+- URL inside antiX: `http://127.0.0.1:8765/`
+- Windows tunnel: `ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128`
+- notmuch config: `~/.config/notmuch/default/config`
+- database: `/mail/SearchIndex/notmuch/default`
+- mail root: `/mail/Mailstore`
+- safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`
+- current pilot scope: `provider-live` plus the small restored delta
+- full 59G archive: still excluded until count drift is explained or accepted
+- latest validated count after repair: 559 unique messages and 1,025 indexed files
+- Maildir `tmp` files after repair/loop validation: 0
+
+The 2026-07-09 browser error was caused by stale notmuch paths, not by the Go
+service. `notmuch-browser-control refresh-index` detected 12 file renames,
+added 102 new messages, and restored `tag:inbox` search. The new
+`notmuch-browser-index-control` loop now runs `refresh-index` every 60 seconds
+and skips while mbsync or another refresh is active.
+
+## Required Source Files
+
+To rebuild from this repository, the antiX source tree needs these paths:
+
+```text
+go.mod
+cmd/notmuch-browser/
+internal/notmuchbrowser/
+scripts/notmuch_browser_control.sh
+scripts/notmuch_browser_index_control.sh
+```
+
+If you do not want to clone the full repository on antiX, copy only those paths
+into a temporary source directory, preserving the same relative layout. Then run
+the build/install chunk from that directory.
+
+## Chunk 1: antiX Safety Audit
+
+Run before building or changing the service.
 
 ```sh
 set -eu
 
-go test ./...
-go build -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
-install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
+CONFIG="$HOME/.config/notmuch/default/config"
+MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
 
-notmuch-browser-control status
-notmuch-browser-control start
-notmuch-browser-control status
+echo "== antiX notmuch browser safety audit =="
+date -Is
+echo
+
+echo "== required commands =="
+for c in go notmuch curl sh install; do
+  if command -v "$c" >/dev/null 2>&1; then
+    printf '%s=OK %s\n' "$c" "$(command -v "$c")"
+  else
+    printf '%s=MISSING\n' "$c"
+  fi
+done
+echo
+
+echo "== notmuch config safety =="
+test -r "$CONFIG"
+notmuch --config="$CONFIG" config get database.path
+notmuch --config="$CONFIG" config get database.mail_root
+notmuch --config="$CONFIG" config get maildir.synchronize_flags
+notmuch --config="$CONFIG" config get index.decrypt
+notmuch --config="$CONFIG" config get new.ignore
+echo
+
+echo "== notmuch counts =="
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+notmuch --config="$CONFIG" count tag:inbox
+echo
+
+echo "== locks and tmp files =="
+test -d "$MBSYNC_LOCK" && echo "mbsync_lock=present" || echo "mbsync_lock=absent"
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
+echo
+
+echo "status=chunk1_safety_audit_complete"
 ```
 
-Open locally inside antiX:
+Expected safety values:
+
+```text
+database.path=/mail/SearchIndex/notmuch/default
+database.mail_root=/mail/Mailstore
+maildir.synchronize_flags=false
+index.decrypt=false
+```
+
+Stop if any value differs.
+
+## Chunk 2: Build and Install From Source
+
+Run from the source directory containing `go.mod`.
+
+```sh
+set -eu
+
+SRC="${SRC:-$PWD}"
+cd "$SRC"
+
+echo "== source root =="
+pwd
+test -f go.mod
+test -d cmd/notmuch-browser
+test -d internal/notmuchbrowser
+test -f scripts/notmuch_browser_control.sh
+test -f scripts/notmuch_browser_index_control.sh
+echo
+
+echo "== syntax checks =="
+sh -n scripts/notmuch_browser_control.sh
+sh -n scripts/notmuch_browser_index_control.sh
+echo "shell_syntax=ok"
+echo
+
+echo "== Go tests and build =="
+go test ./...
+mkdir -p "$HOME/.local/bin"
+go build -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
+install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
+install -m 700 scripts/notmuch_browser_index_control.sh "$HOME/.local/bin/notmuch-browser-index-control"
+echo
+
+echo "== installed files =="
+ls -lh "$HOME/.local/bin/notmuch-browser" \
+       "$HOME/.local/bin/notmuch-browser-control" \
+       "$HOME/.local/bin/notmuch-browser-index-control"
+sha256sum "$HOME/.local/bin/notmuch-browser" \
+          "$HOME/.local/bin/notmuch-browser-control" \
+          "$HOME/.local/bin/notmuch-browser-index-control"
+echo
+
+echo "status=chunk2_build_install_complete"
+```
+
+## Chunk 3: Start Browser and Validate Read-Only Search
+
+```sh
+set -eu
+
+CONFIG="$HOME/.config/notmuch/default/config"
+
+echo "== restart browser =="
+"$HOME/.local/bin/notmuch-browser-control" restart
+sleep 1
+"$HOME/.local/bin/notmuch-browser-control" status
+echo
+
+echo "== health =="
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+echo
+
+echo "== search endpoint =="
+curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' >/tmp/notmuch-browser-search-check.html
+wc -c /tmp/notmuch-browser-search-check.html
+echo
+
+echo "== read-only tmp proof =="
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
+echo
+
+echo "status=chunk3_browser_validate_complete"
+```
+
+Open locally in antiX:
 
 ```sh
 xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true
 ```
 
-## Windows 11 SSH Tunnel
+Manual browser checks:
 
-Keep the service bound to antiX localhost. From Windows PowerShell, use:
+1. Search `tag:inbox`.
+2. Open one message.
+3. Confirm body, HTML iframe, attachments, duplicate selector, and Status page.
 
-```powershell
-ssh -N -L 8765:127.0.0.1:8765 atiq@ANTI_X_VM_IP
+## Chunk 4: Install IceWM Startup Blocks
+
+Install both the browser service startup block and the index-refresh loop
+startup block. Both are user-level and use neutral markers.
+
+```sh
+set -eu
+
+"$HOME/.local/bin/notmuch-browser-control" install-icewm-startup
+"$HOME/.local/bin/notmuch-browser-index-control" install-icewm-startup
+echo
+
+echo "== marker counts =="
+grep -F "# BEGIN NOTMUCH BROWSER SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/browser_begin=/'
+grep -F "# END NOTMUCH BROWSER SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/browser_end=/'
+grep -F "# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/index_begin=/'
+grep -F "# END NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/index_end=/'
+echo
+
+echo "== service status =="
+"$HOME/.local/bin/notmuch-browser-control" status
+"$HOME/.local/bin/notmuch-browser-index-control" status
+echo
+
+echo "status=chunk4_icewm_startup_complete"
 ```
 
-Then open this in the Windows browser:
+Expected marker counts are all `1`.
+
+## Chunk 5: Repair Stale notmuch Paths
+
+Use this if browser search shows errors like:
+
+```text
+Error opening /mail/Mailstore/mbsync/provider-live/new/...: No such file or directory
+```
+
+This is a stale notmuch database reference after Maildir renames. Do not
+reinstall the app. Run a safe refresh.
+
+```sh
+set -eu
+
+CONFIG="$HOME/.config/notmuch/default/config"
+CONTROL="$HOME/.local/bin/notmuch-browser-control"
+MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+
+echo "== stale index repair =="
+date -Is
+echo
+
+echo "== before counts =="
+notmuch --config="$CONFIG" count '*'
+notmuch --config="$CONFIG" count --output=files '*'
+notmuch --config="$CONFIG" count tag:inbox
+echo
+
+echo "== reproduce inbox metadata query =="
+if notmuch --config="$CONFIG" show --format=json --entire-thread=false --body=false --offset=0 --limit=50 tag:inbox >/tmp/notmuch-before-"$STAMP".json 2>/tmp/notmuch-before-"$STAMP".err; then
+  echo "before_query=OK"
+else
+  echo "before_query=FAILED"
+  sed -n '1,80p' /tmp/notmuch-before-"$STAMP".err
+fi
+echo
+
+echo "== refresh =="
+if [ -d "$MBSYNC_LOCK" ]; then
+  echo "status=blocked_mbsync_lock_present"
+  exit 0
+fi
+"$CONTROL" refresh-index
+echo
+
+echo "== after query and browser =="
+notmuch --config="$CONFIG" show --format=json --entire-thread=false --body=false --offset=0 --limit=50 tag:inbox >/tmp/notmuch-after-"$STAMP".json
+wc -c /tmp/notmuch-after-"$STAMP".json
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' >/tmp/notmuch-browser-after-repair.html
+wc -c /tmp/notmuch-browser-after-repair.html
+echo
+
+echo "== tmp proof =="
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
+echo
+
+echo "status=chunk5_stale_index_repair_complete"
+```
+
+Validated 2026-07-09 repair result:
+
+```text
+before: 457 messages / 867 files
+detected: 12 file renames
+added: 102 new messages
+after: 559 messages / 1,025 files
+maildir_tmp_files=0
+```
+
+Counts will change as new mail arrives.
+
+## Chunk 6: Install and Validate Automatic Index Refresh Loop
+
+Run after installing `~/.local/bin/notmuch-browser-index-control`.
+
+```sh
+set -eu
+
+INDEX="$HOME/.local/bin/notmuch-browser-index-control"
+
+echo "== syntax and restart =="
+sh -n "$INDEX"
+"$INDEX" stop || true
+"$INDEX" start
+sleep 5
+echo
+
+echo "== status =="
+"$INDEX" status
+echo
+
+echo "== logs =="
+"$INDEX" logs
+echo
+
+echo "== startup block =="
+"$INDEX" install-icewm-startup
+grep -F "# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/begin_marker_count=/'
+grep -F "# END NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/end_marker_count=/'
+echo
+
+echo "== health/search/tmp proof =="
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' >/tmp/notmuch-browser-search-index-loop.html
+wc -c /tmp/notmuch-browser-search-index-loop.html
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
+echo
+
+echo "status=chunk6_index_loop_validate_complete"
+```
+
+Validated 2026-07-09 result:
+
+```text
+loop=running
+interval_seconds=60
+mbsync_lock=absent
+refresh_lock=absent
+notmuch_unique_messages=559
+notmuch_indexed_files=1025
+status=refresh_index_complete
+begin_marker_count=1
+end_marker_count=1
+maildir_tmp_files=0
+```
+
+## Chunk 7: Windows 11 SSH Tunnel
+
+Use the real antiX IP. The validated IP was `192.168.254.128`, but another VM
+may get a different address.
+
+From Windows PowerShell:
+
+```powershell
+Test-NetConnection 192.168.254.128 -Port 22
+ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128
+```
+
+Keep the SSH window open. Then open this in Windows:
 
 ```text
 http://127.0.0.1:8765/
 ```
 
-## Control Commands
+## Daily Monitor Commands
 
-After installing `scripts/notmuch_browser_control.sh` as
-`~/.local/bin/notmuch-browser-control`:
+```sh
+notmuch-browser-control status
+notmuch-browser-index-control status
+mbsync-provider-live-control status
+```
+
+Use logs only when needed:
+
+```sh
+notmuch-browser-control logs
+notmuch-browser-index-control logs
+```
+
+## Control Command Reference
 
 ```sh
 notmuch-browser-control start
@@ -68,36 +406,41 @@ notmuch-browser-control refresh-index
 notmuch-browser-control tunnel-hint
 notmuch-browser-control install-icewm-startup
 notmuch-browser-control print-runit-service
-```
 
-`refresh-index` runs `notmuch new` only after confirming the notmuch safety
-settings. It skips instead of overlapping when the mbsync provider-live lock is
-present at `/mail/AppData/isync/provider-live-loop/lock`.
+notmuch-browser-index-control start
+notmuch-browser-index-control stop
+notmuch-browser-index-control restart
+notmuch-browser-index-control status
+notmuch-browser-index-control logs
+notmuch-browser-index-control install-icewm-startup
+notmuch-browser-index-control remove-icewm-startup
+```
 
 ## Runit Versus IceWM Startup
 
-Use `install-icewm-startup` for the current user-level pattern. It edits only
-`~/.icewm/startup` with a marked block.
+The validated current setup is IceWM user-session startup:
 
-Use `print-runit-service` only as a reviewed template for later root-level
-runit setup. Do not run those commands blindly; root-level service installation
-should be a separate controlled antiX step.
+- `# BEGIN NOTMUCH BROWSER SERVICE`
+- `# END NOTMUCH BROWSER SERVICE`
+- `# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE`
+- `# END NOTMUCH BROWSER INDEX REFRESH SERVICE`
 
-Do not use `tmux` as the service supervisor. It is acceptable only for manual
-debugging.
+Use root-level runit only if boot-before-login is required. Do not use `tmux`
+as the supervisor. It is acceptable only as a manual debugging console.
 
 ## Validation Checklist
 
-On antiX, validate:
+On a recreated VM, do not consider the service complete until:
 
 1. `go test ./...` passes.
-2. `notmuch-browser-control start` reports `server=running`.
-3. `/healthz` returns `ok: true`.
-4. Search `tag:inbox` shows individual messages.
-5. Opening a result shows one selected email.
-6. Duplicate Message-ID file selector appears when multiple files exist.
+2. Browser service reports `server=running`.
+3. Index loop reports `loop=running`.
+4. `/healthz` returns `ok:true`.
+5. `tag:inbox` search renders.
+6. A single message opens.
 7. HTML mail renders in the sandboxed iframe.
-8. Attachment names are visible but downloads are not exposed in v1.
-9. `notmuch-browser-control refresh-index` skips while mbsync lock is present.
-10. Before/after Maildir path lists and `tmp` counts do not change from
-    search/view operations.
+8. Attachment names display.
+9. Duplicate selector displays for duplicate Message-ID messages.
+10. Windows SSH tunnel works.
+11. Maildir `tmp` count remains 0 after search/view/refresh.
+12. IceWM startup has exactly one begin/end marker for both browser and index loop.
