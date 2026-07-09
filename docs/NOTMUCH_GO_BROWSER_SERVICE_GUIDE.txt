@@ -18,22 +18,28 @@ the current service path and preserves the same safety posture:
 
 ## Validated Current State
 
-Validated on antiX after the 2026-07-09 stale-index repair and refresh-loop
-install:
+Validated on antiX after the 2026-07-09 chi/Tailwind install, index-loop
+post-install check, antiX manual UI check, and Windows SSH-tunnel UI check:
 
 - Browser binary: `~/.local/bin/notmuch-browser`
 - Browser control: `~/.local/bin/notmuch-browser-control`
 - Index loop control: `~/.local/bin/notmuch-browser-index-control`
 - URL inside antiX: `http://127.0.0.1:8765/`
 - Windows tunnel: `ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128`
+- Installed chi binary SHA256: `78f3fce722240999ad6bcfe57866a29a4fb58cceb0852d57529fac78b0ad58bd`
+- Validated minimal source bundle: `/mail/notmuch-browser-chi-src-20260709-222603.tar.gz`
+- Source bundle SHA256: `9a53fabf109e492723e8619dd1e07b09d210ebd30c67197c840a11d26a21dbf5`
+- Compiled local Tailwind CSS served from `/static/app.css`: 10,801 bytes
 - notmuch config: `~/.config/notmuch/default/config`
 - database: `/mail/SearchIndex/notmuch/default`
 - mail root: `/mail/Mailstore`
 - safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`
 - current pilot scope: `provider-live` plus the small restored delta
 - full 59G archive: still excluded until count drift is explained or accepted
-- latest validated count after repair: 559 unique messages and 1,025 indexed files
-- Maildir `tmp` files after repair/loop validation: 0
+- latest validated count after chi install: 638 unique messages and 1,158 indexed files
+- Maildir `tmp` files after chi install and loop validation: 0
+- Manual antiX UI validation: search/results/message/body/HTML/status looked right
+- Manual Windows tunnel UI validation: search/results/message/body/HTML/status looked right
 
 The 2026-07-09 browser error was caused by stale notmuch paths, not by the Go
 service. `notmuch-browser-control refresh-index` detected 12 file renames,
@@ -425,8 +431,8 @@ loop=running
 interval_seconds=60
 mbsync_lock=absent
 refresh_lock=absent
-notmuch_unique_messages=559
-notmuch_indexed_files=1025
+notmuch_unique_messages=638
+notmuch_indexed_files=1158
 status=refresh_index_complete
 begin_marker_count=1
 end_marker_count=1
@@ -450,6 +456,9 @@ Keep the SSH window open. Then open this in Windows:
 ```text
 http://127.0.0.1:8765/
 ```
+
+Validated 2026-07-09 result: Windows tunnel chi UI confirmed for
+search/results/message/body/HTML/status.
 
 ## Daily Monitor Commands
 

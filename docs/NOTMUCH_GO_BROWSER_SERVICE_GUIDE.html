@@ -74,8 +74,13 @@
     <li>Index loop control: <code>~/.local/bin/notmuch-browser-index-control</code></li>
     <li>Current URL: <code>http://127.0.0.1:8765/</code></li>
     <li>Validated Windows tunnel: <code>ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128</code></li>
-    <li>Latest validated count after repair: 559 unique messages and 1,025 indexed files</li>
+    <li>Installed chi binary SHA256: <code>78f3fce722240999ad6bcfe57866a29a4fb58cceb0852d57529fac78b0ad58bd</code></li>
+    <li>Validated source bundle: <code>/mail/notmuch-browser-chi-src-20260709-222603.tar.gz</code></li>
+    <li>Source bundle SHA256: <code>9a53fabf109e492723e8619dd1e07b09d210ebd30c67197c840a11d26a21dbf5</code></li>
+    <li>Compiled local Tailwind CSS: <code>/static/app.css</code>, 10,801 bytes</li>
+    <li>Latest validated count after chi install: 638 unique messages and 1,158 indexed files</li>
     <li>Latest validated Maildir <code>tmp</code> count: 0</li>
+    <li>Manual antiX and Windows tunnel UI validation confirmed search/results/message/body/HTML/status.</li>
   </ul>
   <p>Counts will change as new mail arrives. The safety baseline and zero <code>tmp</code> proof are the important checks.</p>
 </section>
@@ -378,7 +383,7 @@ find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null | wc -l | sed 's/^/m
 echo
 
 echo "status=chunk6_index_loop_validate_complete"</pre></div>
-  <p>Validated 2026-07-09 result: <code>loop=running</code>, <code>interval_seconds=60</code>, <code>status=refresh_index_complete</code>, marker counts 1/1, and <code>maildir_tmp_files=0</code>.</p>
+  <p>Validated 2026-07-09 chi result: <code>loop=running</code>, <code>interval_seconds=60</code>, <code>notmuch_unique_messages=638</code>, <code>notmuch_indexed_files=1158</code>, <code>status=refresh_index_complete</code>, marker counts 1/1, and <code>maildir_tmp_files=0</code>.</p>
 </section>
 
 <section>
@@ -387,6 +392,7 @@ echo "status=chunk6_index_loop_validate_complete"</pre></div>
   <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button data-copy-target="cmd-7">Copy</button></div><pre id="cmd-7">Test-NetConnection 192.168.254.128 -Port 22
 ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128</pre></div>
   <p>Keep the SSH window open, then open <code>http://127.0.0.1:8765/</code> in the Windows browser.</p>
+  <p>Validated 2026-07-09 result: Windows tunnel chi UI confirmed for search/results/message/body/HTML/status.</p>
 </section>
 
 <section>

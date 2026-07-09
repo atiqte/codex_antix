@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-09
 
+- Validated the installed chi/Tailwind notmuch browser on antiX and through the Windows SSH tunnel: Go tests passed on antiX, the compiled CSS/search/message/status views worked, read-only hashes stayed unchanged, the index loop stayed healthy, and the owner confirmed the UI locally and from Windows.
 - Migrated the read-only Go notmuch browser source from stdlib `ServeMux` to chi routing while preserving localhost-only access, read-only notmuch behavior, control scripts, and the index-refresh loop.
 - Split the browser UI into modular embedded HTML templates and added compiled local Tailwind CSS with a checked-in Tailwind source stylesheet; antiX runtime still serves only local embedded assets.
 - Expanded the Go browser HTML/TXT rebuild guides with the chi/Tailwind source-bundle workflow, `go.sum`, modular template/static/style checks, and the no-full-repo antiX transfer path.

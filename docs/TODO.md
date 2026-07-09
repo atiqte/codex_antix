@@ -131,3 +131,4 @@
 - [x] Install and validate the user-level notmuch browser index-refresh loop on antiX.
 - [x] Update the Go notmuch browser service HTML/TXT DIY guides with stale-index repair and automatic index refresh loop instructions.
 - [x] Migrate the Go notmuch browser service source to chi routing, modular embedded templates, local HTMX, and compiled local Tailwind CSS while preserving read-only behavior.
+- [x] Validate the installed chi/Tailwind notmuch browser service on antiX and through the Windows SSH tunnel.
