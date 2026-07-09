@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-09: Keep notmuch Fresh With a User-Level Index Refresh Loop
+
+- Status: accepted
+- Context: After the Go notmuch browser was validated, a later `tag:inbox` search failed because notmuch still referenced Maildir files under `/mail/Mailstore/mbsync/provider-live/new/` that had been renamed or moved by subsequent provider-live activity. A manual locked `notmuch-browser-control refresh-index` fixed the issue by detecting 12 file renames and adding 102 new messages, but manual refresh is not sufficient for an always-on browser.
+- Decision: Install a small user-level `~/.local/bin/notmuch-browser-index-control` loop from the IceWM session. It calls the existing safe `notmuch-browser-control refresh-index` path every 60 seconds, skips while the provider-live mbsync lock or notmuch refresh lock exists, writes logs under `/mail/Logs/notmuch-browser`, and starts from neutral IceWM markers `# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE` / `# END NOTMUCH BROWSER INDEX REFRESH SERVICE`.
+- Consequence: New provider-live Maildir changes should be indexed automatically soon after mbsync/Evolution activity without requiring root runit supervision or tmux. Search can still briefly lag behind live Maildir changes during an active sync or until the next refresh interval, but stale paths should self-repair once the loop runs. The service remains read-only from the browser's perspective; the refresh loop only updates the notmuch sidecar database.
+
 ### 2026-07-06: Install antiX Go Toolchain Under `/mail/AppData`
 
 - Status: accepted

@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-07-06
+Last updated: 2026-07-09
 
 ## Project Identity
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus a read-only Go notmuch browser service for antiX
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a notmuch search/view layer now being promoted from the Python pilot viewer to a Go standard-library browser service
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a validated read-only Go standard-library notmuch browser service with automatic index refresh
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -227,6 +227,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - IceWM startup integration was installed and validated with neutral markers `# BEGIN NOTMUCH BROWSER SERVICE` and `# END NOTMUCH BROWSER SERVICE`, not `CODEX`. The block in `/home/atiq/.icewm/startup` runs `~/.local/bin/notmuch-browser-control start` in the background and passed idempotency checks. The service remained healthy afterward; the remaining proof is a fresh antiX login/reboot auto-start check.
 - Post-reboot proof passed: after rebooting antiX, `~/.local/bin/notmuch-browser-control status` showed the Go browser running as pid 2121, and `/healthz` returned OK/read-only/single-email mode with 457 messages and 867 files. The read-only Go notmuch browser service is now validated end to end for IceWM-session auto-start and Win11 SSH-tunnel access.
 - A 2026-07-09 repair run explained a later browser error after provider-live changed behind the notmuch database: before refresh, `tag:inbox` search failed because 12 indexed files under `/mail/Mailstore/mbsync/provider-live/new/` no longer existed. `refresh-index` ran without mbsync overlap, processed 174 files, detected 12 renames, added 102 new messages, left Maildir `tmp` count at 0, and restored `/healthz` plus `/search?q=tag%3Ainbox` behavior with 559 messages and 1,025 files.
+- The user-level notmuch browser index-refresh loop was installed and validated on 2026-07-09 as `/home/atiq/.local/bin/notmuch-browser-index-control`. It runs every 60 seconds, skips while the provider-live mbsync lock or notmuch refresh lock is present, calls the existing locked `notmuch-browser-control refresh-index`, writes `/mail/Logs/notmuch-browser/notmuch-browser-index-loop.log`, and starts from neutral IceWM markers `# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE` / `# END NOTMUCH BROWSER INDEX REFRESH SERVICE`. Validation showed the loop running as pid 14998, a no-new-mail refresh completed successfully, `/healthz` remained OK with 559 messages and 1,025 files, the browser search endpoint returned HTML, and Maildir `tmp` count stayed 0.
 - Windows validation passed for syntax and portable unit tests. The copy-preserves-Maildir-flags converter test is skipped on Windows because `:2,` filenames are Linux Maildir-specific and invalid on Windows filesystems.
 - Next dynamic delta validation must transfer the verified aggregate export `/home/atiq/maildirpp-post-main-archive-export-20260704-205827` to antiX, restore it as a separate Evolution Maildir account, and validate message counts, message opening, HTML rendering, attachments, and absence of error popups.
 
@@ -241,12 +242,12 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 ## Next Actions
 
 1. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
-2. Install and validate the notmuch browser index-refresh loop so provider-live Maildir changes are picked up automatically after mbsync/Evolution activity.
-3. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
-4. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
-5. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup is explicitly planned.
-6. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-7. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+2. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
+3. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
+4. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup is explicitly planned.
+5. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
+6. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
+7. Keep the notmuch browser index-refresh loop monitored with `notmuch-browser-index-control status` during normal antiX use.
 8. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
 9. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
 
