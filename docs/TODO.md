@@ -5,6 +5,7 @@
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
 - [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
+- [ ] Install and validate the user-level notmuch browser index-refresh loop on antiX.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
 - [ ] Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
@@ -127,3 +128,4 @@
 - [x] Install and validate the IceWM startup block for the Go notmuch browser service with neutral `NOTMUCH BROWSER SERVICE` markers.
 - [x] Verify after antiX reboot that IceWM startup auto-starts the Go notmuch browser service.
 - [x] Validate the read-only Go notmuch browser service end to end for antiX IceWM auto-start and Win11 SSH-tunnel access.
+- [x] Repair stale notmuch index paths after provider-live Maildir changes and restore `tag:inbox` browser search.
