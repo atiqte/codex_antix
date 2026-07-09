@@ -1,0 +1,46 @@
+{{define "messagePage"}}
+{{template "top" (dictTitle "Message")}}
+{{if .Error}}
+  <div class="notice bad">{{.Error}}</div>
+{{else}}
+<p><a class="button" href="/">Back to search</a></p>
+<article class="message">
+  <header class="message-meta">
+    <h1>{{.Detail.Summary.Subject}}</h1>
+    <dl>
+      <dt>From</dt><dd>{{.Detail.Summary.From}}</dd>
+      <dt>To</dt><dd>{{.Detail.Summary.To}}</dd>
+      <dt>Date</dt><dd>{{.Detail.Summary.Date}}</dd>
+      <dt>Message-ID</dt><dd class="path">{{.Detail.Summary.ID}}</dd>
+      {{if .Detail.SelectedFile}}<dt>Selected file</dt><dd class="path">{{.Detail.SelectedFile}}</dd>{{end}}
+    </dl>
+    <div class="tags">{{range .Detail.Summary.Tags}}<span>{{.}}</span>{{end}}</div>
+    {{if .Detail.DuplicateNote}}
+    <div class="notice">{{.Detail.DuplicateNote}}</div>
+    <div class="duplicates">
+      {{range $i, $path := .Detail.Files}}
+        {{if selectedDup $.Detail.SelectedDup $i}}
+          <strong>{{add $i 1}}</strong>
+        {{else}}
+          <a href="{{messageURL $.Detail.Summary.ID $i}}">{{add $i 1}}</a>
+        {{end}}
+      {{end}}
+    </div>
+    {{end}}
+    {{if .Detail.Attachments}}
+    <div class="attachments"><strong>Attachments:</strong> {{range .Detail.Attachments}}<span>{{.}}</span>{{end}}</div>
+    {{end}}
+  </header>
+  <section class="message-body">
+    {{if eq .Detail.BodyKind "html"}}
+      <iframe sandbox referrerpolicy="no-referrer" srcdoc="{{.Detail.HTMLSrcdoc}}"></iframe>
+    {{else if eq .Detail.BodyKind "plain"}}
+      <pre>{{.Detail.PlainBody}}</pre>
+    {{else}}
+      <div class="notice">No text/plain or text/html body part was returned by notmuch.</div>
+    {{end}}
+  </section>
+</article>
+{{end}}
+{{template "bottom" .}}
+{{end}}

@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-09: Migrate notmuch Browser Service to chi Router and Compiled Tailwind CSS
+
+- Status: accepted
+- Context: After the read-only Go notmuch browser service was validated, the owner requested a more modular GUI/backend structure using Go `chi`, HTMX, and Tailwind CSS while preserving the same high-performance, low-resource, read-only antiX service posture.
+- Decision: Keep the notmuch command layer, localhost binding, SSH tunnel access, control scripts, IceWM startup, and index-refresh loop unchanged, but replace the stdlib `ServeMux` with `github.com/go-chi/chi/v5` and move embedded HTML templates into modular files. Use Tailwind only as a build-time CSS generator: commit the compiled local `app.css`, keep the Tailwind source stylesheet, and require no Node/npm/Tailwind runtime on antiX. Continue serving local HTMX only.
+- Consequence: The runtime remains a small single Go binary serving embedded local assets, with one small Go router dependency and no frontend build step on antiX. Future UI changes can be maintained through separate template and stylesheet files. Validation must run on antiX or another machine with Go installed because the Windows workspace still lacks a local Go toolchain.
+
 ### 2026-07-09: Keep notmuch Fresh With a User-Level Index Refresh Loop
 
 - Status: accepted
@@ -178,4 +185,4 @@ This file records meaningful project decisions. Add a new entry when the project
 - Whether the Go browser service should start through IceWM startup or reviewed root-level runit service after antiX validation
 - Packaging/install workflow for the Go browser service after antiX validation
 - Next implementation milestone after the read-only Go notmuch browser service is validated
-- Dependency installation policy beyond the current approved Python standard-library utilities, Go standard-library service, and local vendored HTMX asset
+- Dependency installation policy beyond the current approved Python standard-library utilities, Go chi notmuch browser service, local vendored HTMX asset, and build-time compiled Tailwind CSS workflow

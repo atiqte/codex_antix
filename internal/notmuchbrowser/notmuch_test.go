@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -196,6 +198,109 @@ func TestTemplateEscapesSearchResults(t *testing.T) {
 	if !strings.Contains(out, "&lt;script&gt;") {
 		t.Fatalf("escaped script marker missing: %s", out)
 	}
+}
+
+func TestRouteRejectsPost(t *testing.T) {
+	server := newHTTPTestServer()
+	req := httptest.NewRequest(http.MethodPost, "/search", nil)
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, req)
+	if res.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", res.Code)
+	}
+	if got := res.Header().Get("Allow"); got != http.MethodGet {
+		t.Fatalf("expected Allow GET, got %q", got)
+	}
+}
+
+func TestSecurityHeadersAndHTMXFragment(t *testing.T) {
+	server := newHTTPTestServer()
+	req := httptest.NewRequest(http.MethodGet, "/search?q=tag%3Ainbox", nil)
+	req.Header.Set("HX-Request", "true")
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if got := res.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("missing security header, got %q", got)
+	}
+	if got := res.Header().Get("Vary"); got != "HX-Request" {
+		t.Fatalf("expected HTMX vary header, got %q", got)
+	}
+	out := res.Body.String()
+	if strings.Contains(out, "<!doctype html>") {
+		t.Fatalf("HTMX fragment included full page shell: %s", out)
+	}
+	if !strings.Contains(out, `class="result-toolbar"`) {
+		t.Fatalf("HTMX fragment missing results toolbar: %s", out)
+	}
+}
+
+func TestStaticAssetServedLocally(t *testing.T) {
+	server := newHTTPTestServer()
+	req := httptest.NewRequest(http.MethodGet, "/static/app.css", nil)
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.Code)
+	}
+	if !strings.Contains(res.Body.String(), "tailwindcss") || !strings.Contains(res.Body.String(), ".app-header") {
+		t.Fatalf("static CSS did not look like compiled local Tailwind output")
+	}
+}
+
+func TestTemplateRendersDuplicateSelector(t *testing.T) {
+	view := messageView{
+		Detail: MessageDetail{
+			Summary: MessageSummary{
+				ID:      "abc@example.test",
+				Subject: "Duplicate test",
+				Tags:    []string{"inbox"},
+			},
+			Files:         []string{"/mail/a", "/mail/b"},
+			SelectedDup:   1,
+			SelectedFile:  "/mail/b",
+			PlainBody:     "plain body",
+			BodyKind:      "plain",
+			DuplicateNote: "2 duplicate/copy files share this Message-ID",
+		},
+	}
+	var buf bytes.Buffer
+	if err := templates.ExecuteTemplate(&buf, "messagePage", view); err != nil {
+		t.Fatalf("template render failed: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "2 duplicate/copy files") {
+		t.Fatalf("duplicate note missing: %s", out)
+	}
+	if !strings.Contains(out, "<strong>2</strong>") {
+		t.Fatalf("selected duplicate marker missing: %s", out)
+	}
+	if !strings.Contains(out, `href="/message?id=abc%40example.test"`) {
+		t.Fatalf("duplicate navigation link missing: %s", out)
+	}
+}
+
+func newHTTPTestServer() *Server {
+	cfg := testConfig()
+	runner := &fakeRunner{
+		outputs: map[string]string{
+			"count\x00tag:inbox": "1\n",
+			"count\x00--output=files\x00tag:inbox": "2\n",
+			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00tag:inbox": sampleNotmuchJSON,
+			"count\x00*": "1\n",
+			"count\x00--output=files\x00*": "2\n",
+			"config\x00get\x00database.path": cfg.ExpectedDatabasePath + "\n",
+			"config\x00get\x00database.mail_root": cfg.ExpectedMailRoot + "\n",
+			"config\x00get\x00maildir.synchronize_flags": cfg.ExpectedSyncFlags + "\n",
+			"config\x00get\x00index.decrypt": cfg.ExpectedIndexDecrypt + "\n",
+			"config\x00get\x00new.ignore": "evolution/local-maildir\n",
+			"--version": "notmuch 0.39\n",
+		},
+		errs: map[string]error{},
+	}
+	return NewServer(cfg, NotmuchClient{Config: cfg, Runner: runner})
 }
 
 const sampleNotmuchJSON = `[

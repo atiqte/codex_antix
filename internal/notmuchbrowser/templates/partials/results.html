@@ -1,0 +1,55 @@
+{{define "results"}}
+{{if .Error}}
+<div class="notice bad">{{.Error}}</div>
+{{else}}
+<div class="result-toolbar">
+  <div>
+    <strong>{{.SearchPage.Counts.Messages}}</strong> messages |
+    <strong>{{.SearchPage.Counts.Files}}</strong> files
+    {{if .SearchPage.Results}}
+      | showing {{firstShown .SearchPage}}-{{nextOffset .SearchPage}}
+    {{end}}
+  </div>
+  <div class="code">{{.SearchPage.Query}}</div>
+</div>
+{{if .SearchPage.Results}}
+<table class="result-table">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>From</th>
+      <th>Subject / Message-ID</th>
+      <th>Tags</th>
+      <th>Files</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .SearchPage.Results}}
+    <tr>
+      <td class="date">{{if .DateRelative}}{{.DateRelative}}{{else}}{{.Date}}{{end}}</td>
+      <td>{{.From}}</td>
+      <td>
+        <a class="subject" href="{{messageURL .ID 0}}">{{.Subject}}</a>
+        <div class="path">{{.ID}}</div>
+      </td>
+      <td class="tags">
+        {{range .Tags}}<span>{{.}}</span>{{end}}
+      </td>
+      <td class="file-count">{{formatFileCount .FileCount}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+<div class="pager">
+  {{if hasPrev .SearchPage}}
+    <a class="button" href="{{searchURL .SearchPage.Query (prevOffset .SearchPage) (displayLimit .SearchPage)}}" hx-get="{{searchURL .SearchPage.Query (prevOffset .SearchPage) (displayLimit .SearchPage)}}" hx-target="#results" hx-push-url="true">Previous</a>
+  {{end}}
+  {{if hasNext .SearchPage}}
+    <a class="button" href="{{searchURL .SearchPage.Query (nextOffset .SearchPage) (displayLimit .SearchPage)}}" hx-get="{{searchURL .SearchPage.Query (nextOffset .SearchPage) (displayLimit .SearchPage)}}" hx-target="#results" hx-push-url="true">Next</a>
+  {{end}}
+</div>
+{{else}}
+<div class="notice">No results.</div>
+{{end}}
+{{end}}
+{{end}}

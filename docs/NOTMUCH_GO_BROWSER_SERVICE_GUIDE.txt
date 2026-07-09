@@ -1,16 +1,18 @@
-# Go notmuch Browser Service for antiX
+# Go chi notmuch Browser Service for antiX
 
 Updated: 2026-07-09
 
-This is the rebuild guide for the read-only Go notmuch browser service on antiX
-Linux runit with zzzFM/IceWM. It supersedes the Python pilot viewer as the
-current service path and preserves the same safety posture:
+This is the rebuild guide for the read-only Go chi notmuch browser service on
+antiX Linux runit with zzzFM/IceWM. It supersedes the Python pilot viewer as
+the current service path and preserves the same safety posture:
 
 - Search and view only.
 - Evolution remains reply, forward, compose, and send.
 - The HTTP service binds only to `127.0.0.1:8765`.
 - Windows 11 access uses an SSH tunnel.
-- No React, npm, CDN, Gin, Flask, uv runtime, or tmux supervisor.
+- Backend uses Go `net/http` plus the small `github.com/go-chi/chi/v5` router.
+- UI uses modular embedded HTML templates, local HTMX, and compiled local Tailwind CSS.
+- No React, Node/npm/Tailwind runtime on antiX, CDN, Gin, Flask, uv runtime, or tmux supervisor.
 - notmuch is the search database; there is no custom mail database.
 - The browser must not mutate Maildir data.
 
@@ -45,6 +47,7 @@ To rebuild from this repository, the antiX source tree needs these paths:
 
 ```text
 go.mod
+go.sum
 cmd/notmuch-browser/
 internal/notmuchbrowser/
 scripts/notmuch_browser_control.sh
@@ -54,6 +57,67 @@ scripts/notmuch_browser_index_control.sh
 If you do not want to clone the full repository on antiX, copy only those paths
 into a temporary source directory, preserving the same relative layout. Then run
 the build/install chunk from that directory.
+
+The `internal/notmuchbrowser/` directory must include `templates/`, `static/`,
+and `styles/`. The runtime serves only embedded local assets. Tailwind is a
+build-time source workflow: `internal/notmuchbrowser/static/app.css` is the
+compiled file used by antiX, and `internal/notmuchbrowser/styles/app.tailwind.css`
+is the source file used only when regenerating CSS.
+
+Optional development-host CSS regeneration, not required on antiX runtime:
+
+```powershell
+npx @tailwindcss/cli@4 -i internal/notmuchbrowser/styles/app.tailwind.css -o internal/notmuchbrowser/static/app.css --minify
+go test ./...
+```
+
+## Optional: Create a Minimal Source Bundle on Windows
+
+Use this when you do not want to clone the whole repository on antiX. Run from
+the Windows repository root after the latest changes are committed.
+
+```powershell
+cd C:\Users\Admin\Documents\antiX_VM_Laptop
+
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$bundle = "C:\Users\Admin\Documents\antiX_VM_Laptop\notmuch-browser-chi-src-$stamp.tar.gz"
+if (Test-Path $bundle) { Remove-Item -LiteralPath $bundle -Force }
+
+tar -czf $bundle `
+  go.mod `
+  go.sum `
+  cmd/notmuch-browser `
+  internal/notmuchbrowser `
+  scripts/notmuch_browser_control.sh `
+  scripts/notmuch_browser_index_control.sh
+
+Get-Item $bundle | Select-Object FullName,Length
+Get-FileHash -Algorithm SHA256 $bundle
+```
+
+Copy that `.tar.gz` to antiX by VMware shared folder, USB, SSH, or another
+trusted local transfer path. Then extract it on antiX:
+
+```sh
+set -eu
+
+BUNDLE="/path/to/notmuch-browser-chi-src-YYYYMMDD-HHMMSS.tar.gz"
+WORK="$HOME/notmuch-browser-src"
+
+rm -rf "$WORK"
+mkdir -p "$WORK"
+tar -xzf "$BUNDLE" -C "$WORK"
+cd "$WORK"
+
+test -f go.mod
+test -f go.sum
+test -d cmd/notmuch-browser
+test -d internal/notmuchbrowser/templates
+test -f internal/notmuchbrowser/static/app.css
+test -f scripts/notmuch_browser_control.sh
+test -f scripts/notmuch_browser_index_control.sh
+pwd
+```
 
 ## Chunk 1: antiX Safety Audit
 
@@ -126,8 +190,16 @@ cd "$SRC"
 echo "== source root =="
 pwd
 test -f go.mod
+test -f go.sum
 test -d cmd/notmuch-browser
 test -d internal/notmuchbrowser
+test -d internal/notmuchbrowser/templates
+test -d internal/notmuchbrowser/templates/partials
+test -d internal/notmuchbrowser/static
+test -d internal/notmuchbrowser/styles
+test -f internal/notmuchbrowser/static/app.css
+test -f internal/notmuchbrowser/static/htmx.min.js
+test -f internal/notmuchbrowser/styles/app.tailwind.css
 test -f scripts/notmuch_browser_control.sh
 test -f scripts/notmuch_browser_index_control.sh
 echo
@@ -141,7 +213,7 @@ echo
 echo "== Go tests and build =="
 go test ./...
 mkdir -p "$HOME/.local/bin"
-go build -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
+go build -trimpath -ldflags='-s -w' -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
 install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
 install -m 700 scripts/notmuch_browser_index_control.sh "$HOME/.local/bin/notmuch-browser-index-control"
 echo
@@ -433,14 +505,15 @@ as the supervisor. It is acceptable only as a manual debugging console.
 On a recreated VM, do not consider the service complete until:
 
 1. `go test ./...` passes.
-2. Browser service reports `server=running`.
-3. Index loop reports `loop=running`.
-4. `/healthz` returns `ok:true`.
-5. `tag:inbox` search renders.
-6. A single message opens.
-7. HTML mail renders in the sandboxed iframe.
-8. Attachment names display.
-9. Duplicate selector displays for duplicate Message-ID messages.
-10. Windows SSH tunnel works.
-11. Maildir `tmp` count remains 0 after search/view/refresh.
-12. IceWM startup has exactly one begin/end marker for both browser and index loop.
+2. `internal/notmuchbrowser/static/app.css` exists and is served from `/static/app.css`.
+3. Browser service reports `server=running`.
+4. Index loop reports `loop=running`.
+5. `/healthz` returns `ok:true`.
+6. `tag:inbox` search renders.
+7. A single message opens.
+8. HTML mail renders in the sandboxed iframe.
+9. Attachment names display.
+10. Duplicate selector displays for duplicate Message-ID messages.
+11. Windows SSH tunnel works.
+12. Maildir `tmp` count remains 0 after search/view/refresh.
+13. IceWM startup has exactly one begin/end marker for both browser and index loop.

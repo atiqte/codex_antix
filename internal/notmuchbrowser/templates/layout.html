@@ -1,0 +1,28 @@
+{{define "top"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} - notmuch browser</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="app-header">
+  <a class="brand" href="/">notmuch browser</a>
+  <nav aria-label="Primary">
+    <a href="/">Search</a>
+    <a href="/status">Status</a>
+  </nav>
+  <span class="mode">read-only | single email</span>
+</header>
+<main id="content" class="shell">
+{{end}}
+
+{{define "bottom"}}
+</main>
+</body>
+</html>
+{{end}}

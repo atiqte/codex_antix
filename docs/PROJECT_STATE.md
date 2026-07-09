@@ -6,7 +6,7 @@ Last updated: 2026-07-09
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus a read-only Go notmuch browser service for antiX
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a validated read-only Go standard-library notmuch browser service with automatic index refresh
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a validated read-only Go notmuch browser service with chi routing, local HTMX, compiled local Tailwind CSS, and automatic index refresh
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -14,7 +14,7 @@ Last updated: 2026-07-09
 
 Planning/setup plus first broader application implementation.
 
-The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, transporting the already-converted Maildir++ archive from Fedora to antiX, and selecting/staging post-main-archive Betterbird aggregate deltas, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. On 2026-07-06, the owner accepted the first broader application objective: a read-only Go standard-library notmuch browser service for antiX, bound to localhost and reached from Windows 11 through SSH tunneling.
+The owner approved Python standard-library utilities for transporting a full Betterbird profile tree, converting Betterbird/Thunderbird maildir-lite to canonical Maildir++, transporting the already-converted Maildir++ archive from Fedora to antiX, and selecting/staging post-main-archive Betterbird aggregate deltas, plus small antiX setup helpers for launching Evolution Flatpak and testing deletion-safe mbsync pulls. On 2026-07-06, the owner accepted the first broader application objective: a read-only Go notmuch browser service for antiX, bound to localhost and reached from Windows 11 through SSH tunneling. On 2026-07-09, the owner accepted the follow-up migration from stdlib `ServeMux` to chi routing with modular embedded templates and compiled local Tailwind CSS.
 
 ## Current Objective
 
@@ -38,7 +38,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`, an offline browser DIY guide with visible embedded command blocks and copy buttons for retiring Astroid, installing the single-email read-only notmuch browser viewer, daily start/stop, CLI search, tag backup/restore, and pilot-safe reindexing.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same browser-only notmuch guide.
-- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html`, an offline browser DIY guide with visible copy-button command blocks for rebuilding the Go standard-library notmuch browser service, validating read-only behavior, installing IceWM startup, repairing stale notmuch paths, installing the automatic index-refresh loop, and validating Windows SSH tunnel access.
+- `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html`, an offline browser DIY guide with visible copy-button command blocks for rebuilding the Go chi/Tailwind notmuch browser service, validating read-only behavior, installing IceWM startup, repairing stale notmuch paths, installing the automatic index-refresh loop, and validating Windows SSH tunnel access.
 - `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt`, a terminal-friendly plain text version of the same Go browser service rebuild guide.
 - `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt`, retained only as retired historical guides with warnings pointing to the active browser-only guide.
 - `docs/WORK_VALIDATION_LEDGER.md`, a topic-neutral ledger for command chunks, pasted-output review, validation outcomes, failures, fixes, and superseded steps.
@@ -58,7 +58,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `scripts/notmuch_browser_control.sh`, the source control script intended to be installed on antiX as `~/.local/bin/notmuch-browser-control`; it starts/stops the Go browser service, reports status/logs, refreshes the notmuch index with lock safety, prints SSH tunnel hints, installs an IceWM startup block, and prints a reviewed runit service template.
 - `scripts/notmuch_browser_index_control.sh`, a user-level helper intended to keep the notmuch index fresh by running the existing locked `notmuch-browser-control refresh-index` path in a small loop that skips while the provider-live mbsync lock or notmuch refresh lock is present.
 - `cmd/notmuch-browser/main.go`, the Go service entrypoint.
-- `internal/notmuchbrowser/`, the Go standard-library service package, including notmuch command execution, JSON parsing, server-rendered templates, local CSS, vendored local HTMX 2.0.10, and unit tests.
+- `internal/notmuchbrowser/`, the Go service package, including chi routing, notmuch command execution, JSON parsing, modular embedded server-rendered templates, compiled local Tailwind CSS, Tailwind source CSS, vendored local HTMX 2.0.10, and unit tests.
 
 ## What Is Intentionally Undecided
 
@@ -74,7 +74,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 - The repository is in setup plus first application implementation mode.
 - Do not install Python, Node, npm packages, pip packages, Docker, devcontainers, or other dependencies without explicit approval.
-- The current transport and converter utilities must remain Python 3 standard-library-only unless the owner approves a dependency change. The notmuch browser service is Go standard-library-only for backend code; HTMX is vendored as a local static browser asset. User-level antiX setup helpers should remain POSIX shell; package-installing helper commands should remain explicit subcommands and only run after owner approval.
+- The current transport and converter utilities must remain Python 3 standard-library-only unless the owner approves a dependency change. The notmuch browser service now uses one approved Go dependency, `github.com/go-chi/chi/v5`, while HTMX and compiled Tailwind CSS are vendored/embedded local browser assets. Tailwind tooling is build-time only and is not required on antiX at runtime. User-level antiX setup helpers should remain POSIX shell; package-installing helper commands should remain explicit subcommands and only run after owner approval.
 - Do not delete files without explicit approval.
 - End each working session by committing changes with a clear self-explanatory message and pushing to the configured remote.
 - Do not perform non-routine remote operations without explicit approval.
@@ -114,8 +114,10 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `.gitignore`
   - `.gitattributes`
   - `go.mod`
+  - `go.sum`
   - `cmd/notmuch-browser/main.go`
   - `internal/notmuchbrowser/config.go`
+  - `internal/notmuchbrowser/handlers.go`
   - `internal/notmuchbrowser/notmuch.go`
   - `internal/notmuchbrowser/server.go`
   - `internal/notmuchbrowser/templates.go`
@@ -123,6 +125,12 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `internal/notmuchbrowser/static/app.css`
   - `internal/notmuchbrowser/static/htmx.min.js`
   - `internal/notmuchbrowser/static/htmx.LICENSE.txt`
+  - `internal/notmuchbrowser/styles/app.tailwind.css`
+  - `internal/notmuchbrowser/templates/layout.html`
+  - `internal/notmuchbrowser/templates/search.html`
+  - `internal/notmuchbrowser/templates/message.html`
+  - `internal/notmuchbrowser/templates/status.html`
+  - `internal/notmuchbrowser/templates/partials/results.html`
   - `src/betterbird_profile_transport.py`
   - `src/maildirpp_transport.py`
   - `src/betterbird_maildirlite_to_maildirpp.py`
@@ -214,10 +222,10 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - The validated notmuch GUI path is the read-only localhost browser viewer at `~/.local/bin/notmuch-browser-pilot`, launched on `http://127.0.0.1:8765/`. It now uses single-email mode: search results are individual messages, `/message?id=<message-id>` opens one selected email body, exact `id:<message-id>` search works, and the Status page reports `Viewer mode: single-email`. This viewer is read/search/view only; reply/send stays in Evolution.
 - notmuch backup/restore/reindex helper validation has passed for the pilot scope. Corrected Chunk 8B-FIX1 passed shell/Python syntax checks, tag backup/restore, exact `id:` search, indexed path stability, and zero `tmp` changes. Chunk 8C then moved the old database to `/mail/Backups/notmuch/reindex-db/default-20260705-084026`, rebuilt only `/mail/SearchIndex/notmuch/default`, restored tags from `/mail/Backups/notmuch/notmuch-tags-before-reindex-20260705-084026.batch-tag`, preserved 444 messages and 846 files at that time, kept the pilot Maildir file list unchanged, kept `tmp` folders empty, resumed mbsync, and relaunched the browser viewer.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html` and `.txt` now document the active browser-only path, including Astroid purge, single-email viewer installation, shim removal, daily browser-viewer start/stop commands, status checks, CLI search examples, tag backup/restore, pilot-safe reindex, and the deferred full-archive expansion preflight. The older `docs/NOTMUCH_ASTROID_ANTIX_GUIDE.html` and `.txt` are retained only as retired historical guides.
-- The next notmuch browser implementation is now the Go standard-library service in `cmd/notmuch-browser` and `internal/notmuchbrowser`. It exposes `GET /`, `/search`, `/message`, `/status`, and `/healthz`, executes notmuch through argument-array `exec.CommandContext` calls, parses notmuch JSON, renders server-side HTML, embeds local CSS and HTMX 2.0.10, refuses non-localhost binds by default, and checks startup safety for `database.path=/mail/SearchIndex/notmuch/default`, `database.mail_root=/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`.
+- The current notmuch browser implementation is the Go chi-backed service in `cmd/notmuch-browser` and `internal/notmuchbrowser`. It exposes `GET /`, `/search`, `/message`, `/status`, and `/healthz`, executes notmuch through argument-array `exec.CommandContext` calls, parses notmuch JSON, renders modular embedded server-side HTML, embeds compiled local Tailwind CSS and HTMX 2.0.10, refuses non-localhost binds by default, and checks startup safety for `database.path=/mail/SearchIndex/notmuch/default`, `database.mail_root=/mail/Mailstore`, `maildir.synchronize_flags=false`, and `index.decrypt=false`.
 - `scripts/notmuch_browser_control.sh` is the installable antiX control source for the Go browser service. It expects the compiled binary at `~/.local/bin/notmuch-browser`, uses logs under `/mail/Logs/notmuch-browser`, stores state under `/mail/AppData/notmuch-browser`, keeps Windows access on an SSH tunnel, and makes `refresh-index` skip when `/mail/AppData/isync/provider-live-loop/lock` is present so it does not overlap the provider-live mbsync loop.
 - `scripts/notmuch_browser_index_control.sh` is the source for a small optional antiX index-refresh loop. It is meant to be installed as `~/.local/bin/notmuch-browser-index-control`, starts/stops/statuses the loop, installs a neutral IceWM startup block, writes logs under `/mail/Logs/notmuch-browser`, and calls the existing locked `refresh-index` command so mbsync and notmuch refreshes do not overlap.
-- The local Windows workspace used for the initial implementation did not have Go installed, so Go compilation and `go test ./...` must be run on antiX or another machine with Go available before treating the service as validated.
+- The local Windows workspace used for implementation still does not have Go installed in `PATH`, so Go compilation and `go test ./...` must be run on antiX or another machine with Go available before treating new Go service changes as runtime-validated.
 - On 2026-07-06, antiX operator chunks inspected the pinned `kerolloz/go-installer` v3.0.0 script and installed Go 1.26.4 under `/mail/AppData/go/goroot`, with GOPATH `/mail/AppData/go/workspace` and a managed block in `/home/atiq/.profile`.
 - The first antiX Go test/build chunk loaded Go successfully but stopped before validation with `status=blocked_repo_not_found`; the repository was not cloned under the searched `/home/atiq` paths. A later minimal raw-file download attempt from pinned commit `34479bdf9312b3fd714af00bd34890578bf0b18a` stopped immediately with HTTP 404, and a sparse checkout attempt failed because GitHub HTTPS password authentication is not supported. The successful path was a credential-free minimal source bundle copied to `/mail/notmuch-browser-min-src-efc2990.tar.gz`.
 - On 2026-07-06, antiX validated the minimal Go browser source bundle: SHA256 matched, `scripts/notmuch_browser_control.sh` passed `sh -n`, `go test ./...` passed, and a temporary Linux binary was built at `/home/atiq/codex-runs/notmuch-browser-build-20260706-212117/notmuch-browser`.

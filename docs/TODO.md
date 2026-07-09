@@ -130,3 +130,4 @@
 - [x] Repair stale notmuch index paths after provider-live Maildir changes and restore `tag:inbox` browser search.
 - [x] Install and validate the user-level notmuch browser index-refresh loop on antiX.
 - [x] Update the Go notmuch browser service HTML/TXT DIY guides with stale-index repair and automatic index refresh loop instructions.
+- [x] Migrate the Go notmuch browser service source to chi routing, modular embedded templates, local HTMX, and compiled local Tailwind CSS while preserving read-only behavior.

@@ -1,0 +1,27 @@
+{{define "statusPage"}}
+{{template "top" (dictTitle "Status")}}
+{{if .Error}}
+  <div class="notice bad">{{.Error}}</div>
+{{else}}
+<section class="status-grid">
+  <div class="metric"><span>Messages</span><strong>{{.Status.Counts.Messages}}</strong></div>
+  <div class="metric"><span>Files</span><strong>{{.Status.Counts.Files}}</strong></div>
+  <div class="metric"><span>mbsync lock</span><strong>{{if .Status.MbsyncLockPresent}}present{{else}}absent{{end}}</strong></div>
+</section>
+<table class="status-table">
+  <tbody>
+    <tr><th>notmuch</th><td>{{.Status.NotmuchVersion}}</td></tr>
+    <tr><th>Config</th><td class="path">{{.Status.ConfigPath}}</td></tr>
+    <tr><th>database.path</th><td class="path">{{.Status.DatabasePath}}</td></tr>
+    <tr><th>database.mail_root</th><td class="path">{{.Status.MailRoot}}</td></tr>
+    <tr><th>maildir.synchronize_flags</th><td>{{.Status.MaildirSyncFlags}}</td></tr>
+    <tr><th>index.decrypt</th><td>{{.Status.IndexDecrypt}}</td></tr>
+    <tr><th>new.ignore</th><td class="path">{{.Status.NewIgnore}}</td></tr>
+  </tbody>
+</table>
+<h2>Win11 SSH tunnel</h2>
+<pre class="code-block">{{.TunnelHint}}</pre>
+<div class="notice">The service is intended to bind to localhost inside antiX. Use the SSH tunnel from Windows instead of binding the private mail browser to the LAN.</div>
+{{end}}
+{{template "bottom" .}}
+{{end}}

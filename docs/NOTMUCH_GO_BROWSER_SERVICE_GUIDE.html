@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Go notmuch Browser Service for antiX</title>
+  <title>Go chi notmuch Browser Service for antiX</title>
   <style>
     :root {
       color-scheme: light;
@@ -45,18 +45,19 @@
 </head>
 <body>
 <header>
-  <h1>Go notmuch Browser Service for antiX</h1>
-  <p>Read-only search/view service with automatic notmuch index refresh, localhost binding, and Windows SSH tunnel access.</p>
+  <h1>Go chi notmuch Browser Service for antiX</h1>
+  <p>Read-only search/view service with automatic notmuch index refresh, localhost binding, local HTMX, compiled Tailwind CSS, and Windows SSH tunnel access.</p>
 </header>
 <main>
 <section>
   <div class="banner">Updated 2026-07-09. This HTML guide is offline-safe; commands are visible directly in each block and copy buttons only copy the visible command text.</div>
-  <p>This guide rebuilds the validated Go notmuch browser service on antiX Linux runit with zzzFM/IceWM. The service is search/view only. Evolution remains the reply, forward, compose, and send client.</p>
+  <p>This guide rebuilds the validated Go chi notmuch browser service on antiX Linux runit with zzzFM/IceWM. The service is search/view only. Evolution remains the reply, forward, compose, and send client.</p>
   <ul>
-    <li>Backend: Go standard library <code>net/http</code>, no Gin or Flask.</li>
-    <li>Frontend: server-rendered HTML, local CSS, and vendored local HTMX.</li>
+    <li>Backend: Go <code>net/http</code> with <code>github.com/go-chi/chi/v5</code>, no Gin or Flask.</li>
+    <li>Frontend: modular embedded HTML templates, compiled local Tailwind CSS, and vendored local HTMX.</li>
     <li>Bind address: <code>127.0.0.1:8765</code> inside antiX.</li>
     <li>Windows access: SSH tunnel only.</li>
+    <li>No React, Node/npm/Tailwind runtime on antiX, CDN, uv runtime, or tmux supervisor.</li>
     <li>notmuch database: <code>/mail/SearchIndex/notmuch/default</code>.</li>
     <li>Mail root: <code>/mail/Mailstore</code>.</li>
     <li>Safety flags: <code>maildir.synchronize_flags=false</code>, <code>index.decrypt=false</code>.</li>
@@ -83,10 +84,54 @@
   <h2>Required Source Files</h2>
   <p>To rebuild from this repository, the antiX source tree needs these paths. If you do not clone the whole repository, copy only these paths while preserving the relative layout.</p>
   <div class="cmd"><div class="cmd-head"><span>Required paths</span><button data-copy-target="cmd-paths">Copy</button></div><pre id="cmd-paths">go.mod
+go.sum
 cmd/notmuch-browser/
 internal/notmuchbrowser/
 scripts/notmuch_browser_control.sh
 scripts/notmuch_browser_index_control.sh</pre></div>
+  <p>The <code>internal/notmuchbrowser/</code> directory must include <code>templates/</code>, <code>static/</code>, and <code>styles/</code>. antiX serves the compiled local <code>static/app.css</code>; <code>styles/app.tailwind.css</code> is only for future CSS regeneration.</p>
+  <div class="cmd"><div class="cmd-head"><span>Development host only: regenerate CSS</span><button data-copy-target="cmd-tailwind">Copy</button></div><pre id="cmd-tailwind">npx @tailwindcss/cli@4 -i internal/notmuchbrowser/styles/app.tailwind.css -o internal/notmuchbrowser/static/app.css --minify
+go test ./...</pre></div>
+</section>
+
+<section>
+  <h2>Optional: Create a Minimal Source Bundle on Windows</h2>
+  <p>Use this when you do not want to clone the whole repository on antiX. Run from the Windows repository root after the latest changes are committed.</p>
+  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button data-copy-target="cmd-bundle-win">Copy</button></div><pre id="cmd-bundle-win">cd C:\Users\Admin\Documents\antiX_VM_Laptop
+
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$bundle = "C:\Users\Admin\Documents\antiX_VM_Laptop\notmuch-browser-chi-src-$stamp.tar.gz"
+if (Test-Path $bundle) { Remove-Item -LiteralPath $bundle -Force }
+
+tar -czf $bundle `
+  go.mod `
+  go.sum `
+  cmd/notmuch-browser `
+  internal/notmuchbrowser `
+  scripts/notmuch_browser_control.sh `
+  scripts/notmuch_browser_index_control.sh
+
+Get-Item $bundle | Select-Object FullName,Length
+Get-FileHash -Algorithm SHA256 $bundle</pre></div>
+  <p>Copy that <code>.tar.gz</code> to antiX by VMware shared folder, USB, SSH, or another trusted local transfer path. Then extract it on antiX.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-bundle-antix">Copy</button></div><pre id="cmd-bundle-antix">set -eu
+
+BUNDLE="/path/to/notmuch-browser-chi-src-YYYYMMDD-HHMMSS.tar.gz"
+WORK="$HOME/notmuch-browser-src"
+
+rm -rf "$WORK"
+mkdir -p "$WORK"
+tar -xzf "$BUNDLE" -C "$WORK"
+cd "$WORK"
+
+test -f go.mod
+test -f go.sum
+test -d cmd/notmuch-browser
+test -d internal/notmuchbrowser/templates
+test -f internal/notmuchbrowser/static/app.css
+test -f scripts/notmuch_browser_control.sh
+test -f scripts/notmuch_browser_index_control.sh
+pwd</pre></div>
 </section>
 
 <section>
@@ -146,8 +191,16 @@ cd "$SRC"
 echo "== source root =="
 pwd
 test -f go.mod
+test -f go.sum
 test -d cmd/notmuch-browser
 test -d internal/notmuchbrowser
+test -d internal/notmuchbrowser/templates
+test -d internal/notmuchbrowser/templates/partials
+test -d internal/notmuchbrowser/static
+test -d internal/notmuchbrowser/styles
+test -f internal/notmuchbrowser/static/app.css
+test -f internal/notmuchbrowser/static/htmx.min.js
+test -f internal/notmuchbrowser/styles/app.tailwind.css
 test -f scripts/notmuch_browser_control.sh
 test -f scripts/notmuch_browser_index_control.sh
 echo
@@ -161,7 +214,7 @@ echo
 echo "== Go tests and build =="
 go test ./...
 mkdir -p "$HOME/.local/bin"
-go build -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
+go build -trimpath -ldflags='-s -w' -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
 install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
 install -m 700 scripts/notmuch_browser_index_control.sh "$HOME/.local/bin/notmuch-browser-index-control"
 echo
@@ -371,6 +424,7 @@ notmuch-browser-index-control remove-icewm-startup</pre></div>
   <h2>Completion Checklist</h2>
   <ol>
     <li><code>go test ./...</code> passes.</li>
+    <li><code>internal/notmuchbrowser/static/app.css</code> exists and is served from <code>/static/app.css</code>.</li>
     <li>Browser service reports <code>server=running</code>.</li>
     <li>Index loop reports <code>loop=running</code>.</li>
     <li><code>/healthz</code> returns <code>ok:true</code>.</li>
