@@ -10,6 +10,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Hardened external-backup validation after antiX discovery showed `/media/atiq` was backed by `/`; USB/HGFS targets must now have a real non-root mount ancestor.
 - Installed and validated the provider-live archive tools and canonical empty archive layout on antiX without changing mbsync/notmuch configs or starting the archive monitor.
 - Added and source-verified the separate `TAG-Mustang Local Archive` Evolution Maildir account without changing the existing live Sent destination or adding SMTP.
+- Enrolled the empty provider-live archive in the controlled notmuch scope; verified the pilot remained at 650 messages/1,176 files, provider-live and the approved small delta remained indexed, the full 59G Betterbird archive remained excluded, and index/browser services restarted cleanly.
 - Added persistent runtime-adjustable provider-live polling intervals to the generated loop/control scripts, including `interval`, `set-interval`, `reset-interval`, status visibility, atomic mode-600 storage, and a conservative 60-second to 24-hour range.
 - Validated the dynamic interval rollout on antiX: unsafe `30s` rejection, persistent `2m` startup, live `2m -> 1m -> 2m -> 3m` changes without restarting, successful manual/automatic group syncs, final running/unpaused/lock-free state, and empty Maildir `tmp`.
 - Updated the mbsync HTML/TXT guides with interval commands and clarified that the interval is measured after each completed sync, so slow syncs remain sequential and never overlap.
