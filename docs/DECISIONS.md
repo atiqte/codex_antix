@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-12: Use Dunst for IceWM Desktop Notifications
+
+- Status: accepted
+- Context: The provider-live threshold monitor correctly persists alerts and logs, but a live `notify-send` test failed because the antiX IceWM session has no owner or D-Bus service for `org.freedesktop.Notifications`. The session bus itself is healthy, and Debian Trixie offers several daemon choices.
+- Decision: Use Debian APT `dunst` as the user-session notification daemon, start it from one marked IceWM startup block before the provider-live archive monitor, retain D-Bus activation as a fallback, and validate both a visible popup and reboot persistence. Do not change the archive monitor's durable status/log fallback.
+- Consequence: Threshold alerts can appear visually in the minimal IceWM desktop without installing an XFCE, MATE, or GNOME-specific notification stack. Missing popup delivery never blocks or changes mail synchronization, threshold state, or approval gates.
+
 ### 2026-07-11: Archive Provider-Live Through an Approval-Gated Local Maildir++ Controller
 
 - Status: accepted
