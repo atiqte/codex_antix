@@ -5,6 +5,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 ## 2026-07-11
 
 - Added persistent runtime-adjustable provider-live polling intervals to the generated loop/control scripts, including `interval`, `set-interval`, `reset-interval`, status visibility, atomic mode-600 storage, and a conservative 60-second to 24-hour range.
+- Validated the dynamic interval rollout on antiX: unsafe `30s` rejection, persistent `2m` startup, live `2m -> 1m -> 2m -> 3m` changes without restarting, successful manual/automatic group syncs, final running/unpaused/lock-free state, and empty Maildir `tmp`.
 - Updated the mbsync HTML/TXT guides with interval commands and clarified that the interval is measured after each completed sync, so slow syncs remain sequential and never overlap.
 - Recorded the missing-mail diagnosis: the provider-live loop, TLS connection, state, disk, and repeated sync exits were healthy; another POP client had been removing server copies before IMAP/mbsync could see them.
 

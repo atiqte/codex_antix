@@ -11,7 +11,7 @@
 - [ ] After validating the newer post-main-archive aggregate delta, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results.
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
-- [ ] Roll out and validate the persistent provider-live interval controls on antiX, including live `3m` to `2m` change, invalid-value rejection, reboot persistence, and unchanged sync/lock health.
+- [ ] Optionally prove a custom provider-live interval survives a future full VM reboot; file-backed persistence and live-loop behavior are already validated.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
 ## Later
@@ -81,6 +81,7 @@
 - [x] Harden the mbsync helper and guides with exact provider-live auto-sync reproduction commands.
 - [x] Add and validate provider-live auto-sync timeout wrapping, sync-age status, stale-lock clearing, and stale loop PID protection.
 - [x] Add persistent runtime-adjustable provider-live interval controls to the helper and HTML/TXT guides, with isolated local generation and control-command tests.
+- [x] Roll out and validate persistent provider-live interval controls on antiX, including invalid-value rejection, mode-600 persistence, live interval changes without restart, manual/automatic sync exit 0, final 3m default, absent lock, and empty `tmp`.
 - [x] Add a clear Start Here sequence to the mbsync HTML/text guides and label production config snippets as reference-only.
 - [x] Add a topic-neutral work validation ledger for future command chunks and pasted-output review.
 - [x] Create the separate Betterbird delta Maildir++ archive on Fedora with all 248 selected messages.

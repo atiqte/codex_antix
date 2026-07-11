@@ -8,7 +8,8 @@ This guide started as the first mbsync phase after Evolution Flatpak
 validation. It installs and configures isync/mbsync for one standard IMAP INBOX
 test pull into an isolated Maildir++ tree under /mail.
 
-Current validated production state, as of 2026-06-27:
+Current production state: core workflow validated 2026-06-27; dynamic interval
+controls validated on antiX 2026-07-11:
 
 - The INBOX test path remains available at
   /mail/Mailstore/mbsync/provider-inbox-test.
