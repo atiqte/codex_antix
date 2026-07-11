@@ -15,7 +15,8 @@ Current validated production state, as of 2026-06-27:
 - Production live mail is now under /mail/Mailstore/mbsync/provider-live.
 - Normal production folders are receive-only.
 - Sent is the only push-capable folder, through a narrow Sent-only channel.
-- The 180-second auto-sync loop now syncs provider-live-group.
+- The auto-sync loop defaults to 180 seconds, syncs provider-live-group, and
+  supports a persistent interval that can be changed while the loop runs.
 
 Start Here: Fresh Setup
 -----------------------
@@ -72,6 +73,8 @@ Expected final state:
 
 - loop=running
 - paused=no
+- interval_seconds=180
+- interval_human=3m
 - sync_timeout_seconds=3600
 - sync_lock=absent
 - channel=provider-live-group
@@ -82,6 +85,7 @@ For the already validated VM, use these controls instead of rerunning the fresh
 setup:
 
   mbsync-provider-live-control status
+  mbsync-provider-live-control interval
   mbsync-provider-live-control logs
   mbsync-provider-live-control sync-now
 
@@ -242,12 +246,15 @@ Production auto-sync controls:
   mbsync-provider-live-control sync-now
   mbsync-provider-live-control logs
   mbsync-provider-live-control cleanup-logs
+  mbsync-provider-live-control interval
+  mbsync-provider-live-control set-interval 2m
+  mbsync-provider-live-control reset-interval
   mbsync-provider-live-control clear-stale-lock
   mbsync-provider-live-control stop-loop
   mbsync-provider-live-control start
 
-The loop starts from the marked IceWM startup block and runs every 180 seconds.
-It writes one daily auto log, for example:
+The loop starts from the marked IceWM startup block and defaults to a
+180-second interval. It writes one daily auto log, for example:
 
   /mail/Logs/mbsync-live/20260627-provider-live-auto.log
 
@@ -261,8 +268,10 @@ Default log retention:
 Slow-sync and lock behavior:
 
 - The loop is sequential: it runs one mbsync, waits for it to finish, then
-  sleeps 180 seconds before the next pass. If a sync takes longer than 180
-  seconds, a second loop pass does not start inside the same loop.
+  sleeps for the configured interval before the next pass. The interval is a
+  delay after a completed sync, so start-to-start time is sync duration plus
+  the interval. If a sync takes longer than the interval, no second pass starts
+  while it is running.
 - The lock prevents overlap between the loop, manual sync-now, and accidental
   duplicate loop starts.
 - The generated scripts wrap mbsync with timeout when the timeout command is
@@ -277,6 +286,28 @@ Slow-sync and lock behavior:
   mbsync-provider-live-loop, so a stale pid file does not make the control
   script report or kill an unrelated process.
 
+Dynamic interval controls:
+
+  mbsync-provider-live-control interval
+  mbsync-provider-live-control set-interval 1m
+  mbsync-provider-live-control set-interval 2m
+  mbsync-provider-live-control set-interval 5m
+  mbsync-provider-live-control reset-interval
+
+- set-interval accepts plain seconds or a suffix: 120, 120s, 2m, or 1h.
+- The accepted range is 60 seconds through 24 hours. The minimum protects the
+  provider from accidental rapid polling.
+- The chosen value is stored in
+  /mail/AppData/isync/provider-live-loop/interval-seconds with mode 600 and
+  survives logout and reboot.
+- A running loop notices a changed interval within about 5 seconds while it is
+  sleeping. It does not interrupt an active mbsync process; the new delay is
+  used after that sync finishes.
+- interval and status show interval_seconds, interval_human, and whether the
+  value comes from the persistent file or the 180-second default.
+- reset-interval removes only the persistent override and returns to the
+  default. It does not change mail, mbsync state, or the IceWM startup block.
+
 Future exact auto-sync reproduction flow:
 
   sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
@@ -290,6 +321,8 @@ Expected final auto-sync state:
 
 - loop=running
 - paused=no
+- interval_seconds=180
+- interval_human=3m
 - sync_timeout_seconds=3600
 - sync_lock=absent
 - channel=provider-live-group
@@ -367,7 +400,7 @@ Available commands:
   write-autosync
     Writes the provider-live loop/control scripts targeting provider-live-group
     with daily log retention, timeout wrapping, sync-age status, stale loop pid
-    protection, and stale-lock clearing.
+    protection, stale-lock clearing, and persistent dynamic interval controls.
 
   install-autosync-startup
     Adds the marked IceWM startup block for provider-live auto-sync.

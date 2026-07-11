@@ -88,6 +88,7 @@ Environment overrides:
   MBSYNC_AUTO_LOG_COMPRESS_DAYS Default: 2
   MBSYNC_AUTO_LOG_DELETE_DAYS   Default: 30
   MBSYNC_MANUAL_LOG_DELETE_DAYS Default: 90
+  MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS Default: 180
   MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS Default: 3600
   MBSYNC_AUTOSYNC_VALIDATE_SLEEP_SECONDS Default: 8
   MBSYNC_OVERWRITE_CONFIG=1 allows replacing a non-Codex existing config.
@@ -96,7 +97,8 @@ The generated channel uses Sync PullNew, Create Near, Remove None, and Expunge N
 The production provider-live block keeps normal folders receive-only and enables
 PushNew only for the Sent folder.
 Generated provider-live controls include logs, cleanup-logs, timeout visibility,
-sync lock age, stale loop PID protection, and clear-stale-lock.
+dynamic interval controls, sync lock age, stale loop PID protection, and
+clear-stale-lock.
 EOF
 }
 
@@ -691,7 +693,9 @@ CONFIG=${MBSYNC_CONFIG_FILE:-"$HOME/.config/isyncrc"}
 CHANNEL=${MBSYNC_LIVE_GROUP:-"$PROFILE-live-group"}
 STATE_DIR=${MBSYNC_LIVE_LOOP_STATE_DIR:-"$MAIL_ROOT/AppData/isync/$PROFILE-live-loop"}
 LOG_DIR=${MBSYNC_LIVE_LOG_DIR:-"$MAIL_ROOT/Logs/mbsync-live"}
-INTERVAL_SECONDS=${MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS:-180}
+DEFAULT_INTERVAL_SECONDS=${MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS:-180}
+MIN_INTERVAL_SECONDS=60
+MAX_INTERVAL_SECONDS=86400
 SYNC_TIMEOUT_SECONDS=${MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS:-3600}
 AUTO_LOG_COMPRESS_DAYS=${MBSYNC_AUTO_LOG_COMPRESS_DAYS:-2}
 AUTO_LOG_DELETE_DAYS=${MBSYNC_AUTO_LOG_DELETE_DAYS:-30}
@@ -701,12 +705,21 @@ case "$SYNC_TIMEOUT_SECONDS" in
   ''|*[!0-9]*) SYNC_TIMEOUT_SECONDS=3600 ;;
 esac
 
+case "$DEFAULT_INTERVAL_SECONDS" in
+  ''|*[!0-9]*) DEFAULT_INTERVAL_SECONDS=180 ;;
+esac
+if [ "$DEFAULT_INTERVAL_SECONDS" -lt "$MIN_INTERVAL_SECONDS" ] || \
+   [ "$DEFAULT_INTERVAL_SECONDS" -gt "$MAX_INTERVAL_SECONDS" ]; then
+  DEFAULT_INTERVAL_SECONDS=180
+fi
+
 LOCK_DIR="$STATE_DIR/lock"
 PAUSE_FILE="$STATE_DIR/paused"
 STOP_FILE="$STATE_DIR/stop"
 PID_FILE="$STATE_DIR/loop.pid"
 LAST_STATUS="$STATE_DIR/last-status.txt"
 CLEANUP_STAMP="$STATE_DIR/log-cleanup-date"
+INTERVAL_FILE="$STATE_DIR/interval-seconds"
 LOCK_PID_FILE="$LOCK_DIR/pid"
 LOCK_STARTED_EPOCH_FILE="$LOCK_DIR/started_epoch"
 LOCK_STARTED_AT_FILE="$LOCK_DIR/started_at"
@@ -719,6 +732,21 @@ rm -f "$STOP_FILE"
 
 log_line() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S%z')" "$*"
+}
+
+read_interval_seconds() {
+  value=$(cat "$INTERVAL_FILE" 2>/dev/null || true)
+  case "$value" in
+    ''|*[!0-9]*) printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"; return ;;
+    0*) printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"; return ;;
+  esac
+  [ "${#value}" -le 6 ] || { printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"; return; }
+  if [ "$value" -lt "$MIN_INTERVAL_SECONDS" ] || \
+     [ "$value" -gt "$MAX_INTERVAL_SECONDS" ]; then
+    printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"
+    return
+  fi
+  printf '%s\n' "$value"
 }
 
 write_lock_metadata() {
@@ -811,7 +839,8 @@ run_sync_once() {
 
 trap 'rm -f "$PID_FILE"; clear_lock_if_owned; exit 0' INT TERM HUP
 cleanup_logs_if_due
-log_line "loop start interval=${INTERVAL_SECONDS}s timeout=${SYNC_TIMEOUT_SECONDS}s pid=$$" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+current_interval=$(read_interval_seconds)
+log_line "loop start interval=${current_interval}s timeout=${SYNC_TIMEOUT_SECONDS}s pid=$$" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
 
 while :; do
   cleanup_logs_if_due
@@ -825,14 +854,24 @@ while :; do
   run_sync_once || true
 
   slept=0
-  while [ "$slept" -lt "$INTERVAL_SECONDS" ]; do
+  wait_interval=$(read_interval_seconds)
+  while [ "$slept" -lt "$wait_interval" ]; do
     if [ -e "$STOP_FILE" ]; then
       log_line "stop file found during sleep; loop exiting" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
       rm -f "$STOP_FILE" "$PID_FILE"
       exit 0
     fi
-    sleep 5
-    slept=$((slept + 5))
+    remaining=$((wait_interval - slept))
+    sleep_step=5
+    [ "$remaining" -ge "$sleep_step" ] || sleep_step=$remaining
+    sleep "$sleep_step"
+    slept=$((slept + sleep_step))
+
+    updated_interval=$(read_interval_seconds)
+    if [ "$updated_interval" -ne "$wait_interval" ]; then
+      log_line "interval changed old=${wait_interval}s new=${updated_interval}s" >> "$LOG_DIR/$(date +%Y%m%d)-$PROFILE-live-auto.log"
+      wait_interval=$updated_interval
+    fi
   done
 done
 EOF
@@ -851,11 +890,22 @@ LOOP=${MBSYNC_LIVE_LOOP_SCRIPT:-"$HOME/.local/bin/mbsync-$PROFILE-live-loop"}
 AUTO_LOG_COMPRESS_DAYS=${MBSYNC_AUTO_LOG_COMPRESS_DAYS:-2}
 AUTO_LOG_DELETE_DAYS=${MBSYNC_AUTO_LOG_DELETE_DAYS:-30}
 MANUAL_LOG_DELETE_DAYS=${MBSYNC_MANUAL_LOG_DELETE_DAYS:-90}
+DEFAULT_INTERVAL_SECONDS=${MBSYNC_PROVIDER_LIVE_INTERVAL_SECONDS:-180}
+MIN_INTERVAL_SECONDS=60
+MAX_INTERVAL_SECONDS=86400
 SYNC_TIMEOUT_SECONDS=${MBSYNC_PROVIDER_LIVE_SYNC_TIMEOUT_SECONDS:-3600}
 
 case "$SYNC_TIMEOUT_SECONDS" in
   ''|*[!0-9]*) SYNC_TIMEOUT_SECONDS=3600 ;;
 esac
+
+case "$DEFAULT_INTERVAL_SECONDS" in
+  ''|*[!0-9]*) DEFAULT_INTERVAL_SECONDS=180 ;;
+esac
+if [ "$DEFAULT_INTERVAL_SECONDS" -lt "$MIN_INTERVAL_SECONDS" ] || \
+   [ "$DEFAULT_INTERVAL_SECONDS" -gt "$MAX_INTERVAL_SECONDS" ]; then
+  DEFAULT_INTERVAL_SECONDS=180
+fi
 
 LOCK_DIR="$STATE_DIR/lock"
 PAUSE_FILE="$STATE_DIR/paused"
@@ -863,6 +913,7 @@ STOP_FILE="$STATE_DIR/stop"
 PID_FILE="$STATE_DIR/loop.pid"
 LAST_STATUS="$STATE_DIR/last-status.txt"
 CLEANUP_STAMP="$STATE_DIR/log-cleanup-date"
+INTERVAL_FILE="$STATE_DIR/interval-seconds"
 LOCK_PID_FILE="$LOCK_DIR/pid"
 LOCK_STARTED_EPOCH_FILE="$LOCK_DIR/started_epoch"
 LOCK_STARTED_AT_FILE="$LOCK_DIR/started_at"
@@ -904,6 +955,111 @@ lock_pid_alive() {
   [ -s "$LOCK_PID_FILE" ] || return 1
   lock_pid=$(cat "$LOCK_PID_FILE" 2>/dev/null || true)
   [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null
+}
+
+read_interval_seconds() {
+  value=$(cat "$INTERVAL_FILE" 2>/dev/null || true)
+  case "$value" in
+    ''|*[!0-9]*) printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"; return ;;
+    0*) printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"; return ;;
+  esac
+  [ "${#value}" -le 6 ] || { printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"; return; }
+  if [ "$value" -lt "$MIN_INTERVAL_SECONDS" ] || \
+     [ "$value" -gt "$MAX_INTERVAL_SECONDS" ]; then
+    printf '%s\n' "$DEFAULT_INTERVAL_SECONDS"
+    return
+  fi
+  printf '%s\n' "$value"
+}
+
+parse_interval() {
+  input=${1:-}
+  [ -n "$input" ] || return 1
+
+  case "$input" in
+    *[sS]) number=${input%?}; unit=s ;;
+    *[mM]) number=${input%?}; unit=m ;;
+    *[hH]) number=${input%?}; unit=h ;;
+    *) number=$input; unit=s ;;
+  esac
+
+  case "$number" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  number=$(printf '%s\n' "$number" | sed 's/^0*//')
+  [ -n "$number" ] || number=0
+  [ "${#number}" -le 6 ] || return 1
+
+  case "$unit" in
+    s)
+      [ "$number" -ge 60 ] && [ "$number" -le 86400 ] || return 1
+      seconds=$number
+      ;;
+    m)
+      [ "$number" -ge 1 ] && [ "$number" -le 1440 ] || return 1
+      seconds=$((number * 60))
+      ;;
+    h)
+      [ "$number" -ge 1 ] && [ "$number" -le 24 ] || return 1
+      seconds=$((number * 3600))
+      ;;
+  esac
+  printf '%s\n' "$seconds"
+}
+
+show_interval() {
+  interval=$(read_interval_seconds)
+  interval_source=default
+  if [ -f "$INTERVAL_FILE" ]; then
+    saved=$(cat "$INTERVAL_FILE" 2>/dev/null || true)
+    if [ "$saved" = "$interval" ]; then
+      interval_source=persistent
+    else
+      interval_source=default_invalid_persistent_value
+    fi
+  fi
+
+  if [ $((interval % 3600)) -eq 0 ]; then
+    interval_human="$((interval / 3600))h"
+  elif [ $((interval % 60)) -eq 0 ]; then
+    interval_human="$((interval / 60))m"
+  else
+    interval_human="${interval}s"
+  fi
+
+  echo "interval_seconds=$interval"
+  echo "interval_human=$interval_human"
+  echo "interval_source=$interval_source"
+}
+
+set_interval() {
+  requested=${1:-}
+  if ! seconds=$(parse_interval "$requested"); then
+    echo "invalid interval: ${requested:-missing}"
+    echo "use 60..86400 seconds, 1m..1440m, or 1h..24h"
+    return 2
+  fi
+
+  interval_tmp="$INTERVAL_FILE.tmp.$$"
+  if ! (umask 077 && printf '%s\n' "$seconds" > "$interval_tmp"); then
+    rm -f "$interval_tmp"
+    echo "failed to write interval temporary file"
+    return 1
+  fi
+  if ! mv -f "$interval_tmp" "$INTERVAL_FILE"; then
+    rm -f "$interval_tmp"
+    echo "failed to install interval file"
+    return 1
+  fi
+  chmod 600 "$INTERVAL_FILE" 2>/dev/null || true
+
+  echo "provider-live interval updated"
+  show_interval
+  if is_loop_running; then
+    echo "apply=running_loop_will_notice_within_5_seconds"
+  else
+    echo "apply=next_loop_start"
+  fi
 }
 
 show_lock_status() {
@@ -1089,6 +1245,7 @@ case "${1:-status}" in
     else
       echo "paused=no"
     fi
+    show_interval
     show_lock_status
     [ ! -f "$LAST_STATUS" ] || cat "$LAST_STATUS"
     echo "channel=$CHANNEL"
@@ -1104,11 +1261,22 @@ case "${1:-status}" in
     cleanup_logs
     show_logs
     ;;
+  interval)
+    show_interval
+    ;;
+  set-interval)
+    set_interval "${2:-}"
+    ;;
+  reset-interval)
+    rm -f "$INTERVAL_FILE"
+    echo "provider-live interval reset to default"
+    show_interval
+    ;;
   clear-stale-lock)
     clear_stale_lock
     ;;
   *)
-    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status|logs|cleanup-logs|clear-stale-lock}"
+    echo "Usage: $0 {start|pause|resume|stop-loop|sync-now|status|logs|cleanup-logs|interval|set-interval VALUE|reset-interval|clear-stale-lock}"
     exit 2
     ;;
 esac

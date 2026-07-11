@@ -241,7 +241,7 @@
         </div>
         <div class="callout warning">
           <strong>Current production state:</strong>
-          <code>/mail/Mailstore/mbsync/provider-live</code> is now validated. Normal folders are receive-only, Sent upload is handled by a narrow Sent-only channel, and the 180-second loop syncs <code>provider-live-group</code>.
+          <code>/mail/Mailstore/mbsync/provider-live</code> is now validated. Normal folders are receive-only, Sent upload is handled by a narrow Sent-only channel, and the auto-sync loop defaults to 180 seconds, syncs <code>provider-live-group</code>, and supports a persistent runtime-adjustable interval.
         </div>
       </section>
 
@@ -279,7 +279,7 @@ sh scripts/mbsync_provider_inbox_setup.sh production-status</code></pre></div>
         <p>Add <code>/mail/Mailstore/mbsync/provider-live</code> to Evolution as <strong>Maildir-format mail directories</strong>. Configure SMTP in Evolution, then set the sent-message folder to <code>TAG-Mustang_mbsync-Live / Sent</code>.</p>
 
         <h3>4. Auto-sync install and validation</h3>
-        <p>After Evolution reads/searches production mail and SMTP sends successfully, install and verify the 180-second auto-sync loop.</p>
+        <p>After Evolution reads/searches production mail and SMTP sends successfully, install and verify the auto-sync loop. Its default interval is 180 seconds.</p>
         <div class="command"><div class="command-title"><span>Fresh setup - auto-sync validation sequence</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
 sh scripts/mbsync_provider_inbox_setup.sh refresh-autosync
 sh scripts/mbsync_provider_inbox_setup.sh autosync-stale-lock-proof
@@ -287,11 +287,12 @@ sh scripts/mbsync_provider_inbox_setup.sh autosync-validate
 sh scripts/mbsync_provider_inbox_setup.sh autosync-log-rotation-proof
 sh scripts/mbsync_provider_inbox_setup.sh autosync-status</code></pre></div>
 
-        <p>Expected final state: <code>loop=running</code>, <code>paused=no</code>, <code>sync_timeout_seconds=3600</code>, <code>sync_lock=absent</code>, <code>channel=provider-live-group</code>, visible <code>log_usage</code>, and empty provider-live <code>tmp</code> directories.</p>
+        <p>Expected final state: <code>loop=running</code>, <code>paused=no</code>, <code>interval_seconds=180</code>, <code>interval_human=3m</code>, <code>sync_timeout_seconds=3600</code>, <code>sync_lock=absent</code>, <code>channel=provider-live-group</code>, visible <code>log_usage</code>, and empty provider-live <code>tmp</code> directories.</p>
 
         <h3>Current VM maintenance</h3>
         <p>For the already validated VM, use these controls instead of rerunning the fresh setup.</p>
         <div class="command"><div class="command-title"><span>Current VM maintenance commands</span><button class="copy">Copy command</button></div><pre><code>mbsync-provider-live-control status
+mbsync-provider-live-control interval
 mbsync-provider-live-control logs
 mbsync-provider-live-control sync-now</code></pre></div>
       </section>
@@ -387,18 +388,28 @@ mbsync-provider-live-control resume
 mbsync-provider-live-control sync-now
 mbsync-provider-live-control logs
 mbsync-provider-live-control cleanup-logs
+mbsync-provider-live-control interval
+mbsync-provider-live-control set-interval 2m
+mbsync-provider-live-control reset-interval
 mbsync-provider-live-control clear-stale-lock
 mbsync-provider-live-control stop-loop
 mbsync-provider-live-control start</code></pre></div>
         <p>The loop writes one daily auto log such as <code>/mail/Logs/mbsync-live/20260627-provider-live-auto.log</code>. Default retention compresses auto logs older than 2 days when <code>gzip</code> is available, deletes auto logs older than 30 days, and keeps manual or validation logs for 90 days.</p>
-        <p>Slow syncs do not overlap: the loop runs one <code>mbsync</code>, waits for it to finish, then sleeps 180 seconds before the next pass. The lock also blocks manual <code>sync-now</code> overlap and accidental duplicate loop starts. Generated scripts wrap <code>mbsync</code> with <code>timeout</code> when available, defaulting to <code>sync_timeout_seconds=3600</code>; GNU <code>timeout</code> uses <code>--kill-after=60s</code>, while simpler implementations fall back to plain <code>timeout</code>. While a sync is active, <code>status</code> shows sync age, channel, pid, and whether the pid is alive. Use <code>clear-stale-lock</code> only when a lock is stale and <code>sync_pid_alive=no</code>. The control script verifies saved loop pids before reporting or killing them, so a stale pid file does not target an unrelated process.</p>
+        <p>Slow syncs do not overlap: the loop runs one <code>mbsync</code>, waits for it to finish, then sleeps for the configured interval before the next pass. The interval is a delay after completion, so start-to-start time is sync duration plus the interval. The lock also blocks manual <code>sync-now</code> overlap and accidental duplicate loop starts. Generated scripts wrap <code>mbsync</code> with <code>timeout</code> when available, defaulting to <code>sync_timeout_seconds=3600</code>; GNU <code>timeout</code> uses <code>--kill-after=60s</code>, while simpler implementations fall back to plain <code>timeout</code>. While a sync is active, <code>status</code> shows sync age, channel, pid, and whether the pid is alive. Use <code>clear-stale-lock</code> only when a lock is stale and <code>sync_pid_alive=no</code>. The control script verifies saved loop pids before reporting or killing them, so a stale pid file does not target an unrelated process.</p>
+        <h3>Change the polling interval</h3>
+        <div class="command"><div class="command-title"><span>Show, change, or reset the interval</span><button class="copy">Copy command</button></div><pre><code>mbsync-provider-live-control interval
+mbsync-provider-live-control set-interval 1m
+mbsync-provider-live-control set-interval 2m
+mbsync-provider-live-control set-interval 5m
+mbsync-provider-live-control reset-interval</code></pre></div>
+        <p><code>set-interval</code> accepts plain seconds or a suffix, for example <code>120</code>, <code>120s</code>, <code>2m</code>, or <code>1h</code>. The accepted range is 60 seconds through 24 hours. The value is stored at <code>/mail/AppData/isync/provider-live-loop/interval-seconds</code> with mode 600 and survives logout and reboot. A running loop notices changes within about five seconds while sleeping, without interrupting an active sync. <code>interval</code> and <code>status</code> show the effective value and whether it is persistent or the 180-second default. <code>reset-interval</code> returns to the default without changing mail or mbsync state.</p>
         <div class="command"><div class="command-title"><span>Exact auto-sync reproduction flow</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh autosync-preflight
 sh scripts/mbsync_provider_inbox_setup.sh refresh-autosync
 sh scripts/mbsync_provider_inbox_setup.sh autosync-stale-lock-proof
 sh scripts/mbsync_provider_inbox_setup.sh autosync-validate
 sh scripts/mbsync_provider_inbox_setup.sh autosync-log-rotation-proof
 sh scripts/mbsync_provider_inbox_setup.sh autosync-status</code></pre></div>
-        <p>Expected final state: <code>loop=running</code>, <code>paused=no</code>, <code>sync_timeout_seconds=3600</code>, <code>sync_lock=absent</code>, <code>channel=provider-live-group</code>, visible <code>log_usage</code>, empty provider-live <code>tmp</code> directories, and the IceWM startup marker <code># BEGIN CODEX MBSYNC PROVIDER LIVE AUTOSYNC</code>.</p>
+        <p>Expected final state: <code>loop=running</code>, <code>paused=no</code>, <code>interval_seconds=180</code>, <code>interval_human=3m</code>, <code>sync_timeout_seconds=3600</code>, <code>sync_lock=absent</code>, <code>channel=provider-live-group</code>, visible <code>log_usage</code>, empty provider-live <code>tmp</code> directories, and the IceWM startup marker <code># BEGIN CODEX MBSYNC PROVIDER LIVE AUTOSYNC</code>.</p>
         <p>Manual chunks can also be used when the guide/script update is available on antiX without cloning GitHub.</p>
         <div class="command"><div class="command-title"><span>Manual refresh after script update</span><button class="copy">Copy command</button></div><pre><code>mbsync-provider-live-control pause
 mbsync-provider-live-control stop-loop
@@ -417,7 +428,7 @@ mbsync-provider-live-control status</code></pre></div>
         <p>Run commands from the repository root on the antiX VM.</p>
         <div class="command"><div class="command-title"><span>Show helper usage</span><button class="copy">Copy command</button></div><pre><code>sh scripts/mbsync_provider_inbox_setup.sh --help</code></pre></div>
         <p>The helper supports the original INBOX-test commands: <code>inspect</code>, <code>install-packages</code>, <code>create-layout</code>, <code>write-config</code>, <code>list</code>, <code>dry-run</code>, <code>sync-once</code>, <code>status</code>, and <code>redact-config</code>.</p>
-        <p>It also supports production commands for the validated setup: <code>production-layout</code>, <code>write-production-config</code>, <code>production-list</code>, <code>production-sync</code>, <code>production-status</code>, <code>write-autosync</code>, <code>install-autosync-startup</code>, <code>autosync-status</code>, <code>autosync-preflight</code>, <code>refresh-autosync</code>, <code>autosync-stale-lock-proof</code>, <code>autosync-validate</code>, and <code>autosync-log-rotation-proof</code>. The generated provider-live control script includes <code>logs</code>, <code>cleanup-logs</code>, <code>clear-stale-lock</code>, timeout wrapping, sync-age status, and stale loop pid protection.</p>
+        <p>It also supports production commands for the validated setup: <code>production-layout</code>, <code>write-production-config</code>, <code>production-list</code>, <code>production-sync</code>, <code>production-status</code>, <code>write-autosync</code>, <code>install-autosync-startup</code>, <code>autosync-status</code>, <code>autosync-preflight</code>, <code>refresh-autosync</code>, <code>autosync-stale-lock-proof</code>, <code>autosync-validate</code>, and <code>autosync-log-rotation-proof</code>. The generated provider-live control script includes <code>logs</code>, <code>cleanup-logs</code>, <code>interval</code>, <code>set-interval</code>, <code>reset-interval</code>, <code>clear-stale-lock</code>, timeout wrapping, sync-age status, and stale loop pid protection.</p>
       </section>
 
       <section id="batch1">

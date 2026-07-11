@@ -67,7 +67,7 @@ Before doing project work, read these files:
 └── tests/
 ```
 
-`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, maildir-lite conversion, and dynamic post-main-archive delta utilities. `cmd/notmuch-browser` and `internal/notmuchbrowser` contain the Go notmuch browser service. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, stale-lock recovery, stale loop PID protection, and the notmuch browser control plus index-refresh scripts.
+`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, maildir-lite conversion, and dynamic post-main-archive delta utilities. `cmd/notmuch-browser` and `internal/notmuchbrowser` contain the Go notmuch browser service. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, persistent runtime-adjustable polling intervals, stale-lock recovery, stale loop PID protection, and the notmuch browser control plus index-refresh scripts.
 
 ## Development Policy
 

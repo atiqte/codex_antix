@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-11: Make Provider-Live Polling Interval Persistent and Runtime-Adjustable
+
+- Status: accepted
+- Context: The validated provider-live loop used a fixed 180-second delay. The owner requested a quick, low-risk way to change that timing without editing scripts or weakening the overlap protections.
+- Decision: Keep 180 seconds as the default and add `interval`, `set-interval VALUE`, and `reset-interval` to the generated control script. Store a validated override in `/mail/AppData/isync/provider-live-loop/interval-seconds`, accept 60 seconds through 24 hours with seconds/minutes/hours suffixes, and have the sequential loop re-read the value during its five-second sleep checks. Do not restart or interrupt an active sync when the interval changes.
+- Consequence: The polling delay survives logout and reboot, appears in `status`, and can be changed while the loop runs. The next pass still begins only after the current sync completes and the configured delay elapses, so existing lock and timeout behavior remains intact.
+
 ### 2026-07-09: Migrate notmuch Browser Service to chi Router and Compiled Tailwind CSS
 
 - Status: accepted

@@ -2,6 +2,12 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-11
+
+- Added persistent runtime-adjustable provider-live polling intervals to the generated loop/control scripts, including `interval`, `set-interval`, `reset-interval`, status visibility, atomic mode-600 storage, and a conservative 60-second to 24-hour range.
+- Updated the mbsync HTML/TXT guides with interval commands and clarified that the interval is measured after each completed sync, so slow syncs remain sequential and never overlap.
+- Recorded the missing-mail diagnosis: the provider-live loop, TLS connection, state, disk, and repeated sync exits were healthy; another POP client had been removing server copies before IMAP/mbsync could see them.
+
 ## 2026-07-09
 
 - Validated the installed chi/Tailwind notmuch browser on antiX and through the Windows SSH tunnel: Go tests passed on antiX, the compiled CSS/search/message/status views worked, read-only hashes stayed unchanged, the index loop stayed healthy, and the owner confirmed the UI locally and from Windows.
