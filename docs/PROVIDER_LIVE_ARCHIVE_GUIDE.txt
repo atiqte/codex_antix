@@ -4,9 +4,11 @@ Provider-Live Archive and Threshold Controller for antiX
 Status
 ------
 
-Implementation and local safety tests completed 2026-07-11. The archive
-controller has not yet been installed or runtime-validated on the antiX VM.
-Run one chunk at a time and review its output before continuing.
+Implementation, antiX installation, the Evolution archive account, controlled
+notmuch enrollment, the 900-second monitor, and IceWM reboot autostart were
+validated on 2026-07-11. The first real 15,000-message archive transaction,
+external package, and cleanup canary remain pending. For a fresh installation,
+run one chunk at a time and review its output before continuing.
 
 Goal
 ----
