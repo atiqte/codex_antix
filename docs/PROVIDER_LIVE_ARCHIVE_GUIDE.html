@@ -233,7 +233,7 @@ provider-live-archive-control monitor-start</pre></div>
 <section>
   <h2>At 15,000: Estimate and Approval 1</h2>
   <div class="cmd"><div class="cmd-head"><span>Estimate</span><button data-copy="estimate">Copy</button></div><pre id="estimate">provider-live-archive-control estimate</pre></div>
-  <p>Review count, bytes, full-tree snapshot size, UID/date ranges, monthly distribution, and both free-space requirements. Then audit the actual external mount:</p>
+  <p>Review count, bytes, full-tree snapshot size, UID/date ranges, monthly distribution, and both free-space requirements. Then audit the actual external mount. An empty <code>/media/$USER</code> directory backed by <code>/</code> is not external storage and is rejected:</p>
   <div class="cmd"><div class="cmd-head"><span>External mount audit</span><button data-copy="external">Copy</button></div><pre id="external">set -eu
 EXTERNAL_TARGET="/actual/mounted/external/directory"
 findmnt -T "$EXTERNAL_TARGET"

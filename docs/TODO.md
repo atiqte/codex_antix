@@ -12,7 +12,6 @@
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Optionally prove a custom provider-live interval survives a future full VM reboot; file-backed persistence and live-loop behavior are already validated.
-- [ ] Run provider-live archive Chunk 1 read-only discovery on antiX and review all output.
 - [ ] Install the checksummed no-clone archive payload and validate installed hashes/syntax/layout.
 - [ ] Add `TAG-Mustang Local Archive` to Evolution with `BackendName=maildir` and the exact archive path.
 - [ ] Enroll only `provider-live-archive` in notmuch while proving the 59G `local-maildir` remains excluded.
@@ -93,6 +92,7 @@
 - [x] Implement the provider-live Python archive engine, POSIX threshold/controller script, and no-clone offline setup/bundle helper.
 - [x] Add focused provider-live archive tests covering threshold, UID/hash/flags, mbsync policy, backup corruption, resumable copy, cleanup canary, rollback, and retirement.
 - [x] Create chronological provider-live archive DIY guides in HTML and plain text.
+- [x] Run and review provider-live archive Chunk 1A/1B read-only discovery on antiX, confirming safe mbsync/Evolution/notmuch state and no valid external mount yet.
 - [x] Create the separate Betterbird delta Maildir++ archive on Fedora with all 248 selected messages.
 - [x] Validate the Betterbird delta Maildir++ archive in Fedora Evolution.
 - [x] Pack and verify the Betterbird delta Maildir++ export on Fedora.

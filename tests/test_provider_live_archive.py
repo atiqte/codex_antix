@@ -5,6 +5,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -301,6 +302,15 @@ Channel provider-live-sent-upload
                     mail_root=base / "mail",
                     allow_same_filesystem=True,
                 )
+
+    def test_mounted_ancestor_identifies_root_backed_media_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "media" / "user" / "not-mounted"
+            target.mkdir(parents=True)
+            root = target.anchor
+
+            with mock.patch("os.path.ismount", side_effect=lambda value: str(value) == root):
+                self.assertEqual(archive.mounted_ancestor(target), Path(root))
 
     def test_corrupted_external_part_is_detected(self):
         with tempfile.TemporaryDirectory() as tmp:

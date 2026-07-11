@@ -6,7 +6,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 - Added the provider-live archive transaction engine with immutable UID/hash manifests, monthly Maildir++ copies, hard-link snapshots, verified split external backups, two approvals, cleanup canary, rollback, and 30-day snapshot retirement.
 - Added the POSIX 15,000-message threshold monitor/controller, exact production mbsync policy audit, notmuch scope guard, bounded monitor logs, persistent daily alerts, IceWM startup integration, and no-clone offline payload installer/bundler.
-- Added 18 focused provider-live archive tests plus chronological HTML/TXT rollout guides; antiX runtime validation is explicitly pending and starts with read-only discovery.
+- Added 19 focused provider-live archive tests plus chronological HTML/TXT rollout guides; antiX runtime validation is explicitly pending and starts with read-only discovery.
+- Hardened external-backup validation after antiX discovery showed `/media/atiq` was backed by `/`; USB/HGFS targets must now have a real non-root mount ancestor.
 - Added persistent runtime-adjustable provider-live polling intervals to the generated loop/control scripts, including `interval`, `set-interval`, `reset-interval`, status visibility, atomic mode-600 storage, and a conservative 60-second to 24-hour range.
 - Validated the dynamic interval rollout on antiX: unsafe `30s` rejection, persistent `2m` startup, live `2m -> 1m -> 2m -> 3m` changes without restarting, successful manual/automatic group syncs, final running/unpaused/lock-free state, and empty Maildir `tmp`.
 - Updated the mbsync HTML/TXT guides with interval commands and clarified that the interval is measured after each completed sync, so slow syncs remain sequential and never overlap.

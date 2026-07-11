@@ -701,6 +701,11 @@ def external_pack(
         allowed_prefixes = (Path("/media"), Path("/run/media"), Path("/mnt/hgfs"))
         if not any(_is_relative_to(external_target, prefix) for prefix in allowed_prefixes):
             fail("external target must be under /media, /run/media, or /mnt/hgfs")
+        mount_point = mounted_ancestor(external_target)
+        if mount_point == Path("/"):
+            fail(f"external target is backed by the root filesystem, not a mounted USB/HGFS filesystem: {external_target}")
+        if not any(_is_relative_to(mount_point, prefix) for prefix in allowed_prefixes):
+            fail(f"external target mount point is outside approved USB/HGFS roots: {mount_point}")
     if not allow_same_filesystem and external_target.stat().st_dev == mail_root.stat().st_dev:
         fail("external target is on the same filesystem as /mail")
     required = sum(path.stat().st_size for path in paths["snapshot_bundle"].rglob("*") if path.is_file())
@@ -1083,6 +1088,17 @@ def _is_relative_to(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def mounted_ancestor(path: Path) -> Path:
+    """Return the nearest actual mount point, refusing paths backed by root."""
+    current = resolve(path)
+    while True:
+        if os.path.ismount(current):
+            return current
+        if current.parent == current:
+            fail(f"cannot identify mounted filesystem for external target: {path}")
+        current = current.parent
 
 
 def compute_notmuch_ignore(

@@ -283,7 +283,9 @@ snapshot bytes, UID and date ranges, monthly distribution, `/mail` free-space
 requirement, and external free-space requirement.
 
 2. Audit the selected external mount. It must be under `/media`, `/run/media`,
-or `/mnt/hgfs`, outside `/mail`, writable, and on a different filesystem.
+or `/mnt/hgfs`, outside `/mail`, writable, on a different filesystem, and have
+a real non-root mount ancestor. An empty `/media/$USER` directory backed by `/`
+is not an external backup and is rejected.
 
   EXTERNAL_TARGET="/actual/mounted/external/directory"
   findmnt -T "$EXTERNAL_TARGET"
