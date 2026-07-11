@@ -12,6 +12,12 @@
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Optionally prove a custom provider-live interval survives a future full VM reboot; file-backed persistence and live-loop behavior are already validated.
+- [ ] Run provider-live archive Chunk 1 read-only discovery on antiX and review all output.
+- [ ] Install the checksummed no-clone archive payload and validate installed hashes/syntax/layout.
+- [ ] Add `TAG-Mustang Local Archive` to Evolution with `BackendName=maildir` and the exact archive path.
+- [ ] Enroll only `provider-live-archive` in notmuch while proving the 59G `local-maildir` remains excluded.
+- [ ] Install and validate the 15-minute IceWM threshold monitor and simulated alert.
+- [ ] At 15,000 messages, validate Approval 1, Evolution monthly folders, notmuch coverage, the real mbsync cleanup canary, Approval 2, and final services/tmp state.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
 ## Later
@@ -84,6 +90,9 @@
 - [x] Roll out and validate persistent provider-live interval controls on antiX, including invalid-value rejection, mode-600 persistence, live interval changes without restart, manual/automatic sync exit 0, final 3m default, absent lock, and empty `tmp`.
 - [x] Add a clear Start Here sequence to the mbsync HTML/text guides and label production config snippets as reference-only.
 - [x] Add a topic-neutral work validation ledger for future command chunks and pasted-output review.
+- [x] Implement the provider-live Python archive engine, POSIX threshold/controller script, and no-clone offline setup/bundle helper.
+- [x] Add focused provider-live archive tests covering threshold, UID/hash/flags, mbsync policy, backup corruption, resumable copy, cleanup canary, rollback, and retirement.
+- [x] Create chronological provider-live archive DIY guides in HTML and plain text.
 - [x] Create the separate Betterbird delta Maildir++ archive on Fedora with all 248 selected messages.
 - [x] Validate the Betterbird delta Maildir++ archive in Fedora Evolution.
 - [x] Pack and verify the Betterbird delta Maildir++ export on Fedora.

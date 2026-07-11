@@ -6,7 +6,7 @@ Last updated: 2026-07-11
 
 - Repository name: `antiX_VM_Laptop`
 - Project type: local mail migration utilities plus a read-only Go notmuch browser service for antiX
-- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution Flatpak setup documentation for antiX, prepared antiX helper scripts for Evolution launching, validated Betterbird archive transfer paths, dynamic post-main-archive Betterbird aggregate delta handling, a validated first mbsync INBOX test path, a validated production mbsync `provider-live` path with deletion-safe receive, narrow Sent upload, log retention, and timeout/lock-age hardened auto-sync, plus a validated read-only Go notmuch browser service with chi routing, local HTMX, compiled local Tailwind CSS, and automatic index refresh
+- Primary purpose today: durable project memory, safe Betterbird/Maildir++ migration utilities, validated Evolution and production mbsync workflows, an approval-gated provider-live local archive/threshold controller awaiting antiX rollout, and a validated read-only Go notmuch browser service with automatic index refresh
 - Portability target: Windows 11 and Debian Linux
 - Future remote target: GitHub or GitLab, not connected by this setup task
 
@@ -36,6 +36,8 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `docs/EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same Evolution Flatpak guide.
 - `docs/MBSYNC_ANTIX_GUIDE.html`, an offline browser DIY guide with copy buttons for the first deletion-safe mbsync INBOX test and the validated production `provider-live` setup with narrow Sent upload on antiX.
 - `docs/MBSYNC_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same mbsync guide.
+- `docs/PROVIDER_LIVE_ARCHIVE_GUIDE.html`, a chronological offline guide with copy buttons for discovery, checksummed no-clone installation, Evolution/notmuch enrollment, threshold monitoring, two-stage archive approval, cleanup canary, rollback, and snapshot retirement.
+- `docs/PROVIDER_LIVE_ARCHIVE_GUIDE.txt`, the terminal-friendly companion guide for the same provider-live archive workflow.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.html`, an offline browser DIY guide with visible embedded command blocks and copy buttons for retiring Astroid, installing the single-email read-only notmuch browser viewer, daily start/stop, CLI search, tag backup/restore, and pilot-safe reindexing.
 - `docs/NOTMUCH_BROWSER_ANTIX_GUIDE.txt`, a terminal-friendly plain text version of the same browser-only notmuch guide.
 - `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html`, an offline browser DIY guide with visible copy-button command blocks for rebuilding the Go chi/Tailwind notmuch browser service, validating read-only behavior, installing IceWM startup, repairing stale notmuch paths, installing the automatic index-refresh loop, and validating Windows SSH tunnel access.
@@ -49,6 +51,10 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `src/maildirpp_transport.py`, a Python standard-library tool to inspect, pack, split, verify, unpack, and verify an already-converted canonical Maildir++ archive.
 - `src/betterbird_maildirlite_to_maildirpp.py`, a dry-run-first Python converter for staged Betterbird maildir-lite profiles.
 - `src/betterbird_post_archive_delta.py`, a Python standard-library helper that audits and stages all current Betterbird source messages absent from the main converted archive baseline.
+- `src/provider_live_archive.py`, a Python standard-library transaction engine for UID/hash manifests, hard-link snapshots, split external backup verification, monthly Maildir++ archive copies, approval gates, cleanup canary, rollback, snapshot retirement, mbsync policy audit, and notmuch scope audit.
+- `scripts/provider_live_archive_control.sh`, the POSIX antiX monitor/service controller for the 15,000-message threshold and explicit archive transaction commands.
+- `scripts/provider_live_archive_setup.sh`, the checksummed offline payload bundler and antiX installer/validator; no antiX repository clone is required.
+- `tests/test_provider_live_archive.py`, focused tests for threshold selection, UID/flag/month mapping, mbsync policy refusal, external corruption, resumable archive copy, hash gates, canary behavior, cleanup, rollback, and retirement.
 - `tests/test_betterbird_profile_transport.py`, standard-library tests for split archive transport safety.
 - `tests/test_maildirpp_transport.py`, standard-library tests for converted Maildir++ transport safety.
 - `tests/test_betterbird_maildirlite_to_maildirpp.py`, standard-library tests for folder mapping and portable validation.
@@ -214,6 +220,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - On 2026-07-11, the helper-generated controls gained persistent dynamic intervals: `interval`, `set-interval VALUE`, and `reset-interval`, with 60 seconds through 24 hours accepted and the mode-600 override stored under `/mail/AppData/isync/provider-live-loop`. The antiX rollout was validated end to end: `30s` was rejected with exit 2, a `2m` override was stored with mode 600, manual and automatic group syncs exited 0, the running loop logged live changes from 120 to 60, 60 to 120, and 120 to 180 seconds, and final state returned to the original `3m` default with loop running, paused=no, lock absent, and provider-live `tmp=0`. Installed loop/control hashes are `06063c0c80219120e99344fc9a0d847c8e092f686e9c56ea502bf46d986111b6` and `8892bc03b3c462ae6f56cd029c6beae54f37df785072affe04c1e217dd59d3d2`; rollback backup is `/mail/Backups/mbsync/20260711-111637-before-dynamic-interval`.
 - A 2026-07-11 missing-mail diagnostic found the installed provider-live system healthy: loop running, not paused, lock absent, repeated exit `0`, valid IMAPS TLS, 103G free under `/mail`, local arrivals through 00:30, and INBOX state updated at 00:33. The owner then identified the cause: another POP client had `leave a copy on server` disabled, so it removed messages before IMAP/mbsync could retrieve them. The POP client must retain server copies or be changed to IMAP; already removed messages must be preserved/exported from that client.
 - The generated provider-live control script now verifies that a saved loop PID belongs to `mbsync-provider-live-loop` before reporting the loop as running or sending a stop signal. Stale loop PID files are shown as `stale_loop_pid` and ignored for process killing. The timeout wrapper uses GNU `timeout --kill-after=60s` when supported and falls back to plain `timeout` otherwise.
+- The provider-live archive controller is now source-implemented but not yet installed on antiX. Its archive root is `/mail/Mailstore/evolution/provider-live-archive`, threshold is 15,000 immediate root-INBOX files, monitor interval is 900 seconds, and all transfer/cleanup actions require explicit run-ID approvals. Normal mbsync remains receive-only and Sent remains the only `PushNew` channel; the engine refuses any policy drift before snapshot or cleanup.
+- Archive runs target every INBOX message at the stable cutoff. A full provider-live hard-link snapshot and copied mbsync state/config are retained under `/mail/Backups/provider-live-archive`; a portable split gzip package on a verified USB/HGFS filesystem is mandatory. Monthly archive copies preserve message bytes and Maildir flags while using new names without mbsync `U=` metadata. Approval 2 requires copy, Evolution, notmuch, same-disk snapshot, and external-package verification plus a one-message mbsync canary.
+- Local validation on 2026-07-11 passed 18 provider-live archive tests and Python/shell syntax checks. antiX runtime validation remains required for Evolution source registration, notmuch scope enrollment, IceWM monitor startup, real external mount/package behavior, and the live mbsync cleanup canary. The full 59G Betterbird archive remains excluded.
 - `scripts/mbsync_provider_inbox_setup.sh` now includes production helper commands for the validated setup: `production-layout`, `write-production-config`, `production-list`, `production-sync`, `production-status`, `write-autosync`, `install-autosync-startup`, `autosync-status`, `autosync-preflight`, `refresh-autosync`, `autosync-stale-lock-proof`, `autosync-validate`, and `autosync-log-rotation-proof`.
 - `docs/MBSYNC_ANTIX_GUIDE.html` and `.txt` now include a clear `Start Here: Fresh Setup` sequence before the production reference material. Fresh antiX runs start with the INBOX validation helper sequence, then production `provider-live`, then Evolution GUI checks, then auto-sync validation. The production mbsync config block is explicitly labeled reference-only so it is not mistaken for a terminal command.
 - `docs/WORK_VALIDATION_LEDGER.md` is now the durable record for all future terminal-guided and validation-heavy work, regardless of topic. It records chunk/action, output source, result, notes, and follow-up without storing secrets or massive raw logs. Historical entries are summarized from confirmed project memory because earlier exact pasted-output pairs were not preserved.
@@ -256,15 +265,14 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 ## Next Actions
 
-1. Keep the notmuch scope limited to `provider-live` plus the small restored delta until the 59G archive count drift is explained or accepted.
-2. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
-3. Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.
-4. After antiX validation, disable/remove older post-main-archive delta accounts from Evolution UI to avoid duplicate search results, but do not delete files until backup and cleanup is explicitly planned.
-5. Keep the old delta export ZIP, antiX staging package, and restored delta target until the delta archive is included in a backup and any cleanup is explicitly planned.
-6. Keep the production mbsync `provider-live` loop monitored with `mbsync-provider-live-control status` during normal antiX use.
-7. Keep the notmuch browser index-refresh loop monitored with `notmuch-browser-index-control status` during normal antiX use.
-8. Consider later hardening of mbsync credentials with GPG only after unattended polling remains stable.
-9. Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
+1. Run Provider-Live Archive Guide Chunk 1 on antiX and review the read-only discovery output before installing the controller.
+2. Create the empty archive account and enroll only it in notmuch after the current scope and Evolution source are verified.
+3. Install and validate the read-only 15-minute threshold monitor; do not run a real archive transaction before the 15,000-message threshold and external backup review.
+4. Keep the full 59G Betterbird archive excluded from notmuch until its count drift is explained or accepted.
+5. Use the read-only browser service for search/view and keep Evolution Flatpak as the reply/send client.
+6. Transfer and validate the newer Betterbird aggregate delta separately.
+7. Keep the mbsync and notmuch index loops monitored during normal antiX use.
+8. Consider credential and flag-sync changes only as separate controlled work.
 
 ## Cross-Machine Restore Instructions
 

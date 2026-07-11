@@ -12,8 +12,8 @@ The broader application direction is now selected for v1: a lightweight Go web s
 - `docs/WORK_VALIDATION_LEDGER.md` records topic-neutral command-chunk validation outcomes for future terminal-guided work.
 - Approved mail migration utilities live in `src/`.
 - The Go notmuch browser service lives under `cmd/notmuch-browser` and `internal/notmuchbrowser`.
-- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the first deletion-safe mbsync INBOX test, the validated production `provider-live` setup including narrow Sent upload plus hardened auto-sync controls, the browser-only notmuch pilot workflow, and the current Go chi/Tailwind notmuch browser service rebuild workflow.
-- AntiX helper scripts are available for Evolution Flatpak Personal menu/taskbar integration, the first mbsync INBOX test setup, the validated production `provider-live`/Sent-upload workflow, and the Go notmuch browser control/index-refresh workflow.
+- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the deletion-safe production `provider-live` setup, the approval-gated provider-live local archive controller, the browser-only notmuch pilot workflow, and the current Go chi/Tailwind notmuch browser service rebuild workflow.
+- AntiX helper scripts are available for Evolution Flatpak integration, production mbsync/Sent upload, provider-live archive monitoring and transactions, and Go notmuch browser control/index refresh.
 - Windows 11 and Debian Linux portability is a project requirement.
 
 ## Start Here
@@ -51,6 +51,8 @@ Before doing project work, read these files:
 │   ├── NOTMUCH_BROWSER_ANTIX_GUIDE.txt
 │   ├── NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html
 │   ├── NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt
+│   ├── PROVIDER_LIVE_ARCHIVE_GUIDE.html
+│   ├── PROVIDER_LIVE_ARCHIVE_GUIDE.txt
 │   ├── TODO.md
 │   ├── WORK_VALIDATION_LEDGER.md
 │   └── WORKFLOW.md
@@ -62,12 +64,14 @@ Before doing project work, read these files:
 │   ├── evolution_flatpak_icewm_launcher_setup.sh
 │   ├── mbsync_provider_inbox_setup.sh
 │   ├── notmuch_browser_control.sh
-│   └── notmuch_browser_index_control.sh
+│   ├── notmuch_browser_index_control.sh
+│   ├── provider_live_archive_control.sh
+│   └── provider_live_archive_setup.sh
 ├── src/
 └── tests/
 ```
 
-`src/` currently contains the approved Betterbird profile transport, converted Maildir++ archive transport, maildir-lite conversion, and dynamic post-main-archive delta utilities. `cmd/notmuch-browser` and `internal/notmuchbrowser` contain the Go notmuch browser service. `scripts/` contains user-level antiX setup helpers for Evolution launch integration, the first mbsync INBOX test, the validated production `provider-live` mbsync setup with receive-only normal folders, Sent-only upload, log retention, timeout visibility, persistent runtime-adjustable polling intervals, stale-lock recovery, stale loop PID protection, and the notmuch browser control plus index-refresh scripts.
+`src/` contains the Betterbird migration/transport tools plus the approval-gated provider-live archive engine. `cmd/notmuch-browser` and `internal/notmuchbrowser` contain the Go notmuch browser service. `scripts/` contains user-level antiX setup/control helpers for Evolution, mbsync, provider-live archiving, and notmuch browser/index services.
 
 ## Development Policy
 

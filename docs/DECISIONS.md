@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-11: Archive Provider-Live Through an Approval-Gated Local Maildir++ Controller
+
+- Status: accepted
+- Context: The provider retains mail for a limited period, so all IMAP-visible mail must remain local. A very large active Evolution INBOX can become less ergonomic, but changing the mbsync Inbox path, recreating state, or propagating disappearance would risk loss or server-side effects.
+- Decision: Keep `/mail/Mailstore/mbsync/provider-live` and its mbsync state unchanged. Monitor only root INBOX `cur` plus `new` and alert at 15,000. Archive a stable cutoff into the separate Evolution Maildir++ account `/mail/Mailstore/evolution/provider-live-archive` as `Inbox/YYYY/MM`. Require a UID/hash manifest, same-disk hard-link snapshot, verified external USB/HGFS split package, Evolution attestation, notmuch verification, and a real one-message mbsync canary before manifest-selected local unlinking. Never archive or delete automatically, and never enable `MaxMessages`, `PushGone`, `PullGone`, flag sync, removal, or expunge.
+- Consequence: The live INBOX can return to only post-cutoff arrivals while all cutoff mail remains available in a separate Evolution account and notmuch index. Cleanup is recoverable from the retained snapshot and external backup. The implementation is locally tested, but antiX runtime gates must be validated chunk by chunk before the first production cleanup.
+
 ### 2026-07-11: Make Provider-Live Polling Interval Persistent and Runtime-Adjustable
 
 - Status: accepted

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Provider-Live Archive Controller for antiX</title>
+  <style>
+    :root { color-scheme: light; --bg:#f3f5f6; --panel:#fff; --ink:#182126; --muted:#58656d; --line:#ccd5da; --nav:#213238; --accent:#087f8c; --warn:#a76100; --warnbg:#fff7e6; --ok:#277044; --okbg:#edf8f1; --code:#10181d; --bar:#2b383e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Arial,Helvetica,sans-serif; line-height:1.5; }
+    header { background:var(--nav); color:#fff; padding:24px 28px; border-bottom:4px solid var(--accent); }
+    main { width:min(1160px,calc(100% - 28px)); margin:18px auto 48px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:18px 20px; margin:15px 0; }
+    h1 { margin:0 0 7px; font-size:28px; line-height:1.2; }
+    h2 { margin:4px 0 10px; font-size:21px; color:var(--nav); }
+    h3 { margin:18px 0 8px; font-size:17px; }
+    p { margin:8px 0; }
+    li { margin:5px 0; }
+    code { background:#eaf0f2; padding:1px 4px; border-radius:3px; font-family:Consolas,"Liberation Mono",monospace; }
+    .ok,.warn { padding:11px 13px; margin:12px 0; border-left:5px solid; }
+    .ok { background:var(--okbg); border-color:var(--ok); }
+    .warn { background:var(--warnbg); border-color:var(--warn); }
+    .cmd { margin:12px 0; overflow:hidden; border:1px solid #26343a; border-radius:6px; background:var(--code); }
+    .cmd-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--bar); color:#fff; font-weight:700; }
+    button { border:1px solid #b9c4c9; border-radius:5px; background:#fff; color:var(--ink); padding:5px 9px; cursor:pointer; font-weight:700; }
+    pre { margin:0; padding:13px 14px; overflow:auto; background:var(--code); color:#e8eef1; font:13px/1.45 Consolas,"Liberation Mono",monospace; white-space:pre; }
+    footer { color:var(--muted); font-size:13px; margin:22px 2px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Provider-Live Archive and Threshold Controller</h1>
+  <p>Approval-gated local Maildir++ archiving for mbsync, Evolution, notmuch, and antiX IceWM.</p>
+</header>
+<main>
+<section>
+  <div class="ok">Implementation and local safety tests completed 2026-07-11. antiX installation and real-mail runtime validation remain pending.</div>
+  <div class="warn"><strong>Start with Chunk 1.</strong> Run one chunk, paste its complete terminal output for review, and wait before continuing. Never start with <code>prepare</code> or <code>cleanup</code>.</div>
+  <ul>
+    <li>Live tree: <code>/mail/Mailstore/mbsync/provider-live</code></li>
+    <li>Archive tree: <code>/mail/Mailstore/evolution/provider-live-archive</code></li>
+    <li>Evolution account: <code>TAG-Mustang Local Archive</code></li>
+    <li>Threshold: 15,000 immediate root-INBOX files in <code>cur</code> plus <code>new</code></li>
+    <li>Monitor: every 15 minutes, daily reminders, no automatic transfer or deletion</li>
+    <li>Archive folders: <code>Inbox/YYYY/MM</code>, represented as Maildir++ names such as <code>.Inbox.2026.07</code></li>
+    <li>Target zero means all cutoff messages are removed after verification; later arrivals remain live.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Safety Contract</h2>
+  <p>Every transaction audits the exact production mbsync policy. Normal folders must remain <code>PullNew</code> only. Sent may use only <code>PullNew PushNew</code>. Both channels must retain <code>Remove None</code> and <code>Expunge None</code>. Any <code>PushGone</code>, <code>PullGone</code>, flag synchronization, changed group membership, or changed live path blocks the transaction.</p>
+  <p>Approval 1 creates an immutable UID/hash manifest, a same-disk hard-link snapshot, a verified portable external package, and hash-verified monthly archive copies. Approval 2 is blocked until Evolution and notmuch validation are recorded. It reverifies the external package, tests one cleanup canary through mbsync, and only then removes manifest-selected local links.</p>
+</section>
+
+<section>
+  <h2>Chunk 1: Read-Only antiX Discovery</h2>
+  <p>This command does not install or modify anything.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy="c1">Copy</button></div><pre id="c1">set -u
+
+LIVE=/mail/Mailstore/mbsync/provider-live
+ARCHIVE=/mail/Mailstore/evolution/provider-live-archive
+CONFIG="$HOME/.config/notmuch/default/config"
+
+echo "== system and storage =="
+date -Is
+cat /etc/os-release
+df -hT /mail
+findmnt -T /mail
+
+echo "== live root INBOX =="
+for d in "$LIVE/cur" "$LIVE/new"; do
+  printf '%s=' "$d"
+  find "$d" -maxdepth 1 -type f 2&gt;/dev/null | wc -l
+done
+du -sh "$LIVE" 2&gt;/dev/null || true
+
+echo "== every provider-live tmp directory =="
+find "$LIVE" -type d -name tmp -exec sh -c '
+  for d do printf "%s files=" "$d"; find "$d" -maxdepth 1 -type f | wc -l; done
+' sh {} + 2&gt;/dev/null || true
+
+echo "== proposed archive path =="
+if [ -e "$ARCHIVE" ]; then
+  ls -ld "$ARCHIVE"
+  find "$ARCHIVE" -mindepth 1 -maxdepth 3 -printf '%y %p\n' | sed -n '1,120p'
+else
+  echo "archive_path=absent_expected_before_install"
+fi
+
+echo "== mbsync runtime =="
+mbsync-provider-live-control status 2&gt;&amp;1 || true
+pgrep -af 'mbsync|isync' || true
+find /mail/AppData/isync -maxdepth 4 -type d -name lock -print 2&gt;/dev/null || true
+
+echo "== production mbsync block only; credentials excluded =="
+awk '
+  /^# BEGIN CODEX MBSYNC PROVIDER LIVE$/ {show=1}
+  show {print}
+  /^# END CODEX MBSYNC PROVIDER LIVE$/ {show=0}
+' "$HOME/.config/isyncrc" 2&gt;/dev/null || true
+
+echo "== Evolution runtime and Maildir sources =="
+flatpak ps 2&gt;/dev/null || true
+grep -RIl 'provider-live\|provider-live-archive' \
+  "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources" 2&gt;/dev/null || true
+grep -RInE 'BackendName=maildir|provider-live|provider-live-archive' \
+  "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources" 2&gt;/dev/null || true
+
+echo "== notmuch safety and current scope =="
+if command -v notmuch &gt;/dev/null 2&gt;&amp;1 &amp;&amp; [ -f "$CONFIG" ]; then
+  for key in database.path database.mail_root maildir.synchronize_flags index.decrypt new.ignore; do
+    printf '%s=' "$key"
+    notmuch --config="$CONFIG" config get "$key" 2&gt;&amp;1
+  done
+  printf 'messages='; notmuch --config="$CONFIG" count '*'
+  printf 'files='; notmuch --config="$CONFIG" count --output=files '*'
+  printf 'full_betterbird_indexed_files='
+  notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/local-maildir/' || true
+  printf 'provider_live_indexed_files='
+  notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/mbsync/provider-live/' || true
+fi
+notmuch-browser-index-control status 2&gt;&amp;1 || true
+notmuch-browser-control status 2&gt;&amp;1 || true
+
+echo "== notification and external mount candidates =="
+command -v notify-send || true
+findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS | sed -n '1,160p'
+for p in "/media/$USER" "/run/media/$USER" /mnt/hgfs; do
+  [ ! -e "$p" ] || { echo "candidate=$p"; ls -la "$p" | sed -n '1,80p'; }
+done</pre></div>
+  <div class="warn">Stop here and review the output. All Maildir <code>tmp</code> counts must be zero, the production mbsync block must match the validated policy, and the full Betterbird archive must not be indexed.</div>
+</section>
+
+<section>
+  <h2>Chunk 2: Checksummed Offline Payload</h2>
+  <p>Build on Windows. antiX does not clone the repository.</p>
+  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button data-copy="c2w">Copy</button></div><pre id="c2w">cd C:\Users\Admin\Documents\antiX_VM_Laptop
+New-Item -ItemType Directory -Force .\dist | Out-Null
+&amp; 'C:\Program Files\Git\bin\bash.exe' scripts/provider_live_archive_setup.sh bundle "$PWD/dist"
+Get-ChildItem .\dist\provider-live-archive-offline.tar.gz*
+Get-FileHash -Algorithm SHA256 .\dist\provider-live-archive-offline.tar.gz</pre></div>
+  <p>Transfer the <code>.tar.gz</code> and matching <code>.sha256</code> by HGFS, USB, or another trusted local path. Then set the real path below.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy="c2a">Copy</button></div><pre id="c2a">set -eu
+PAYLOAD_DIR="/path/to/transferred/files"
+BUNDLE="$PAYLOAD_DIR/provider-live-archive-offline.tar.gz"
+CHECKSUM="$BUNDLE.sha256"
+WORK="$HOME/codex-runs/provider-live-archive-install-$(date +%Y%m%d-%H%M%S)"
+
+test -f "$BUNDLE"
+test -f "$CHECKSUM"
+(cd "$PAYLOAD_DIR" &amp;&amp; sha256sum -c "$(basename "$CHECKSUM")")
+tar -tzf "$BUNDLE"
+test "$(tar -tzf "$BUNDLE" | wc -l)" -eq 4
+tar -tzf "$BUNDLE" | grep -qx 'src/provider_live_archive.py'
+tar -tzf "$BUNDLE" | grep -qx 'src/betterbird_profile_transport.py'
+tar -tzf "$BUNDLE" | grep -qx 'scripts/provider_live_archive_control.sh'
+tar -tzf "$BUNDLE" | grep -qx 'scripts/provider_live_archive_setup.sh'
+
+mkdir -p "$WORK"
+tar -xzf "$BUNDLE" -C "$WORK"
+cd "$WORK"
+sh scripts/provider_live_archive_setup.sh verify-sources
+sh scripts/provider_live_archive_setup.sh install
+sh scripts/provider_live_archive_setup.sh verify-install</pre></div>
+  <p>Expected: source and installed syntax checks pass, hashes print, the empty archive layout is ready, and the simulated threshold reports <code>alert=would_trigger</code> without creating files.</p>
+</section>
+
+<section>
+  <h2>Chunk 3: Evolution Archive Account</h2>
+  <div class="cmd"><div class="cmd-head"><span>Launch Evolution</span><button data-copy="c3launch">Copy</button></div><pre id="c3launch">"$HOME/.local/bin/evolution-flatpak-mail"</pre></div>
+  <ol>
+    <li>Open Edit &gt; Preferences &gt; Mail Accounts &gt; Add.</li>
+    <li>Name it <code>TAG-Mustang Local Archive</code>.</li>
+    <li>Select exactly <code>Maildir-format mail directories</code>, not MH.</li>
+    <li>Use <code>/mail/Mailstore/evolution/provider-live-archive</code>.</li>
+    <li>Do not make it default and do not assign it an outgoing identity or Sent folder.</li>
+    <li>Keep outgoing mail on the existing live identity and <code>TAG-Mustang_mbsync-Live/Sent</code>.</li>
+    <li>Finish and close Evolution.</li>
+  </ol>
+  <p>Treat this as an archive account. Reading and normal read/flag changes are supported, but do not manually move or delete archived messages; later verification refuses missing or unexpectedly relocated data.</p>
+  <div class="cmd"><div class="cmd-head"><span>Verify after closing GUI</span><button data-copy="c3verify">Copy</button></div><pre id="c3verify">set -eu
+flatpak kill org.gnome.Evolution 2&gt;/dev/null || true
+sleep 3
+if flatpak ps --columns=application 2&gt;/dev/null | grep -qx org.gnome.Evolution; then
+  echo "ERROR: Evolution is still running" &gt;&amp;2
+  exit 1
+fi
+SOURCES="$HOME/.var/app/org.gnome.Evolution/config/evolution/sources"
+grep -RInE 'BackendName=maildir|provider-live-archive|TAG-Mustang Local Archive' "$SOURCES"</pre></div>
+  <p>Require <code>BackendName=maildir</code> and the exact path.</p>
+</section>
+
+<section>
+  <h2>Chunk 4: Enroll Only This Archive in notmuch</h2>
+  <p>This automatically backs up config, tags, counts, and indexed paths. It refuses unsafe notmuch settings and any currently indexed full Betterbird path. Scope enrollment uses <code>notmuch new --full-scan</code>; routine refreshes remain incremental.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy="c4">Copy</button></div><pre id="c4">set -eu
+provider-live-archive-control configure-notmuch-scope
+provider-live-archive-control status
+notmuch-browser-index-control status
+notmuch-browser-control status
+
+CONFIG="$HOME/.config/notmuch/default/config"
+echo "new.ignore:"
+notmuch --config="$CONFIG" config get new.ignore
+printf 'archive_indexed_files='
+notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/provider-live-archive/' || true
+printf 'full_betterbird_indexed_files='
+notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/local-maildir/' || true</pre></div>
+  <p>The empty archive may have zero files. The full Betterbird count must be zero.</p>
+</section>
+
+<section>
+  <h2>Chunk 5: Start the Read-Only Monitor</h2>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy="c5">Copy</button></div><pre id="c5">set -eu
+provider-live-archive-control install-icewm-startup
+provider-live-archive-control check-now
+provider-live-archive-control monitor-start
+provider-live-archive-control status
+grep -nA5 -B2 'PROVIDER LIVE ARCHIVE MONITOR' "$HOME/.icewm/startup"</pre></div>
+  <p>Expected below threshold: <code>monitor=running</code>, <code>alert=clear</code>, <code>transaction_lock=absent</code>, <code>monitor_interval_seconds=900</code>, and <code>next_action=none_until_threshold</code>.</p>
+</section>
+
+<section>
+  <h2>Normal Controls</h2>
+  <div class="cmd"><div class="cmd-head"><span>Daily commands</span><button data-copy="normal">Copy</button></div><pre id="normal">provider-live-archive-control status
+provider-live-archive-control check-now
+provider-live-archive-control monitor-stop
+provider-live-archive-control monitor-start</pre></div>
+  <p>The monitor only counts and alerts. It uses a persistent pending state, optional <code>notify-send</code>, daily reminders, a transaction-lock skip, and bounded size-rotated logs.</p>
+</section>
+
+<section>
+  <h2>At 15,000: Estimate and Approval 1</h2>
+  <div class="cmd"><div class="cmd-head"><span>Estimate</span><button data-copy="estimate">Copy</button></div><pre id="estimate">provider-live-archive-control estimate</pre></div>
+  <p>Review count, bytes, full-tree snapshot size, UID/date ranges, monthly distribution, and both free-space requirements. Then audit the actual external mount:</p>
+  <div class="cmd"><div class="cmd-head"><span>External mount audit</span><button data-copy="external">Copy</button></div><pre id="external">set -eu
+EXTERNAL_TARGET="/actual/mounted/external/directory"
+findmnt -T "$EXTERNAL_TARGET"
+df -hT /mail "$EXTERNAL_TARGET"
+probe="$EXTERNAL_TARGET/.provider-live-archive-write-test-$$"
+(umask 077 &amp;&amp; printf test &gt; "$probe")
+test "$(cat "$probe")" = test
+rm -f "$probe"</pre></div>
+  <p>Close Evolution. Use the suggested run ID exactly:</p>
+  <div class="cmd"><div class="cmd-head"><span>Approval 1</span><button data-copy="approval1">Copy</button></div><pre id="approval1">set -eu
+RUN_ID="YYYYMMDD-HHMMSS"
+EXTERNAL_TARGET="/actual/mounted/external/directory"
+provider-live-archive-control prepare "$RUN_ID" \
+  --approve-copy "$RUN_ID" \
+  --external-target "$EXTERNAL_TARGET"
+provider-live-archive-control verify-copy "$RUN_ID"
+provider-live-archive-control run-status "$RUN_ID"</pre></div>
+  <p>This snapshots a stable cutoff, resumes mbsync promptly, builds verified 1,900 MiB external gzip parts, copies through archive <code>tmp</code>, verifies every hash, and restarts indexing, the browser, and monitoring. No live message is removed.</p>
+</section>
+
+<section>
+  <h2>Evolution, notmuch, and Approval 2</h2>
+  <ol>
+    <li>Open Evolution and inspect monthly archive folders.</li>
+    <li>Validate text, HTML, attachment, unread, and flagged samples.</li>
+    <li>Close Evolution.</li>
+  </ol>
+  <div class="cmd"><div class="cmd-head"><span>Record GUI and notmuch validation</span><button data-copy="validate">Copy</button></div><pre id="validate">set -eu
+provider-live-archive-control mark-evolution-validated "$RUN_ID"
+provider-live-archive-control verify-notmuch "$RUN_ID"
+provider-live-archive-control run-status "$RUN_ID"</pre></div>
+  <p>Close Evolution again. Approval 2 is the only command that can unlink captured live INBOX files:</p>
+  <div class="cmd"><div class="cmd-head"><span>Approval 2</span><button data-copy="approval2">Copy</button></div><pre id="approval2">set -eu
+provider-live-archive-control cleanup "$RUN_ID" \
+  --approve-cleanup "$RUN_ID"
+provider-live-archive-control run-status "$RUN_ID"
+provider-live-archive-control status</pre></div>
+  <p>The controller reverifies the external package, tests one UID-selected canary through mbsync, then removes only remaining manifest-selected files. Later arrivals stay live and begin the next cycle.</p>
+</section>
+
+<section>
+  <h2>Recovery and Retirement</h2>
+  <div class="cmd"><div class="cmd-head"><span>Rollback missing captured live links</span><button data-copy="rollback">Copy</button></div><pre id="rollback">provider-live-archive-control rollback "$RUN_ID"</pre></div>
+  <p>Keep the hard-link snapshot at least 30 days. Retirement reverifies the external package and every archive hash, then deletes only that run's same-disk snapshot.</p>
+  <div class="cmd"><div class="cmd-head"><span>After 30 days only</span><button data-copy="retire">Copy</button></div><pre id="retire">provider-live-archive-control retire-snapshot "$RUN_ID" \
+  --approve-retire "$RUN_ID"</pre></div>
+  <div class="warn">Never manually delete mbsync state, run manifests, monthly archive files, snapshot files, or external package parts while a run is active.</div>
+</section>
+
+<section>
+  <h2>Runtime Validation Still Required</h2>
+  <ul>
+    <li>Exact Evolution source registration and monthly-folder rendering.</li>
+    <li>Current notmuch scope rewrite while the 59 GB Betterbird archive stays excluded.</li>
+    <li>IceWM monitor startup, persistent alerts, and notification behavior.</li>
+    <li>Real USB/HGFS capacity, package verification, and deliberate corruption refusal.</li>
+    <li>The real one-message mbsync canary proving no far-side deletion and no re-download.</li>
+    <li>Final running services, absent locks, and empty Maildir <code>tmp</code> directories.</li>
+  </ul>
+</section>
+<footer>Offline guide. Copy buttons copy only the visible command block. The text companion contains the same workflow and command reference.</footer>
+</main>
+<script>
+  document.querySelectorAll('button[data-copy]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var block = document.getElementById(button.getAttribute('data-copy'));
+      navigator.clipboard.writeText(block.textContent).then(function () {
+        var old = button.textContent;
+        button.textContent = 'Copied';
+        setTimeout(function () { button.textContent = old; }, 1200);
+      });
+    });
+  });
+</script>
+</body>
+</html>

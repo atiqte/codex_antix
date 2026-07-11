@@ -1,0 +1,385 @@
+Provider-Live Archive and Threshold Controller for antiX
+========================================================
+
+Status
+------
+
+Implementation and local safety tests completed 2026-07-11. The archive
+controller has not yet been installed or runtime-validated on the antiX VM.
+Run one chunk at a time and review its output before continuing.
+
+Goal
+----
+
+- Keep /mail/Mailstore/mbsync/provider-live as the active mbsync tree.
+- Create /mail/Mailstore/evolution/provider-live-archive as a separate local
+  Evolution Maildir++ account named TAG-Mustang Local Archive.
+- Count only immediate files in provider-live/cur and provider-live/new.
+- Alert at 15,000 messages, but never copy or delete automatically.
+- After two exact approvals, archive every message captured at a stable cutoff
+  into Inbox/YYYY/MM and remove only those captured local INBOX files.
+- Keep later arrivals in provider-live as the next live cycle.
+- Preserve the current mbsync state and deletion-safe channel policy.
+
+Safety Model
+------------
+
+The controller refuses data-changing work unless the installed mbsync config
+still has the exact validated policy:
+
+- provider-live: PullNew only, Remove None, Expunge None.
+- provider-live-sent-upload: PullNew PushNew only, Remove None, Expunge None.
+- provider-live-group contains only those two channels.
+- No PushGone, PullGone, Flags, Remove, or Expunge propagation is accepted.
+
+The immutable run manifest records each cutoff message's mbsync UID, source
+path, size, mtime, Maildir flags, SHA-256, archive ID, monthly destination, and
+transaction state. Archive names preserve flags but intentionally omit U= UID
+metadata. Cleanup resolves current live filenames by UID and rechecks hashes.
+
+Approval 1 creates the cutoff snapshot, verified external backup, archive
+copies, and copy verification. Approval 2 is unavailable until Evolution and
+notmuch are explicitly validated. It then reverifies the external package,
+removes one canary, runs mbsync, and proceeds only if the canary is neither
+re-downloaded nor propagated to the server.
+
+Start Here: Fresh Installation
+------------------------------
+
+Do not start with install or prepare. Start with Chunk 1. Paste its complete
+terminal output for review. Continue only when the current provider-live,
+notmuch, Evolution, locks, tmp directories, and mount candidates are known.
+
+Chunk 1 - Read-Only antiX Discovery
+-----------------------------------
+
+  set -u
+
+  LIVE=/mail/Mailstore/mbsync/provider-live
+  ARCHIVE=/mail/Mailstore/evolution/provider-live-archive
+  CONFIG="$HOME/.config/notmuch/default/config"
+
+  echo "== system and storage =="
+  date -Is
+  cat /etc/os-release
+  df -hT /mail
+  findmnt -T /mail
+
+  echo "== live root INBOX =="
+  for d in "$LIVE/cur" "$LIVE/new"; do
+    printf '%s=' "$d"
+    find "$d" -maxdepth 1 -type f 2>/dev/null | wc -l
+  done
+  du -sh "$LIVE" 2>/dev/null || true
+
+  echo "== every provider-live tmp directory =="
+  find "$LIVE" -type d -name tmp -exec sh -c '
+    for d do printf "%s files=" "$d"; find "$d" -maxdepth 1 -type f | wc -l; done
+  ' sh {} + 2>/dev/null || true
+
+  echo "== proposed archive path =="
+  if [ -e "$ARCHIVE" ]; then
+    ls -ld "$ARCHIVE"
+    find "$ARCHIVE" -mindepth 1 -maxdepth 3 -printf '%y %p\n' | sed -n '1,120p'
+  else
+    echo "archive_path=absent_expected_before_install"
+  fi
+
+  echo "== mbsync runtime =="
+  mbsync-provider-live-control status 2>&1 || true
+  pgrep -af 'mbsync|isync' || true
+  find /mail/AppData/isync -maxdepth 4 -type d -name lock -print 2>/dev/null || true
+
+  echo "== production mbsync block only; credentials excluded =="
+  awk '
+    /^# BEGIN CODEX MBSYNC PROVIDER LIVE$/ {show=1}
+    show {print}
+    /^# END CODEX MBSYNC PROVIDER LIVE$/ {show=0}
+  ' "$HOME/.config/isyncrc" 2>/dev/null || true
+
+  echo "== Evolution runtime and Maildir sources =="
+  flatpak ps 2>/dev/null || true
+  grep -RIl 'provider-live\|provider-live-archive' \
+    "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources" 2>/dev/null || true
+  grep -RInE 'BackendName=maildir|provider-live|provider-live-archive' \
+    "$HOME/.var/app/org.gnome.Evolution/config/evolution/sources" 2>/dev/null || true
+
+  echo "== notmuch safety and current scope =="
+  if command -v notmuch >/dev/null 2>&1 && [ -f "$CONFIG" ]; then
+    for key in database.path database.mail_root maildir.synchronize_flags index.decrypt new.ignore; do
+      printf '%s=' "$key"
+      notmuch --config="$CONFIG" config get "$key" 2>&1
+    done
+    printf 'messages='; notmuch --config="$CONFIG" count '*'
+    printf 'files='; notmuch --config="$CONFIG" count --output=files '*'
+    printf 'full_betterbird_indexed_files='
+    notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/local-maildir/' || true
+    printf 'provider_live_indexed_files='
+    notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/mbsync/provider-live/' || true
+  fi
+  notmuch-browser-index-control status 2>&1 || true
+  notmuch-browser-control status 2>&1 || true
+
+  echo "== notification and external mount candidates =="
+  command -v notify-send || true
+  findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS | sed -n '1,160p'
+  for p in "/media/$USER" "/run/media/$USER" /mnt/hgfs; do
+    [ ! -e "$p" ] || { echo "candidate=$p"; ls -la "$p" | sed -n '1,80p'; }
+  done
+
+Stop after Chunk 1. Do not install until the output has been reviewed.
+
+Chunk 2 - Create and Transfer the Checksummed Offline Payload
+--------------------------------------------------------------
+
+Run this on Windows from the repository root. It does not clone anything on
+antiX and does not include credentials or mail data.
+
+  cd C:\Users\Admin\Documents\antiX_VM_Laptop
+  New-Item -ItemType Directory -Force .\dist | Out-Null
+  & 'C:\Program Files\Git\bin\bash.exe' scripts/provider_live_archive_setup.sh bundle "$PWD/dist"
+  Get-ChildItem .\dist\provider-live-archive-offline.tar.gz*
+  Get-FileHash -Algorithm SHA256 .\dist\provider-live-archive-offline.tar.gz
+
+Transfer both files through VMware HGFS, USB, or another trusted local path:
+
+  provider-live-archive-offline.tar.gz
+  provider-live-archive-offline.tar.gz.sha256
+
+On antiX, set PAYLOAD_DIR to their real directory and run:
+
+  set -eu
+  PAYLOAD_DIR="/path/to/transferred/files"
+  BUNDLE="$PAYLOAD_DIR/provider-live-archive-offline.tar.gz"
+  CHECKSUM="$BUNDLE.sha256"
+  WORK="$HOME/codex-runs/provider-live-archive-install-$(date +%Y%m%d-%H%M%S)"
+
+  test -f "$BUNDLE"
+  test -f "$CHECKSUM"
+  (cd "$PAYLOAD_DIR" && sha256sum -c "$(basename "$CHECKSUM")")
+
+  echo "== exact payload members =="
+  tar -tzf "$BUNDLE"
+  test "$(tar -tzf "$BUNDLE" | wc -l)" -eq 4
+  tar -tzf "$BUNDLE" | grep -qx 'src/provider_live_archive.py'
+  tar -tzf "$BUNDLE" | grep -qx 'src/betterbird_profile_transport.py'
+  tar -tzf "$BUNDLE" | grep -qx 'scripts/provider_live_archive_control.sh'
+  tar -tzf "$BUNDLE" | grep -qx 'scripts/provider_live_archive_setup.sh'
+
+  mkdir -p "$WORK"
+  tar -xzf "$BUNDLE" -C "$WORK"
+  cd "$WORK"
+  sh scripts/provider_live_archive_setup.sh verify-sources
+  sh scripts/provider_live_archive_setup.sh install
+  sh scripts/provider_live_archive_setup.sh verify-install
+
+Expected results include `layout_ready`, `alert=would_trigger`, installed file
+hashes, `live_inbox_count`, and `transaction_lock=absent`. The simulated alert
+does not create 15,000 files and does not set a real pending alert.
+
+Chunk 3 - Add the Empty Archive to Evolution
+---------------------------------------------
+
+Launch Evolution normally:
+
+  "$HOME/.local/bin/evolution-flatpak-mail"
+
+In Evolution:
+
+1. Open Edit > Preferences > Mail Accounts > Add.
+2. Use account name `TAG-Mustang Local Archive`.
+3. Choose `Maildir-format mail directories` exactly, not MH.
+4. Set the path to `/mail/Mailstore/evolution/provider-live-archive`.
+5. Do not make this the default account.
+6. Do not configure a separate outgoing identity or Sent folder for it.
+7. Keep outgoing live mail on the existing identity and
+   `TAG-Mustang_mbsync-Live/Sent`.
+8. Finish, confirm the empty account appears, and close Evolution.
+
+Treat this account as an archive: reading and normal read/flag changes are
+supported, but do not move or delete archived messages manually. A later
+verification will refuse missing, moved-to-unapproved-folder, or changed data.
+
+After the GUI is closed:
+
+  set -eu
+  flatpak kill org.gnome.Evolution 2>/dev/null || true
+  sleep 3
+  if flatpak ps --columns=application 2>/dev/null | grep -qx org.gnome.Evolution; then
+    echo "ERROR: Evolution is still running" >&2
+    exit 1
+  fi
+  SOURCES="$HOME/.var/app/org.gnome.Evolution/config/evolution/sources"
+  grep -RInE 'BackendName=maildir|provider-live-archive|TAG-Mustang Local Archive' "$SOURCES"
+
+The reviewed source must contain `BackendName=maildir` and the exact archive
+path before continuing.
+
+Chunk 4 - Enroll Only the New Archive in notmuch
+------------------------------------------------
+
+Run only after Chunk 1 and the Evolution source are reviewed. This command
+backs up the notmuch config, tags, counts, and indexed-path inventory before
+changing `new.ignore`. It refuses unsafe database settings and refuses to
+continue if the deferred full Betterbird archive is already indexed. Scope
+enrollment uses `notmuch new --full-scan`; routine refreshes remain incremental.
+
+  set -eu
+  provider-live-archive-control configure-notmuch-scope
+  provider-live-archive-control status
+  notmuch-browser-index-control status
+  notmuch-browser-control status
+
+  CONFIG="$HOME/.config/notmuch/default/config"
+  echo "new.ignore:"
+  notmuch --config="$CONFIG" config get new.ignore
+  printf 'archive_indexed_files='
+  notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/provider-live-archive/' || true
+  printf 'full_betterbird_indexed_files='
+  notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/local-maildir/' || true
+
+The empty archive count may be zero. The full Betterbird count must be zero.
+
+Chunk 5 - Install and Start the Read-Only Threshold Monitor
+------------------------------------------------------------
+
+  set -eu
+  provider-live-archive-control install-icewm-startup
+  provider-live-archive-control check-now
+  provider-live-archive-control monitor-start
+  provider-live-archive-control status
+  grep -nA5 -B2 'PROVIDER LIVE ARCHIVE MONITOR' "$HOME/.icewm/startup"
+
+Expected normal state below threshold:
+
+  monitor=running
+  alert=clear
+  transaction_lock=absent
+  monitor_interval_seconds=900
+  next_action=none_until_threshold
+
+Daily Commands
+--------------
+
+  provider-live-archive-control status
+  provider-live-archive-control check-now
+  provider-live-archive-control monitor-stop
+  provider-live-archive-control monitor-start
+
+The monitor checks every 900 seconds. It counts only root INBOX `cur` and
+`new`. It writes bounded size-rotated logs, stores a persistent alert, uses
+`notify-send` when available, reminds at most daily, skips during an archive
+transaction, and never transfers or deletes mail.
+
+First Archive Cycle at 15,000
+-----------------------------
+
+1. Estimate only:
+
+  provider-live-archive-control estimate
+
+Record the suggested RUN_ID. Review selected count/bytes, full provider-live
+snapshot bytes, UID and date ranges, monthly distribution, `/mail` free-space
+requirement, and external free-space requirement.
+
+2. Audit the selected external mount. It must be under `/media`, `/run/media`,
+or `/mnt/hgfs`, outside `/mail`, writable, and on a different filesystem.
+
+  EXTERNAL_TARGET="/actual/mounted/external/directory"
+  findmnt -T "$EXTERNAL_TARGET"
+  df -hT /mail "$EXTERNAL_TARGET"
+  probe="$EXTERNAL_TARGET/.provider-live-archive-write-test-$$"
+  (umask 077 && printf test > "$probe")
+  test "$(cat "$probe")" = test
+  rm -f "$probe"
+
+3. Approval 1. Close Evolution first. Replace RUN_ID and PATH exactly:
+
+  RUN_ID="YYYYMMDD-HHMMSS"
+  EXTERNAL_TARGET="/actual/mounted/external/directory"
+  provider-live-archive-control prepare "$RUN_ID" \
+    --approve-copy "$RUN_ID" \
+    --external-target "$EXTERNAL_TARGET"
+  provider-live-archive-control verify-copy "$RUN_ID"
+  provider-live-archive-control run-status "$RUN_ID"
+
+`prepare` pauses and stops mbsync and indexing, creates the hard-link cutoff
+snapshot and manifest, resumes mbsync promptly, creates and verifies portable
+1,900 MiB gzip parts externally, copies from the snapshot through Maildir
+`tmp`, verifies every hash, then restarts indexing, the browser, and monitoring.
+It does not remove live mail.
+
+4. Evolution validation. Open `TAG-Mustang Local Archive`, inspect several
+monthly folders, and test text, HTML, attachment, unread, and flagged messages.
+Close Evolution, then record the attestation:
+
+  provider-live-archive-control mark-evolution-validated "$RUN_ID"
+
+5. notmuch validation:
+
+  provider-live-archive-control verify-notmuch "$RUN_ID"
+  provider-live-archive-control run-status "$RUN_ID"
+
+6. Approval 2. Close Evolution again. This is the only command that can unlink
+captured live INBOX files:
+
+  provider-live-archive-control cleanup "$RUN_ID" \
+    --approve-cleanup "$RUN_ID"
+  provider-live-archive-control run-status "$RUN_ID"
+  provider-live-archive-control status
+
+The controller reverifies the external package, removes one UID-selected
+canary, runs mbsync, requires that the canary stays absent, then unlinks only
+the remaining manifest-selected live files. A second mbsync/notmuch validation
+runs before mbsync, indexing, the browser, and the monitor restart. Later
+arrivals remain live, so the final count can be greater than zero.
+
+Recovery and Snapshot Retirement
+--------------------------------
+
+Rollback restores only missing manifest-selected live links while Evolution,
+mbsync, and indexing are stopped by the controller:
+
+  provider-live-archive-control rollback "$RUN_ID"
+
+Keep the same-disk snapshot for at least 30 days. Retirement is never
+automatic. After 30 days, the command reverifies the external package and all
+archive copies before deleting only that run's same-disk snapshot:
+
+  provider-live-archive-control retire-snapshot "$RUN_ID" \
+    --approve-retire "$RUN_ID"
+
+Never manually delete manifest files, mbsync state, the hard-link snapshot,
+archive monthly folders, or external backup parts while a run is active.
+
+Public Command Reference
+------------------------
+
+  provider-live-archive-control status
+  provider-live-archive-control check-now
+  provider-live-archive-control monitor-start
+  provider-live-archive-control monitor-stop
+  provider-live-archive-control estimate
+  provider-live-archive-control prepare RUN_ID --approve-copy RUN_ID --external-target PATH
+  provider-live-archive-control verify-copy RUN_ID
+  provider-live-archive-control mark-evolution-validated RUN_ID
+  provider-live-archive-control verify-notmuch RUN_ID
+  provider-live-archive-control cleanup RUN_ID --approve-cleanup RUN_ID
+  provider-live-archive-control rollback RUN_ID
+  provider-live-archive-control retire-snapshot RUN_ID --approve-retire RUN_ID
+  provider-live-archive-control run-status RUN_ID
+
+Runtime Validation Still Required
+---------------------------------
+
+Local tests prove the archive engine and script syntax, but these antiX-only
+behaviors must be validated through reviewed terminal chunks before production
+cleanup is approved:
+
+- Exact Evolution source registration and monthly folder rendering.
+- Current notmuch `new.ignore` rewrite and full-archive exclusion.
+- IceWM monitor start and daily notification behavior.
+- External USB/HGFS mount identity, capacity, package corruption test, and
+  complete package verification.
+- Real one-message mbsync canary proving no far-side deletion and no re-download.
+- Final loop/browser/index status and all Maildir `tmp` directories empty.
