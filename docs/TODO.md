@@ -12,6 +12,7 @@
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Optionally prove a custom provider-live interval survives a future full VM reboot; file-backed persistence and live-loop behavior are already validated.
+- [ ] Install and validate a lightweight antiX IceWM notification daemon so provider-live threshold alerts appear as desktop popups and survive reboot/login.
 - [ ] At 15,000 messages, validate Approval 1, Evolution monthly folders, notmuch coverage, the real mbsync cleanup canary, Approval 2, and final services/tmp state.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
