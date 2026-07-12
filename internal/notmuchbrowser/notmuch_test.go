@@ -4,17 +4,34 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
 
 type fakeRunner struct {
-	outputs map[string]string
-	errs    map[string]error
-	calls   [][]string
+	outputs    map[string]string
+	rawOutputs map[string][]byte
+	errs       map[string]error
+	calls      [][]string
+}
+
+func (f *fakeRunner) RunRaw(ctx context.Context, timeout time.Duration, output io.Writer, args ...string) (string, error) {
+	f.calls = append(f.calls, append([]string(nil), args...))
+	key := strings.Join(args, "\x00")
+	if err := f.errs[key]; err != nil {
+		return "fake stderr", err
+	}
+	data := f.rawOutputs[key]
+	if data == nil {
+		data = []byte(f.outputs[key])
+	}
+	_, err := output.Write(data)
+	return "", err
 }
 
 func (f *fakeRunner) Run(ctx context.Context, timeout time.Duration, args ...string) (string, string, error) {
@@ -94,10 +111,7 @@ func TestParseMessageDetailsPrefersHTMLAndAttachments(t *testing.T) {
 	if got.BodyKind != "html" {
 		t.Fatalf("expected html body, got %q", got.BodyKind)
 	}
-	if !strings.Contains(got.HTMLSrcdoc, "Content-Security-Policy") {
-		t.Fatalf("expected iframe srcdoc CSP")
-	}
-	if len(got.Attachments) != 1 || got.Attachments[0] != "invoice.pdf" {
+	if len(got.Attachments) != 1 || got.Attachments[0].FileName != "invoice.pdf" || got.Attachments[0].PartID != 3 {
 		t.Fatalf("unexpected attachments: %#v", got.Attachments)
 	}
 }
@@ -106,8 +120,8 @@ func TestSearchCommandConstruction(t *testing.T) {
 	cfg := testConfig()
 	runner := &fakeRunner{
 		outputs: map[string]string{
-			"count\x00tag:inbox":                                                                 "1\n",
-			"count\x00--output=files\x00tag:inbox":                                                "2\n",
+			"count\x00tag:inbox":                   "1\n",
+			"count\x00--output=files\x00tag:inbox": "2\n",
 			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=10\x00--limit=25\x00tag:inbox": sampleNotmuchJSON,
 		},
 		errs: map[string]error{},
@@ -135,7 +149,7 @@ func TestMessageCommandConstructionUsesDuplicate(t *testing.T) {
 	cfg := testConfig()
 	runner := &fakeRunner{
 		outputs: map[string]string{
-			"search\x00--output=files\x00id:abc@example.test":                                                              "/mail/a\n/mail/b\n",
+			"search\x00--output=files\x00id:abc@example.test": "/mail/a\n/mail/b\n",
 			"show\x00--format=json\x00--entire-thread=false\x00--include-html\x00--decrypt=false\x00--duplicate=2\x00id:abc@example.test": sampleNotmuchJSON,
 		},
 		errs: map[string]error{},
@@ -180,7 +194,7 @@ func TestTemplateEscapesSearchResults(t *testing.T) {
 			Limit:  50,
 			Counts: Counts{Messages: 1, Files: 1},
 			Results: []MessageSummary{{
-				ID:       "evil@example.test",
+				ID:      "evil@example.test",
 				Subject: `<script>alert("x")</script>`,
 				From:    "Tester",
 				Tags:    []string{"inbox"},
@@ -201,7 +215,7 @@ func TestTemplateEscapesSearchResults(t *testing.T) {
 }
 
 func TestRouteRejectsPost(t *testing.T) {
-	server := newHTTPTestServer()
+	server := newHTTPTestServer(t)
 	req := httptest.NewRequest(http.MethodPost, "/search", nil)
 	res := httptest.NewRecorder()
 	server.ServeHTTP(res, req)
@@ -214,7 +228,7 @@ func TestRouteRejectsPost(t *testing.T) {
 }
 
 func TestSecurityHeadersAndHTMXFragment(t *testing.T) {
-	server := newHTTPTestServer()
+	server := newHTTPTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/search?q=tag%3Ainbox", nil)
 	req.Header.Set("HX-Request", "true")
 	res := httptest.NewRecorder()
@@ -228,6 +242,9 @@ func TestSecurityHeadersAndHTMXFragment(t *testing.T) {
 	if got := res.Header().Get("Vary"); got != "HX-Request" {
 		t.Fatalf("expected HTMX vary header, got %q", got)
 	}
+	if csp := res.Header().Get("Content-Security-Policy"); strings.Contains(csp, "cid:") || !strings.Contains(csp, "frame-ancestors 'none'") {
+		t.Fatalf("unexpected parent CSP: %q", csp)
+	}
 	out := res.Body.String()
 	if strings.Contains(out, "<!doctype html>") {
 		t.Fatalf("HTMX fragment included full page shell: %s", out)
@@ -238,15 +255,85 @@ func TestSecurityHeadersAndHTMXFragment(t *testing.T) {
 }
 
 func TestStaticAssetServedLocally(t *testing.T) {
-	server := newHTTPTestServer()
+	server := newHTTPTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/static/app.css", nil)
 	res := httptest.NewRecorder()
 	server.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.Code)
 	}
-	if !strings.Contains(res.Body.String(), "tailwindcss") || !strings.Contains(res.Body.String(), ".app-header") {
+	if !strings.Contains(res.Body.String(), "tailwindcss") || !strings.Contains(res.Body.String(), ".app-sidebar") {
 		t.Fatalf("static CSS did not look like compiled local Tailwind output")
+	}
+}
+
+func TestApplicationJavaScriptServedLocally(t *testing.T) {
+	server := newHTTPTestServer(t)
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/static/app.js", nil))
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "data-pane-divider") {
+		t.Fatalf("local application JavaScript missing: status=%d body=%s", res.Code, res.Body.String())
+	}
+}
+
+func TestSearchShellIncludesReusableEmptyReaderState(t *testing.T) {
+	server := newHTTPTestServer(t)
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `<template id="reader-empty-template">`) || strings.Count(res.Body.String(), "No message selected") != 2 {
+		t.Fatalf("search shell reader reset template missing: status=%d body=%s", res.Code, res.Body.String())
+	}
+}
+
+func TestMessageHTMXFragmentHasBlockedImagesAndSignedDownloads(t *testing.T) {
+	server := newHTTPTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/message?id=abc%40example.test", nil)
+	req.Header.Set("HX-Request", "true")
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("message status=%d body=%s", res.Code, res.Body.String())
+	}
+	out := res.Body.String()
+	if strings.Contains(out, "<!doctype html>") || !strings.Contains(out, "Images blocked") {
+		t.Fatalf("unexpected message fragment shell/state: %s", out)
+	}
+	for _, want := range []string{"/attachment?cap=", "/attachments.zip?cap=", "img-src &amp;#39;none&amp;#39;", `<iframe sandbox referrerpolicy="no-referrer"`, "No external server will be contacted"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("message fragment missing %q: %s", want, out)
+		}
+	}
+}
+
+func TestImagePermissionResetsOnFullPageReload(t *testing.T) {
+	server := newHTTPTestServer(t)
+	path := "/message?id=abc%40example.test&images=remote"
+	full := httptest.NewRecorder()
+	server.ServeHTTP(full, httptest.NewRequest(http.MethodGet, path, nil))
+	if full.Code != http.StatusOK || !strings.Contains(full.Body.String(), "Images blocked") || strings.Contains(full.Body.String(), "Remote images allowed") {
+		t.Fatalf("full-page reload did not reset image permission: status=%d body=%s", full.Code, full.Body.String())
+	}
+	htmxRequest := httptest.NewRequest(http.MethodGet, path, nil)
+	htmxRequest.Header.Set("HX-Request", "true")
+	fragment := httptest.NewRecorder()
+	server.ServeHTTP(fragment, htmxRequest)
+	if fragment.Code != http.StatusOK || !strings.Contains(fragment.Body.String(), "Remote images allowed") {
+		t.Fatalf("HTMX confirmation state missing: status=%d body=%s", fragment.Code, fragment.Body.String())
+	}
+}
+
+func TestHealthReportsDownloadReadOnlyContract(t *testing.T) {
+	server := newHTTPTestServer(t)
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if res.Code != http.StatusOK {
+		t.Fatalf("health status=%d body=%s", res.Code, res.Body.String())
+	}
+	out := res.Body.String()
+	for _, want := range []string{`"read_only":true`, `"mail_mutation":false`, `"downloads_enabled":true`, `"temporary_download_files":true`} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("health payload missing %s: %s", want, out)
+		}
 	}
 }
 
@@ -274,7 +361,7 @@ func TestTemplateRendersDuplicateSelector(t *testing.T) {
 	if !strings.Contains(out, "2 duplicate/copy files") {
 		t.Fatalf("duplicate note missing: %s", out)
 	}
-	if !strings.Contains(out, "<strong>2</strong>") {
+	if !strings.Contains(out, `<strong title="/mail/b">2</strong>`) {
 		t.Fatalf("selected duplicate marker missing: %s", out)
 	}
 	if !strings.Contains(out, `href="/message?id=abc%40example.test"`) {
@@ -282,25 +369,37 @@ func TestTemplateRendersDuplicateSelector(t *testing.T) {
 	}
 }
 
-func newHTTPTestServer() *Server {
+func newHTTPTestServer(t *testing.T) *Server {
+	t.Helper()
 	cfg := testConfig()
+	cfg.DownloadTempDir = filepath.Join(t.TempDir(), "download-tmp")
 	runner := &fakeRunner{
 		outputs: map[string]string{
-			"count\x00tag:inbox": "1\n",
+			"count\x00tag:inbox":                   "1\n",
 			"count\x00--output=files\x00tag:inbox": "2\n",
 			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00tag:inbox": sampleNotmuchJSON,
-			"count\x00*": "1\n",
-			"count\x00--output=files\x00*": "2\n",
-			"config\x00get\x00database.path": cfg.ExpectedDatabasePath + "\n",
-			"config\x00get\x00database.mail_root": cfg.ExpectedMailRoot + "\n",
-			"config\x00get\x00maildir.synchronize_flags": cfg.ExpectedSyncFlags + "\n",
-			"config\x00get\x00index.decrypt": cfg.ExpectedIndexDecrypt + "\n",
-			"config\x00get\x00new.ignore": "evolution/local-maildir\n",
-			"--version": "notmuch 0.39\n",
+			"count\x00*":                                      "1\n",
+			"count\x00--output=files\x00*":                    "2\n",
+			"config\x00get\x00database.path":                  cfg.ExpectedDatabasePath + "\n",
+			"config\x00get\x00database.mail_root":             cfg.ExpectedMailRoot + "\n",
+			"config\x00get\x00maildir.synchronize_flags":      cfg.ExpectedSyncFlags + "\n",
+			"config\x00get\x00index.decrypt":                  cfg.ExpectedIndexDecrypt + "\n",
+			"config\x00get\x00new.ignore":                     "evolution/local-maildir\n",
+			"--version":                                       "notmuch 0.39\n",
+			"search\x00--output=files\x00id:abc@example.test": "/mail/a\n/mail/b\n",
+			"show\x00--format=json\x00--entire-thread=false\x00--include-html\x00--decrypt=false\x00--duplicate=1\x00id:abc@example.test": sampleNotmuchJSON,
 		},
 		errs: map[string]error{},
 	}
-	return NewServer(cfg, NotmuchClient{Config: cfg, Runner: runner})
+	signer, err := newCapabilitySignerWithKey(bytes.Repeat([]byte{0x42}, capabilityKeyBytes))
+	if err != nil {
+		t.Fatalf("create test signer: %v", err)
+	}
+	server, err := newServerWithSigner(cfg, NotmuchClient{Config: cfg, Runner: runner}, signer)
+	if err != nil {
+		t.Fatalf("create test server: %v", err)
+	}
+	return server
 }
 
 const sampleNotmuchJSON = `[

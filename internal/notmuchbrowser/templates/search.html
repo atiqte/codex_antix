@@ -1,22 +1,44 @@
 {{define "page"}}
 {{template "top" .}}
-<section class="search-panel">
-  <form class="search-form" action="/search" method="get" hx-get="/search" hx-target="#results" hx-push-url="true">
-    <label class="field">
-      <span>Query</span>
-      <input id="query" name="q" type="search" value="{{.Query}}" autocomplete="off" spellcheck="false" autofocus>
-    </label>
-    <input type="hidden" name="limit" value="{{displayLimit .SearchPage}}">
-    <button type="submit">Search</button>
-  </form>
-  <div class="examples">
-    <a href="/search?q=tag%3Ainbox">tag:inbox</a>
-    <a href="/search?q=from%3Atagindustries.com.sg">from:tagindustries.com.sg</a>
-    <a href="/search?q=date%3A2026..2026%20and%20tag%3Aattachment">date:2026..2026 and tag:attachment</a>
+<section class="mail-workspace" aria-label="Search and read mail">
+  <div class="search-toolbar">
+    <form class="search-form" action="/search" method="get" hx-get="/search" hx-target="#results" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#search-progress">
+      <label class="search-field" for="query">
+        {{icon "search"}}
+        <span class="visually-hidden">Notmuch query</span>
+        <input id="query" name="q" type="search" value="{{.Query}}" autocomplete="off" spellcheck="false" autofocus placeholder="Search with notmuch syntax">
+      </label>
+      <input type="hidden" name="limit" value="{{displayLimit .SearchPage}}">
+      <button class="primary-button" type="submit">Search</button>
+    </form>
+    <span id="search-progress" class="search-progress htmx-indicator" aria-live="polite">Searching...</span>
+    <div class="query-shortcuts" aria-label="Example searches">
+      <a href="/search?q=tag%3Ainbox">tag:inbox</a>
+      <a href="/search?q=tag%3Aunread">tag:unread</a>
+      <a href="/search?q=tag%3Aattachment">tag:attachment</a>
+    </div>
+  </div>
+  <template id="reader-empty-template">{{template "readerEmpty" .}}</template>
+  <div class="split-workspace" data-split-workspace>
+    <section class="results-pane" aria-label="Search results">
+      <div id="results" class="results" aria-live="polite">
+        {{template "results" .}}
+      </div>
+    </section>
+    <div class="pane-divider" role="separator" aria-label="Resize result and reading panes" aria-orientation="vertical" aria-valuemin="28" aria-valuemax="68" aria-valuenow="44" tabindex="0" data-pane-divider></div>
+    <section class="reading-pane" aria-label="Message reading pane">
+      <div id="reading-pane-content" class="reading-pane-content">
+        {{template "readerEmpty" .}}
+      </div>
+    </section>
   </div>
 </section>
-<section id="results" class="results" aria-live="polite">
-  {{template "results" .}}
-</section>
 {{template "bottom" .}}
+{{end}}
+
+{{define "readerEmpty"}}
+<div class="reader-empty">
+  <span class="reader-empty-icon">{{icon "mail-open"}}</span>
+  <strong>No message selected</strong>
+</div>
 {{end}}

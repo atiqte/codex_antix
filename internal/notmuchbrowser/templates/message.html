@@ -1,46 +1,99 @@
 {{define "messagePage"}}
 {{template "top" (dictTitle "Message")}}
+<div id="reading-pane-content" class="full-reader-shell">
+  {{template "messageFragment" .}}
+</div>
+{{template "bottom" .}}
+{{end}}
+
+{{define "messageFragment"}}
 {{if .Error}}
   <div class="notice bad">{{.Error}}</div>
 {{else}}
-<p><a class="button" href="/">Back to search</a></p>
-<article class="message">
-  <header class="message-meta">
-    <h1>{{.Detail.Summary.Subject}}</h1>
-    <dl>
+<article class="message-reader">
+  <header class="reader-header">
+    <div class="reader-heading-row">
+      <a class="icon-button" href="/" aria-label="Back to search" title="Back to search">{{icon "chevron-left"}}</a>
+      <div class="reader-heading">
+        <h1>{{.Detail.Summary.Subject}}</h1>
+        <div class="reader-tags tags">{{range .Detail.Summary.Tags}}<span>{{.}}</span>{{end}}</div>
+      </div>
+    </div>
+    <dl class="message-fields">
       <dt>From</dt><dd>{{.Detail.Summary.From}}</dd>
       <dt>To</dt><dd>{{.Detail.Summary.To}}</dd>
       <dt>Date</dt><dd>{{.Detail.Summary.Date}}</dd>
       <dt>Message-ID</dt><dd class="path">{{.Detail.Summary.ID}}</dd>
-      {{if .Detail.SelectedFile}}<dt>Selected file</dt><dd class="path">{{.Detail.SelectedFile}}</dd>{{end}}
     </dl>
-    <div class="tags">{{range .Detail.Summary.Tags}}<span>{{.}}</span>{{end}}</div>
     {{if .Detail.DuplicateNote}}
-    <div class="notice">{{.Detail.DuplicateNote}}</div>
-    <div class="duplicates">
-      {{range $i, $path := .Detail.Files}}
-        {{if selectedDup $.Detail.SelectedDup $i}}
-          <strong>{{add $i 1}}</strong>
-        {{else}}
-          <a href="{{messageURL $.Detail.Summary.ID $i}}">{{add $i 1}}</a>
+    <div class="duplicate-bar">
+      <span>{{.Detail.DuplicateNote}}</span>
+      <div class="duplicates" aria-label="Duplicate file selection">
+        {{range $i, $path := .Detail.Files}}
+          {{if selectedDup $.Detail.SelectedDup $i}}
+            <strong title="{{$path}}">{{add $i 1}}</strong>
+          {{else}}
+            <a href="{{messageURL $.Detail.Summary.ID $i}}" hx-get="{{messageURL $.Detail.Summary.ID $i}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="{{$path}}">{{add $i 1}}</a>
+          {{end}}
         {{end}}
-      {{end}}
+      </div>
     </div>
     {{end}}
-    {{if .Detail.Attachments}}
-    <div class="attachments"><strong>Attachments:</strong> {{range .Detail.Attachments}}<span>{{.}}</span>{{end}}</div>
-    {{end}}
+    <div class="image-permission-bar">
+      {{if isBlocked .ImageMode}}
+        <span class="permission-state">{{icon "shield-check"}} Images blocked</span>
+        <a class="icon-text-button" href="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "embedded"}}" hx-get="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "embedded"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Show images stored inside this selected email? No external server will be contacted.">{{icon "image"}} Show embedded images</a>
+      {{else if isEmbedded .ImageMode}}
+        <span class="permission-state allowed">{{icon "check"}} Embedded images shown</span>
+        <a class="icon-text-button warning-button" href="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "remote"}}" hx-get="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "remote"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Load remote images? Remote servers may learn your IP address and that this message was viewed.">{{icon "image"}} Load remote images</a>
+      {{else}}
+        <span class="permission-state warning">{{icon "image"}} Remote images allowed</span>
+        <a class="icon-text-button" href="{{messageURL .Detail.Summary.ID .Detail.SelectedDup}}" hx-get="{{messageURL .Detail.Summary.ID .Detail.SelectedDup}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false">{{icon "shield-check"}} Block images</a>
+      {{end}}
+    </div>
   </header>
-  <section class="message-body">
-    {{if eq .Detail.BodyKind "html"}}
-      <iframe sandbox referrerpolicy="no-referrer" srcdoc="{{.Detail.HTMLSrcdoc}}"></iframe>
+
+  {{if .Detail.Attachments}}
+  <section class="attachment-section" aria-labelledby="attachments-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="attachments-title">Attachments</h2>
+        <span>{{len .Detail.Attachments}} from duplicate {{add .Detail.SelectedDup 1}}</span>
+      </div>
+      {{if .SaveAllURL}}<a class="icon-text-button primary-button" href="{{.SaveAllURL}}">{{icon "archive"}} Save All</a>{{end}}
+    </div>
+    <div class="attachment-list">
+      {{range .Detail.Attachments}}
+      <div class="attachment-row">
+        <span class="attachment-icon">{{if .Previewable}}{{icon "image"}}{{else}}{{icon "paperclip"}}{{end}}</span>
+        <div class="attachment-copy">
+          <strong>{{.FileName}}</strong>
+          <span>{{if .MediaType}}{{.MediaType}}{{else}}application/octet-stream{{end}}{{if .Previewable}} | preview available{{end}}</span>
+        </div>
+        <a class="icon-button" href="{{.DownloadURL}}" aria-label="Download {{.FileName}}" title="Download {{.FileName}}">{{icon "download"}}</a>
+      </div>
+      {{if and (imagesAllowed $.ImageMode) .Previewable .InlineURL}}
+      <figure class="attachment-preview">
+        <img src="{{.InlineURL}}" alt="{{.FileName}}" loading="lazy" referrerpolicy="no-referrer">
+      </figure>
+      {{end}}
+      {{end}}
+    </div>
+  </section>
+  {{end}}
+
+  <section class="message-body" aria-label="Message body">
+    {{if .BodyError}}
+      <div class="notice bad">{{.BodyError}}</div>
+    {{else if eq .Detail.BodyKind "html"}}
+      <iframe sandbox referrerpolicy="no-referrer" title="Email HTML body" srcdoc="{{.HTMLSrcdoc}}"></iframe>
     {{else if eq .Detail.BodyKind "plain"}}
       <pre>{{.Detail.PlainBody}}</pre>
     {{else}}
-      <div class="notice">No text/plain or text/html body part was returned by notmuch.</div>
+      <div class="notice">No text body is available.</div>
     {{end}}
   </section>
+  {{if .Detail.SelectedFile}}<footer class="reader-footer"><span>Selected file</span><code>{{.Detail.SelectedFile}}</code></footer>{{end}}
 </article>
 {{end}}
-{{template "bottom" .}}
 {{end}}

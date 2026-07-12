@@ -4,6 +4,8 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
+- [ ] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
+- [ ] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.
 - [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
@@ -147,3 +149,5 @@
 - [x] Update the Go notmuch browser service HTML/TXT DIY guides with stale-index repair and automatic index refresh loop instructions.
 - [x] Migrate the Go notmuch browser service source to chi routing, modular embedded templates, local HTMX, and compiled local Tailwind CSS while preserving read-only behavior.
 - [x] Validate the installed chi/Tailwind notmuch browser service on antiX and through the Windows SSH tunnel.
+- [x] Implement the local Frost/Sapphire adaptive chi/HTMX UI, individual attachment download, selected-duplicate Save All ZIP, signed inline-image route, two-stage image confirmation, and bounded private temp-file lifecycle.
+- [x] Add pinned `golang.org/x/net/html v0.57.0`, raise the Go module floor to 1.25, add focused capability/MIME/HTML/download/ZIP/cleanup tests, and pass local Go 1.26.4 test/vet/build plus desktop/mobile browser QA.

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime"
 	"os"
 	"os/exec"
 	"strconv"
@@ -13,9 +15,15 @@ import (
 	"time"
 )
 
+const (
+	maxSearchJSONBytes  = int64(32 << 20)
+	maxMessageJSONBytes = int64(64 << 20)
+)
+
 // Runner executes notmuch with a fixed config.
 type Runner interface {
 	Run(ctx context.Context, timeout time.Duration, args ...string) (stdout string, stderr string, err error)
+	RunRaw(ctx context.Context, timeout time.Duration, stdout io.Writer, args ...string) (stderr string, err error)
 }
 
 // ExecRunner invokes the notmuch CLI without a shell.
@@ -24,25 +32,31 @@ type ExecRunner struct {
 }
 
 func (r ExecRunner) Run(ctx context.Context, timeout time.Duration, args ...string) (string, string, error) {
+	var stdout bytes.Buffer
+	stderr, err := r.RunRaw(ctx, timeout, &stdout, args...)
+	return stdout.String(), stderr, err
+}
+
+func (r ExecRunner) RunRaw(ctx context.Context, timeout time.Duration, stdout io.Writer, args ...string) (string, error) {
 	if strings.TrimSpace(r.ConfigPath) == "" {
-		return "", "", errors.New("missing notmuch config path")
+		return "", errors.New("missing notmuch config path")
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	fullArgs := append([]string{"--config", r.ConfigPath}, args...)
 	cmd := exec.CommandContext(ctx, "notmuch", fullArgs...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
+	var stderr bytes.Buffer
+	cmd.Stdout = stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if ctx.Err() != nil {
-		return stdout.String(), stderr.String(), fmt.Errorf("notmuch command timed out: %w", ctx.Err())
+		return stderr.String(), fmt.Errorf("notmuch command timed out: %w", ctx.Err())
 	}
 	if err != nil {
-		return stdout.String(), stderr.String(), fmt.Errorf("notmuch %s failed: %w: %s", strings.Join(args, " "), err, trimOutput(stderr.String(), 2048))
+		return stderr.String(), fmt.Errorf("notmuch %s failed: %w: %s", strings.Join(args, " "), err, trimOutput(stderr.String(), 2048))
 	}
-	return stdout.String(), stderr.String(), nil
+	return stderr.String(), nil
 }
 
 // NotmuchClient is the read-only notmuch access layer used by HTTP handlers.
@@ -85,11 +99,33 @@ type MessageDetail struct {
 	SelectedFile  string
 	PlainBody     string
 	HTMLBody      string
-	HTMLSrcdoc    string
 	BodyKind      string
-	Attachments   []string
+	Attachments   []Attachment
+	Parts         []MIMEPart
 	HasBody       bool
 	DuplicateNote string
+}
+
+type MIMEPart struct {
+	ID                 int
+	ContentType        string
+	MediaType          string
+	ContentID          string
+	FileName           string
+	Disposition        string
+	Content            string
+	NestedInAttachment bool
+}
+
+type Attachment struct {
+	PartID      int
+	FileName    string
+	MediaType   string
+	ContentID   string
+	Inline      bool
+	Previewable bool
+	DownloadURL string
+	InlineURL   string
 }
 
 type Status struct {
@@ -144,9 +180,10 @@ func (c NotmuchClient) Search(ctx context.Context, query string, offset int, lim
 		return SearchPage{}, err
 	}
 
-	stdout, _, err := c.Runner.Run(
+	stdout, err := c.runTextLimited(
 		ctx,
 		c.Config.ShowTimeout,
+		maxSearchJSONBytes,
 		"show",
 		"--format=json",
 		"--entire-thread=false",
@@ -193,7 +230,7 @@ func (c NotmuchClient) Message(ctx context.Context, id string, duplicate int) (M
 		"--duplicate=" + strconv.Itoa(duplicate+1),
 		"id:" + id,
 	}
-	stdout, _, err := c.Runner.Run(ctx, c.Config.ShowTimeout, args...)
+	stdout, err := c.runTextLimited(ctx, c.Config.ShowTimeout, maxMessageJSONBytes, args...)
 	if err != nil {
 		return MessageDetail{}, err
 	}
@@ -216,6 +253,15 @@ func (c NotmuchClient) Message(ctx context.Context, id string, duplicate int) (M
 	return detail, nil
 }
 
+func (c NotmuchClient) runTextLimited(ctx context.Context, timeout time.Duration, maxBytes int64, args ...string) (string, error) {
+	var stdout bytes.Buffer
+	limited := &limitWriter{writer: &stdout, max: maxBytes}
+	if _, err := c.Runner.RunRaw(ctx, timeout, limited, args...); err != nil {
+		return "", err
+	}
+	return stdout.String(), nil
+}
+
 func (c NotmuchClient) FilesFor(ctx context.Context, id string) ([]string, error) {
 	id = normalizeMessageID(id)
 	if err := c.Config.ValidateMessageID(id); err != nil {
@@ -236,6 +282,29 @@ func (c NotmuchClient) FilesFor(ctx context.Context, id string) ([]string, error
 		files = append(files, line)
 	}
 	return files, nil
+}
+
+// WritePart asks notmuch for one transfer-decoded leaf MIME part. duplicate is zero-based internally.
+func (c NotmuchClient) WritePart(ctx context.Context, id string, duplicate int, part int, output io.Writer, timeout time.Duration) error {
+	id = normalizeMessageID(id)
+	if err := c.Config.ValidateMessageID(id); err != nil {
+		return err
+	}
+	if duplicate < 0 || part <= 0 {
+		return errors.New("invalid duplicate or MIME part")
+	}
+	_, err := c.Runner.RunRaw(
+		ctx,
+		timeout,
+		output,
+		"show",
+		"--format=raw",
+		"--part="+strconv.Itoa(part),
+		"--duplicate="+strconv.Itoa(duplicate+1),
+		"--decrypt=false",
+		"id:"+id,
+	)
+	return err
 }
 
 func (c NotmuchClient) Status(ctx context.Context) (Status, error) {
@@ -349,20 +418,35 @@ func ParseMessageDetails(data []byte) ([]MessageDetail, error) {
 		seen[summary.ID] = true
 		detail := MessageDetail{Summary: summary}
 		parts := collectBodyParts(obj["body"])
-		for _, part := range parts {
-			if part.FileName != "" {
-				detail.Attachments = appendUnique(detail.Attachments, part.FileName)
-			}
-			if strings.EqualFold(part.Disposition, "attachment") && part.FileName == "" {
-				detail.Attachments = appendUnique(detail.Attachments, part.ContentType)
-			}
+		detail.Parts = parts
+		htmlPart := firstBodyPart(parts, "text/html")
+		plainPart := firstBodyPart(parts, "text/plain")
+		bodyPartIDs := map[int]bool{}
+		if htmlPart.ID > 0 {
+			bodyPartIDs[htmlPart.ID] = true
 		}
-		if htmlPart := firstPart(parts, "text/html"); htmlPart.Content != "" {
+		if plainPart.ID > 0 {
+			bodyPartIDs[plainPart.ID] = true
+		}
+		for _, part := range parts {
+			if !downloadablePart(part, bodyPartIDs) {
+				continue
+			}
+			name := attachmentName(part)
+			detail.Attachments = append(detail.Attachments, Attachment{
+				PartID:      part.ID,
+				FileName:    name,
+				MediaType:   part.MediaType,
+				ContentID:   part.ContentID,
+				Inline:      strings.EqualFold(part.Disposition, "inline"),
+				Previewable: browserImageType(part.MediaType),
+			})
+		}
+		if htmlPart.Content != "" {
 			detail.HTMLBody = htmlPart.Content
-			detail.HTMLSrcdoc = htmlSrcdoc(htmlPart.Content)
 			detail.BodyKind = "html"
 			detail.HasBody = true
-		} else if plainPart := firstPart(parts, "text/plain"); plainPart.Content != "" {
+		} else if plainPart.Content != "" {
 			detail.PlainBody = plainPart.Content
 			detail.BodyKind = "plain"
 			detail.HasBody = true
@@ -432,51 +516,98 @@ func summaryFromMap(m map[string]any) MessageSummary {
 	return summary
 }
 
-type bodyPart struct {
-	ContentType string
-	Content     string
-	FileName    string
-	Disposition string
-}
-
-func collectBodyParts(root any) []bodyPart {
-	var out []bodyPart
-	var walk func(any)
-	walk = func(v any) {
+func collectBodyParts(root any) []MIMEPart {
+	var out []MIMEPart
+	var walk func(any, bool)
+	walk = func(v any, nestedInAttachment bool) {
 		switch x := v.(type) {
 		case []any:
 			for _, item := range x {
-				walk(item)
+				walk(item, nestedInAttachment)
 			}
 		case map[string]any:
-			part := bodyPart{
-				ContentType: stringValue(x["content-type"]),
-				Content:     stringValue(x["content"]),
-				FileName:    stringValue(x["filename"]),
-				Disposition: stringValue(x["content-disposition"]),
+			contentType := stringValue(x["content-type"])
+			part := MIMEPart{
+				ID:                 intValue(x["id"]),
+				ContentType:        stringValue(x["content-type"]),
+				MediaType:          parseMediaType(contentType),
+				ContentID:          normalizeContentID(stringValue(x["content-id"])),
+				Content:            stringValue(x["content"]),
+				FileName:           stringValue(x["filename"]),
+				Disposition:        normalizeDisposition(stringValue(x["content-disposition"])),
+				NestedInAttachment: nestedInAttachment,
 			}
-			if part.ContentType != "" || part.Content != "" || part.FileName != "" || part.Disposition != "" {
+			if part.ID > 0 || part.ContentType != "" || part.Content != "" || part.FileName != "" || part.Disposition != "" {
 				out = append(out, part)
 			}
-			walk(x["content"])
-			walk(x["body"])
+			childNested := nestedInAttachment || strings.EqualFold(part.Disposition, "attachment") || strings.EqualFold(part.MediaType, "message/rfc822")
+			walk(x["content"], childNested)
+			walk(x["body"], childNested)
 		}
 	}
-	walk(root)
+	walk(root, false)
 	return out
 }
 
-func firstPart(parts []bodyPart, contentType string) bodyPart {
+func firstBodyPart(parts []MIMEPart, contentType string) MIMEPart {
 	for _, part := range parts {
-		if strings.EqualFold(part.ContentType, contentType) && part.Content != "" {
+		if strings.EqualFold(part.MediaType, contentType) && part.Content != "" && part.FileName == "" && !part.NestedInAttachment && !strings.EqualFold(part.Disposition, "attachment") {
 			return part
 		}
 	}
-	return bodyPart{}
+	return MIMEPart{}
 }
 
-func htmlSrcdoc(body string) string {
-	return `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: cid:; style-src 'unsafe-inline'; font-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">` + body
+func downloadablePart(part MIMEPart, bodyPartIDs map[int]bool) bool {
+	if part.ID <= 0 || bodyPartIDs[part.ID] || part.NestedInAttachment {
+		return false
+	}
+	if strings.TrimSpace(part.FileName) != "" || strings.EqualFold(part.Disposition, "attachment") {
+		return true
+	}
+	return strings.EqualFold(part.MediaType, "message/rfc822")
+}
+
+func normalizeDisposition(value string) string {
+	if before, _, ok := strings.Cut(value, ";"); ok {
+		value = before
+	}
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func attachmentName(part MIMEPart) string {
+	if name := sanitizeFilename(part.FileName); name != "" {
+		return name
+	}
+	ext := extensionForMediaType(part.MediaType)
+	return fmt.Sprintf("attachment-part-%d%s", part.ID, ext)
+}
+
+func parseMediaType(contentType string) string {
+	mediaType, _, err := mime.ParseMediaType(strings.TrimSpace(contentType))
+	if err == nil {
+		return strings.ToLower(mediaType)
+	}
+	if before, _, ok := strings.Cut(contentType, ";"); ok {
+		contentType = before
+	}
+	candidate := strings.ToLower(strings.TrimSpace(contentType))
+	if candidate == "" {
+		return ""
+	}
+	if mediaType, _, err := mime.ParseMediaType(candidate); err == nil {
+		return strings.ToLower(mediaType)
+	}
+	return "application/octet-stream"
+}
+
+func browserImageType(mediaType string) bool {
+	switch strings.ToLower(strings.TrimSpace(mediaType)) {
+	case "image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/svg+xml":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeQuery(q string) string {
@@ -501,6 +632,27 @@ func stringValue(v any) string {
 		return x.String()
 	default:
 		return ""
+	}
+}
+
+func intValue(v any) int {
+	switch value := v.(type) {
+	case float64:
+		return int(value)
+	case float32:
+		return int(value)
+	case int:
+		return value
+	case int64:
+		return int(value)
+	case json.Number:
+		parsed, _ := strconv.Atoi(value.String())
+		return parsed
+	case string:
+		parsed, _ := strconv.Atoi(strings.TrimSpace(value))
+		return parsed
+	default:
+		return 0
 	}
 }
 
@@ -548,19 +700,6 @@ func filenameCount(v any) int {
 	default:
 		return 0
 	}
-}
-
-func appendUnique(items []string, value string) []string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return items
-	}
-	for _, item := range items {
-		if item == value {
-			return items
-		}
-	}
-	return append(items, value)
 }
 
 func trimOutput(s string, max int) string {

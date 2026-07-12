@@ -4,6 +4,10 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-12
 
+- Added capability-gated individual attachment downloads, selected-duplicate Save All ZIP, signed inline-image delivery, bounded private temp files, concurrency/time/size limits, and expanded read-only health/status reporting to the Go notmuch browser source.
+- Added structured email HTML sanitization with pinned `golang.org/x/net/html v0.57.0`, Go 1.25 module floor, blocked/embedded/remote iframe CSP modes, CID rewriting, sandboxed SVG handling, and image permission reset on reload/message/duplicate changes.
+- Rebuilt the embedded frontend as an adaptive Frost/Sapphire chi/HTMX workspace with local Lucide icons, dense result/reading panes, keyboard/pointer splitter, responsive mobile reading flow, attachment controls, and compiled Tailwind CSS without runtime Node/npm/CDN dependencies.
+- Added focused capability, MIME, HTML, download, ZIP, limit, timeout, and cleanup tests. Local Go 1.26.4 test/vet/build and desktop/mobile browser QA passed; antiX production rollout and final HTML/TXT guide regeneration remain pending staged operator validation.
 - Installed Dunst 1.12.2 for IceWM desktop notifications, placed one marked startup block before the provider-live archive monitor, and validated a visible critical popup without changing mail or configs; reboot persistence remains to be checked.
 
 ## 2026-07-11

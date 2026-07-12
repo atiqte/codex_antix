@@ -17,12 +17,19 @@ const (
 	defaultDatabasePath     = "/mail/SearchIndex/notmuch/default"
 	defaultMailRoot         = "/mail/Mailstore"
 	defaultMbsyncLock       = "/mail/AppData/isync/provider-live-loop/lock"
+	defaultDownloadTempDir  = "/mail/AppData/notmuch-browser/download-tmp"
 	defaultCommandTimeout   = 30 * time.Second
 	defaultShowTimeout      = 75 * time.Second
+	defaultInlineTimeout    = 2 * time.Minute
+	defaultDownloadTimeout  = 15 * time.Minute
 	defaultRefreshTimeout   = 10 * time.Minute
 	defaultMaxResults       = 200
 	defaultMaxQueryBytes    = 4096
 	defaultMaxMessageIDSize = 998
+	defaultMaxInlineBytes   = int64(64 << 20)
+	defaultMaxDownloadBytes = int64(512 << 20)
+	defaultMaxZIPBytes      = int64(2 << 30)
+	defaultMaxZIPParts      = 200
 )
 
 // Config contains every tunable for the read-only browser service.
@@ -34,12 +41,19 @@ type Config struct {
 	ExpectedSyncFlags     string
 	ExpectedIndexDecrypt  string
 	MbsyncLockDir         string
+	DownloadTempDir       string
 	CommandTimeout        time.Duration
 	ShowTimeout           time.Duration
+	InlineImageTimeout    time.Duration
+	DownloadTimeout       time.Duration
 	RefreshTimeout        time.Duration
 	MaxResults            int
 	MaxQueryBytes         int
 	MaxMessageIDBytes     int
+	MaxInlineImageBytes   int64
+	MaxAttachmentBytes    int64
+	MaxZIPDecodedBytes    int64
+	MaxZIPAttachments     int
 	SkipStartupSafety     bool
 	RequireLocalhostBind  bool
 	AllowExternalLoopback bool
@@ -56,12 +70,19 @@ func DefaultConfig() Config {
 		ExpectedSyncFlags:    envString("NOTMUCH_BROWSER_EXPECTED_SYNC_FLAGS", "false"),
 		ExpectedIndexDecrypt: envString("NOTMUCH_BROWSER_EXPECTED_INDEX_DECRYPT", "false"),
 		MbsyncLockDir:        envString("NOTMUCH_BROWSER_MBSYNC_LOCK", defaultMbsyncLock),
+		DownloadTempDir:      envString("NOTMUCH_BROWSER_DOWNLOAD_TMP", defaultDownloadTempDir),
 		CommandTimeout:       envDuration("NOTMUCH_BROWSER_COMMAND_TIMEOUT_SECONDS", defaultCommandTimeout),
 		ShowTimeout:          envDuration("NOTMUCH_BROWSER_SHOW_TIMEOUT_SECONDS", defaultShowTimeout),
+		InlineImageTimeout:   envDuration("NOTMUCH_BROWSER_INLINE_TIMEOUT_SECONDS", defaultInlineTimeout),
+		DownloadTimeout:      envDuration("NOTMUCH_BROWSER_DOWNLOAD_TIMEOUT_SECONDS", defaultDownloadTimeout),
 		RefreshTimeout:       envDuration("NOTMUCH_BROWSER_REFRESH_TIMEOUT_SECONDS", defaultRefreshTimeout),
 		MaxResults:           envInt("NOTMUCH_BROWSER_MAX_RESULTS", defaultMaxResults),
 		MaxQueryBytes:        defaultMaxQueryBytes,
 		MaxMessageIDBytes:    defaultMaxMessageIDSize,
+		MaxInlineImageBytes:  defaultMaxInlineBytes,
+		MaxAttachmentBytes:   defaultMaxDownloadBytes,
+		MaxZIPDecodedBytes:   defaultMaxZIPBytes,
+		MaxZIPAttachments:    defaultMaxZIPParts,
 		RequireLocalhostBind: true,
 	}
 }
@@ -75,8 +96,11 @@ func ParseConfig(args []string) (Config, error) {
 	fs.StringVar(&cfg.ExpectedDatabasePath, "expected-db", cfg.ExpectedDatabasePath, "required notmuch database.path")
 	fs.StringVar(&cfg.ExpectedMailRoot, "expected-mail-root", cfg.ExpectedMailRoot, "required notmuch database.mail_root")
 	fs.StringVar(&cfg.MbsyncLockDir, "mbsync-lock", cfg.MbsyncLockDir, "mbsync provider-live lock directory")
+	fs.StringVar(&cfg.DownloadTempDir, "download-tmp", cfg.DownloadTempDir, "private temporary directory for prepared downloads")
 	fs.DurationVar(&cfg.CommandTimeout, "command-timeout", cfg.CommandTimeout, "timeout for small notmuch commands")
 	fs.DurationVar(&cfg.ShowTimeout, "show-timeout", cfg.ShowTimeout, "timeout for notmuch show commands")
+	fs.DurationVar(&cfg.InlineImageTimeout, "inline-timeout", cfg.InlineImageTimeout, "timeout for decoding one inline image")
+	fs.DurationVar(&cfg.DownloadTimeout, "download-timeout", cfg.DownloadTimeout, "timeout for one download or ZIP")
 	fs.IntVar(&cfg.MaxResults, "max-results", cfg.MaxResults, "maximum search results per request")
 	fs.BoolVar(&cfg.SkipStartupSafety, "skip-startup-safety", cfg.SkipStartupSafety, "skip startup notmuch config safety checks")
 	fs.BoolVar(&cfg.AllowExternalLoopback, "allow-non-localhost-bind", cfg.AllowExternalLoopback, "allow binding outside localhost")
@@ -87,8 +111,11 @@ func ParseConfig(args []string) (Config, error) {
 	if cfg.MaxResults < 1 || cfg.MaxResults > 1000 {
 		return Config{}, fmt.Errorf("max-results must be between 1 and 1000")
 	}
-	if cfg.CommandTimeout <= 0 || cfg.ShowTimeout <= 0 {
+	if cfg.CommandTimeout <= 0 || cfg.ShowTimeout <= 0 || cfg.InlineImageTimeout <= 0 || cfg.DownloadTimeout <= 0 {
 		return Config{}, fmt.Errorf("timeouts must be positive")
+	}
+	if cfg.MaxInlineImageBytes <= 0 || cfg.MaxAttachmentBytes <= 0 || cfg.MaxZIPDecodedBytes <= 0 || cfg.MaxZIPAttachments <= 0 {
+		return Config{}, fmt.Errorf("download limits must be positive")
 	}
 	if err := cfg.ValidateBind(); err != nil {
 		return Config{}, err

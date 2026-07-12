@@ -5,6 +5,7 @@ APP=${NOTMUCH_BROWSER_BIN:-"$HOME/.local/bin/notmuch-browser"}
 ADDR=${NOTMUCH_BROWSER_ADDR:-"127.0.0.1:8765"}
 CONFIG=${NOTMUCH_BROWSER_CONFIG:-"$HOME/.config/notmuch/default/config"}
 STATE_DIR=${NOTMUCH_BROWSER_STATE_DIR:-"/mail/AppData/notmuch-browser"}
+DOWNLOAD_TMP=${NOTMUCH_BROWSER_DOWNLOAD_TMP:-"$STATE_DIR/download-tmp"}
 LOG_DIR=${NOTMUCH_BROWSER_LOG_DIR:-"/mail/Logs/notmuch-browser"}
 PID_FILE="$STATE_DIR/notmuch-browser.pid"
 SERVER_LOG="$LOG_DIR/notmuch-browser.log"
@@ -154,6 +155,16 @@ status_service() {
   log "config=$CONFIG"
   log "state_dir=$STATE_DIR"
   log "log_dir=$LOG_DIR"
+  if [ -d "$DOWNLOAD_TMP" ]; then
+    temp_count=$(find "$DOWNLOAD_TMP" -maxdepth 1 -type f -name 'nmb-*' 2>/dev/null | wc -l | tr -d ' ')
+    temp_bytes=$(find "$DOWNLOAD_TMP" -maxdepth 1 -type f -name 'nmb-*' -exec stat -c '%s' {} \; 2>/dev/null | awk '{total += $1} END {print total + 0}')
+  else
+    temp_count=0
+    temp_bytes=0
+  fi
+  log "download_tmp=$DOWNLOAD_TMP"
+  log "download_tmp_files=$temp_count"
+  log "download_tmp_bytes=$temp_bytes"
   if [ -d "$MBSYNC_LOCK_DIR" ]; then
     log "mbsync_lock=present"
   else
@@ -298,6 +309,7 @@ Environment overrides:
   NOTMUCH_BROWSER_CONFIG
   NOTMUCH_BROWSER_STATE_DIR
   NOTMUCH_BROWSER_LOG_DIR
+  NOTMUCH_BROWSER_DOWNLOAD_TMP
   NOTMUCH_BROWSER_REFRESH_TIMEOUT_SECONDS
 EOF
 }

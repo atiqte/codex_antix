@@ -34,7 +34,7 @@ Use these files as the project memory source of truth.
 
 - Current phase: planning/setup plus first application implementation.
 - Current goal: maintain an AI-readable memory and Git workflow system, the approved mail migration utilities, and the read-only Go notmuch browser service.
-- First broader application objective: Go standard-library notmuch browser service for antiX, read/search/view only, localhost-bound, Windows access through SSH tunnel.
+- First broader application objective: Go chi notmuch browser service for antiX, localhost-bound and reached from Windows through an SSH tunnel. Maildir, tags, and the notmuch database remain non-mutating from browser routes; the approved browser surface includes search/view plus capability-gated decoded attachment export and confirmation-gated image rendering.
 - Do not add unrelated application features until the owner explicitly decides the next implementation objective.
 
 ## Portability Notes

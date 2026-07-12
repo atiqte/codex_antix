@@ -2,7 +2,7 @@
 
 This repository holds project memory, workflow notes, the approved local Betterbird mail migration utilities, antiX mail setup helpers, and the first broader application objective: a read-only Go notmuch browser service for antiX.
 
-The broader application direction is now selected for v1: a lightweight Go web service that searches/views notmuch mail over localhost, with chi routing, server-rendered HTML, local HTMX, compiled local Tailwind CSS, and Windows 11 access through an SSH tunnel. Evolution remains the reply/forward/send client.
+The broader application direction is now selected for v1: a lightweight Go web service that searches/views notmuch mail over localhost, with chi routing, server-rendered HTML, local HTMX, compiled local Tailwind CSS, controlled decoded attachment downloads, and privacy-gated embedded/remote image rendering. Maildir, notmuch tags, and the notmuch database are not mutated by browser routes. Windows 11 access remains through an SSH tunnel, and Evolution remains the reply/forward/send client.
 
 ## Current Status
 

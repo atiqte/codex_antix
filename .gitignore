@@ -41,6 +41,7 @@ build/
 /notmuch-browser
 /notmuch-browser.exe
 notmuch-browser-chi-src-*.tar.gz
+notmuch-browser-attachment-src-*.tar.gz
 *.test
 coverage.out
 
@@ -54,6 +55,8 @@ temp/
 # Local reference material
 codex-input/
 codex-output/
+/stitch_design.md_framework/
+/tailwindcss.exe
 
 # Local secrets and credentials
 *.pem
