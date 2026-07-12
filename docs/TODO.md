@@ -12,7 +12,7 @@
 - [ ] Plan backup and cleanup for the Betterbird delta export ZIP, staging package, and restored target after the delta is covered by backup.
 - [ ] Monitor the production `provider-live` auto-sync loop with `mbsync-provider-live-control status` during normal antiX use.
 - [ ] Optionally prove a custom provider-live interval survives a future full VM reboot; file-backed persistence and live-loop behavior are already validated.
-- [ ] Install and validate a lightweight antiX IceWM notification daemon so provider-live threshold alerts appear as desktop popups and survive reboot/login.
+- [ ] Prove Dunst and a provider-live test popup survive an antiX IceWM reboot/login; package installation, startup ordering, and current-session popup are validated.
 - [ ] At 15,000 messages, validate Approval 1, Evolution monthly folders, notmuch coverage, the real mbsync cleanup canary, Approval 2, and final services/tmp state.
 - [ ] Choose future Git remote provider: GitHub or GitLab.
 
@@ -95,6 +95,7 @@
 - [x] Enroll only `provider-live-archive` in notmuch while proving the 59G `local-maildir` remains excluded and the existing 650-message/1,176-file pilot count remains unchanged.
 - [x] Install and validate the 15-minute provider-live archive threshold monitor, non-persistent simulation, real below-threshold check, and idempotent IceWM startup marker block.
 - [x] Prove the provider-live archive monitor starts through its IceWM block after an antiX reboot/login.
+- [x] Install Dunst 1.12.2 from Debian APT and validate current-session D-Bus ownership, one pre-monitor IceWM startup block, and a visible provider-live test popup.
 - [x] Create the separate Betterbird delta Maildir++ archive on Fedora with all 248 selected messages.
 - [x] Validate the Betterbird delta Maildir++ archive in Fedora Evolution.
 - [x] Pack and verify the Betterbird delta Maildir++ export on Fedora.

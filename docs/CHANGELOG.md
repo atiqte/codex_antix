@@ -2,6 +2,10 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-12
+
+- Installed Dunst 1.12.2 for IceWM desktop notifications, placed one marked startup block before the provider-live archive monitor, and validated a visible critical popup without changing mail or configs; reboot persistence remains to be checked.
+
 ## 2026-07-11
 
 - Added the provider-live archive transaction engine with immutable UID/hash manifests, monthly Maildir++ copies, hard-link snapshots, verified split external backups, two approvals, cleanup canary, rollback, and 30-day snapshot retirement.
