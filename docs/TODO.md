@@ -151,3 +151,8 @@
 - [x] Validate the installed chi/Tailwind notmuch browser service on antiX and through the Windows SSH tunnel.
 - [x] Implement the local Frost/Sapphire adaptive chi/HTMX UI, individual attachment download, selected-duplicate Save All ZIP, signed inline-image route, two-stage image confirmation, and bounded private temp-file lifecycle.
 - [x] Add pinned `golang.org/x/net/html v0.57.0`, raise the Go module floor to 1.25, add focused capability/MIME/HTML/download/ZIP/cleanup tests, and pass local Go 1.26.4 test/vet/build plus desktop/mobile browser QA.
+- [x] Transfer, isolated-test, synthetic-fixture-test, back up, atomically install, and validate exact installed-production attachment/inline-image/Save-All bytes for the attachment/image revision.
+- [ ] Prove strict installed-production read-only behavior with mbsync paused and the notmuch index loop stopped, comparing stable Maildir manifests, indexed content, tags, indexed paths, counts, and temporary directories.
+- [ ] Manually validate the installed attachment/image UI on antiX, then repeat downloads and image confirmations through the Windows SSH tunnel.
+- [ ] Reboot antiX and prove exactly one browser and one index loop auto-start with healthy search, downloads, confirmed images, localhost binding, and empty temporary state.
+- [ ] Regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with every successful attachment/image rollout command, exact hashes, rollback path, expected output, troubleshooting, and copy controls.
