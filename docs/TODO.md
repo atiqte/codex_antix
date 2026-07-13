@@ -153,7 +153,7 @@
 - [x] Add pinned `golang.org/x/net/html v0.57.0`, raise the Go module floor to 1.25, add focused capability/MIME/HTML/download/ZIP/cleanup tests, and pass local Go 1.26.4 test/vet/build plus desktop/mobile browser QA.
 - [x] Transfer, isolated-test, synthetic-fixture-test, back up, atomically install, and validate exact installed-production attachment/inline-image/Save-All bytes for the attachment/image revision.
 - [x] Prove strict installed-production read-only behavior with mbsync paused and the notmuch index loop stopped, comparing stable Maildir manifests, indexed content, tags, indexed paths, counts, and temporary directories.
-- [ ] Manually validate the installed attachment/image UI on antiX.
+- [x] Manually validate the installed attachment/image UI on antiX.
 - [ ] Repeat attachment downloads and image confirmations through the Windows SSH tunnel.
 - [ ] Reboot antiX and prove exactly one browser and one index loop auto-start with healthy search, downloads, confirmed images, localhost binding, and empty temporary state.
 - [ ] Regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with every successful attachment/image rollout command, exact hashes, rollback path, expected output, troubleshooting, and copy controls.
