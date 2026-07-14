@@ -155,5 +155,5 @@
 - [x] Prove strict installed-production read-only behavior with mbsync paused and the notmuch index loop stopped, comparing stable Maildir manifests, indexed content, tags, indexed paths, counts, and temporary directories.
 - [x] Manually validate the installed attachment/image UI on antiX.
 - [x] Repeat attachment downloads and image confirmations through the Windows SSH tunnel.
-- [ ] Reboot antiX and prove exactly one browser and one index loop auto-start with healthy search, downloads, confirmed images, localhost binding, and empty temporary state.
+- [x] Reboot antiX and prove exactly one browser and one index loop auto-start with healthy search, downloads, confirmed images, localhost binding, and empty temporary state.
 - [ ] Regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with every successful attachment/image rollout command, exact hashes, rollback path, expected output, troubleshooting, and copy controls.
