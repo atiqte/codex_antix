@@ -1,488 +1,1043 @@
-# Go chi notmuch Browser Service for antiX
+# NOTMUCH BROWSER SERVICE - Go chi/HTMX/Tailwind DIY Guide for antiX
 
-Updated: 2026-07-09
+Updated: 2026-07-14
+Validated platform: antiX Linux runit edition with zzzFM/IceWM
+Host access: Windows 11 through an SSH local-forward tunnel
 
-This is the rebuild guide for the read-only Go chi notmuch browser service on
-antiX Linux runit with zzzFM/IceWM. It supersedes the Python pilot viewer as
-the current service path and preserves the same safety posture:
+This is the complete rebuild and operating guide for the validated read-only
+NOTMUCH BROWSER SERVICE. It supersedes the July 9 chi-only revision of this
+guide.
 
-- Search and view only.
-- Evolution remains reply, forward, compose, and send.
-- The HTTP service binds only to `127.0.0.1:8765`.
-- Windows 11 access uses an SSH tunnel.
-- Backend uses Go `net/http` plus the small `github.com/go-chi/chi/v5` router.
-- UI uses modular embedded HTML templates, local HTMX, and compiled local Tailwind CSS.
-- No React, Node/npm/Tailwind runtime on antiX, CDN, Gin, Flask, uv runtime, or tmux supervisor.
-- notmuch is the search database; there is no custom mail database.
-- The browser must not mutate Maildir data.
+The service uses:
 
-## Validated Current State
+- Go net/http and github.com/go-chi/chi/v5 v5.3.1.
+- golang.org/x/net/html v0.57.0 for structured email HTML processing.
+- Go module floor 1.25.0. The validated antiX build used Go 1.26.4.
+- Server-rendered embedded templates.
+- Local HTMX, compiled local Tailwind CSS, a tiny local app.js, and local
+  Lucide icons.
+- notmuch as the only search/index backend.
+- IceWM user-session startup plus a lock-aware 60-second notmuch refresh loop.
+- SSH tunneling for Windows access; the HTTP listener remains localhost-only.
 
-Validated on antiX after the 2026-07-09 chi/Tailwind install, index-loop
-post-install check, antiX manual UI check, and Windows SSH-tunnel UI check:
+No full repository clone, CDN, npm runtime, Node runtime, React, Gin, Flask,
+uv runtime, Material UI package, tmux supervisor, or remote-image proxy is
+required on antiX.
 
-- Browser binary: `~/.local/bin/notmuch-browser`
-- Browser control: `~/.local/bin/notmuch-browser-control`
-- Index loop control: `~/.local/bin/notmuch-browser-index-control`
-- URL inside antiX: `http://127.0.0.1:8765/`
-- Windows tunnel: `ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128`
-- Installed chi binary SHA256: `78f3fce722240999ad6bcfe57866a29a4fb58cceb0852d57529fac78b0ad58bd`
-- Validated minimal source bundle: `/mail/notmuch-browser-chi-src-20260709-222603.tar.gz`
-- Source bundle SHA256: `9a53fabf109e492723e8619dd1e07b09d210ebd30c67197c840a11d26a21dbf5`
-- Compiled local Tailwind CSS served from `/static/app.css`: 10,801 bytes
-- notmuch config: `~/.config/notmuch/default/config`
-- database: `/mail/SearchIndex/notmuch/default`
-- mail root: `/mail/Mailstore`
-- safety flags: `maildir.synchronize_flags=false`, `index.decrypt=false`
-- current pilot scope: `provider-live` plus the small restored delta
-- full 59G archive: still excluded until count drift is explained or accepted
-- latest validated count after chi install: 638 unique messages and 1,158 indexed files
-- Maildir `tmp` files after chi install and loop validation: 0
-- Manual antiX UI validation: search/results/message/body/HTML/status looked right
-- Manual Windows tunnel UI validation: search/results/message/body/HTML/status looked right
+-------------------------------------------------------------------------------
+1. Scope and security model
+-------------------------------------------------------------------------------
 
-The 2026-07-09 browser error was caused by stale notmuch paths, not by the Go
-service. `notmuch-browser-control refresh-index` detected 12 file renames,
-added 102 new messages, and restored `tag:inbox` search. The new
-`notmuch-browser-index-control` loop now runs `refresh-index` every 60 seconds
-and skips while mbsync or another refresh is active.
+Browser routes:
 
-## Required Source Files
+- GET /
+- GET /search?q=&offset=&limit=
+- GET /message?id=&dup=&images=blocked|embedded|remote
+- GET /attachment?cap=...
+- GET /attachments.zip?cap=...
+- GET /inline-image?cap=...
+- GET /status
+- GET /healthz
+- GET /static/*
 
-To rebuild from this repository, the antiX source tree needs these paths:
+The service does not edit Maildir files, notmuch tags, or the notmuch database.
+Evolution remains the application for reply, forward, compose, and send.
 
-```text
+Attachment and image rules:
+
+- Each attachment/image URL is protected by a process-lifetime HMAC-SHA256
+  capability. Old capabilities expire when the service restarts.
+- Individual downloads and Save All always use the selected duplicate.
+- Save All uses ZIP Store mode and safe, collision-resolved base filenames.
+- Initial HTML mode blocks every image.
+- "Show embedded images" enables only CID/data/local message images after a
+  confirmation.
+- "Load remote images" requires a second confirmation. The browser, not the Go
+  service, contacts the remote server.
+- HTML stays in an iframe with sandbox and referrerpolicy=no-referrer.
+- SVG is served as an image with a separate restrictive CSP; it is never placed
+  directly in the parent DOM.
+- PNG, JPEG, GIF, WebP, BMP, SVG, CID, and data images can render. TIFF, HEIC,
+  and other unsupported browser formats remain downloadable.
+
+Default resource limits:
+
+- 2 concurrent inline-image operations.
+- 1 concurrent individual/ZIP download.
+- 64 MiB per inline image.
+- 512 MiB per attachment.
+- 200 attachments and 2 GiB decoded output per Save All ZIP.
+- 2-minute inline-image timeout.
+- 15-minute attachment/ZIP timeout.
+- Temporary output: /mail/AppData/notmuch-browser/download-tmp, directory mode
+  0700 and files mode 0600. Successful and failed requests remove their files;
+  startup removes files older than 24 hours.
+
+-------------------------------------------------------------------------------
+2. Validated reference state and exact artifacts
+-------------------------------------------------------------------------------
+
+The following values describe the final July 14 validation. Message/file counts
+will increase as mbsync receives mail; use hashes as artifact references, not as
+permanent mailbox-count assertions.
+
+Source bundle:
+  Name: notmuch-browser-attachment-src-20260712-164424.tar.gz
+  Size: 65,392 bytes
+  Members: 30
+  SHA256: f56332f7746ba0a621da784135cdb1379a8e3f1310e7bfd2de9ed00ac2af5f9e
+
+Validated antiX artifacts:
+  Browser binary size: 9,724,169 bytes
+  Browser binary SHA256:
+    50e6b1adbcf32201496f6d6f5a3d53c060d0c39e1831ca1b5ecac3d48838f37e
+  Browser control SHA256:
+    1b1277b0af3ab582ab307dd8763115ed754121c8a61643737888aa11d97b34b7
+  Index control SHA256:
+    df07cd071d1976ea43b8c4c44655b60a179f9809a24995980bdf8e8958eae0b3
+
+Embedded asset sizes:
+  app.css: 20,775 bytes
+  app.js: 5,371 bytes
+  htmx.min.js: 51,238 bytes
+  Total: 77,384 bytes
+
+Validated production paths:
+  Binary: /home/atiq/.local/bin/notmuch-browser
+  Browser control: /home/atiq/.local/bin/notmuch-browser-control
+  Index control: /home/atiq/.local/bin/notmuch-browser-index-control
+  notmuch config: /home/atiq/.config/notmuch/default/config
+  database.path: /mail/SearchIndex/notmuch/default
+  database.mail_root: /mail/Mailstore
+  state: /mail/AppData/notmuch-browser
+  logs: /mail/Logs/notmuch-browser
+  temporary downloads: /mail/AppData/notmuch-browser/download-tmp
+  HTTP listener: 127.0.0.1:8765
+
+Final controlled-reboot proof:
+  Messages/files at proof time: 827 / 1,507
+  Exactly one browser and one index loop after IceWM login.
+  Browser, index loop, and mbsync all restored/running.
+  Maildir tmp files: 0
+  Download temporary files/bytes: 0 / 0
+  strict_snapshot_match=yes
+  mail_and_index_mutation=no
+  status=chunk9_post_reboot_complete
+
+Validated old-version rollback retained on the original VM:
+  /mail/Backups/notmuch-browser/20260713-064920-before-attachment-images
+  Pointer:
+  /mail/AppData/notmuch-browser/attachment-rollback-current
+
+-------------------------------------------------------------------------------
+3. Exact 30 source-bundle members
+-------------------------------------------------------------------------------
+
 go.mod
 go.sum
-cmd/notmuch-browser/
-internal/notmuchbrowser/
+cmd/notmuch-browser/main.go
+internal/notmuchbrowser/capability_test.go
+internal/notmuchbrowser/capability.go
+internal/notmuchbrowser/config.go
+internal/notmuchbrowser/downloads_test.go
+internal/notmuchbrowser/downloads.go
+internal/notmuchbrowser/handlers.go
+internal/notmuchbrowser/html_email_test.go
+internal/notmuchbrowser/html_email.go
+internal/notmuchbrowser/mime_test.go
+internal/notmuchbrowser/notmuch_test.go
+internal/notmuchbrowser/notmuch.go
+internal/notmuchbrowser/server.go
+internal/notmuchbrowser/templates.go
+internal/notmuchbrowser/visual_preview_test.go
+internal/notmuchbrowser/static/app.css
+internal/notmuchbrowser/static/app.js
+internal/notmuchbrowser/static/htmx.LICENSE.txt
+internal/notmuchbrowser/static/htmx.min.js
+internal/notmuchbrowser/static/lucide.LICENSE.txt
+internal/notmuchbrowser/styles/app.tailwind.css
+internal/notmuchbrowser/templates/layout.html
+internal/notmuchbrowser/templates/message.html
+internal/notmuchbrowser/templates/partials/results.html
+internal/notmuchbrowser/templates/search.html
+internal/notmuchbrowser/templates/status.html
 scripts/notmuch_browser_control.sh
 scripts/notmuch_browser_index_control.sh
-```
 
-If you do not want to clone the full repository on antiX, copy only those paths
-into a temporary source directory, preserving the same relative layout. Then run
-the build/install chunk from that directory.
+-------------------------------------------------------------------------------
+4. Chunk W1 - Verify and transfer the exact bundle from Windows 11
+-------------------------------------------------------------------------------
 
-The `internal/notmuchbrowser/` directory must include `templates/`, `static/`,
-and `styles/`. The runtime serves only embedded local assets. Tailwind is a
-build-time source workflow: `internal/notmuchbrowser/static/app.css` is the
-compiled file used by antiX, and `internal/notmuchbrowser/styles/app.tailwind.css`
-is the source file used only when regenerating CSS.
-
-Optional development-host CSS regeneration, not required on antiX runtime:
+Run in Windows PowerShell from the repository root. Replace the IP only if the
+new VM received another address.
 
 ```powershell
-npx @tailwindcss/cli@4 -i internal/notmuchbrowser/styles/app.tailwind.css -o internal/notmuchbrowser/static/app.css --minify
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+Set-Location 'C:\Users\Admin\Documents\antiX_VM_Laptop'
+$Bundle = Join-Path $PWD 'notmuch-browser-attachment-src-20260712-164424.tar.gz'
+$ExpectedHash = 'F56332F7746BA0A621DA784135CDB1379A8E3F1310E7BFD2DE9ED00AC2AF5F9E'
+
+if (-not (Test-Path -LiteralPath $Bundle -PathType Leaf)) {
+    throw "Missing bundle: $Bundle"
+}
+
+$Item = Get-Item -LiteralPath $Bundle
+$Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Bundle).Hash
+$Members = @(tar -tzf $Bundle)
+
+if ($Item.Length -ne 65392) { throw "Unexpected size: $($Item.Length)" }
+if ($Hash -ne $ExpectedHash) { throw "Unexpected SHA256: $Hash" }
+if ($Members.Count -ne 30) { throw "Unexpected member count: $($Members.Count)" }
+if (@($Members | Sort-Object -Unique).Count -ne 30) {
+    throw 'Duplicate bundle member detected'
+}
+
+$Item | Select-Object FullName, Length
+"SHA256=$Hash"
+"member_count=$($Members.Count)"
+$Members
+Test-NetConnection 192.168.254.128 -Port 22
+scp $Bundle atiq@192.168.254.128:/home/atiq/
+```
+
+Expected:
+  Length=65392
+  SHA256=F56332F...
+  member_count=30
+  TcpTestSucceeded=True
+
+If scp is unavailable, move the same verified file through a trusted VMware
+shared folder or USB. Do not rebuild or rename its contents on antiX.
+
+Optional Tailwind regeneration for intentional future CSS development only:
+
+```powershell
+Set-Location 'C:\Users\Admin\Documents\antiX_VM_Laptop'
+.\tailwindcss.exe -i internal/notmuchbrowser/styles/app.tailwind.css `
+  -o internal/notmuchbrowser/static/app.css --minify
 go test ./...
 ```
 
-## Optional: Create a Minimal Source Bundle on Windows
+Do not run Tailwind on antiX. The compiled app.css is already in the bundle.
 
-Use this when you do not want to clone the whole repository on antiX. Run from
-the Windows repository root after the latest changes are committed.
+-------------------------------------------------------------------------------
+5. Chunk A1 - antiX prerequisite and safety audit
+-------------------------------------------------------------------------------
 
-```powershell
-cd C:\Users\Admin\Documents\antiX_VM_Laptop
-
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$bundle = "C:\Users\Admin\Documents\antiX_VM_Laptop\notmuch-browser-chi-src-$stamp.tar.gz"
-if (Test-Path $bundle) { Remove-Item -LiteralPath $bundle -Force }
-
-tar -czf $bundle `
-  go.mod `
-  go.sum `
-  cmd/notmuch-browser `
-  internal/notmuchbrowser `
-  scripts/notmuch_browser_control.sh `
-  scripts/notmuch_browser_index_control.sh
-
-Get-Item $bundle | Select-Object FullName,Length
-Get-FileHash -Algorithm SHA256 $bundle
-```
-
-Copy that `.tar.gz` to antiX by VMware shared folder, USB, SSH, or another
-trusted local transfer path. Then extract it on antiX:
+Run this before extraction or installation.
 
 ```sh
 set -eu
 
-BUNDLE="/path/to/notmuch-browser-chi-src-YYYYMMDD-HHMMSS.tar.gz"
-WORK="$HOME/notmuch-browser-src"
+CONFIG="$HOME/.config/notmuch/default/config"
+BUNDLE="$HOME/notmuch-browser-attachment-src-20260712-164424.tar.gz"
+MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
+MBSYNC_WAS_UNPAUSED=no
 
-rm -rf "$WORK"
-mkdir -p "$WORK"
+echo "== tools =="
+go version
+go env GOVERSION
+notmuch --version
+command -v curl
+command -v tar
+command -v sha256sum
+command -v install
+
+echo "== bundle =="
+test -f "$BUNDLE"
+printf '%s  %s\n' \
+  'f56332f7746ba0a621da784135cdb1379a8e3f1310e7bfd2de9ed00ac2af5f9e' \
+  "$BUNDLE" | sha256sum -c -
+test "$(tar -tzf "$BUNDLE" | wc -l | tr -d ' ')" = 30
+tar -tzf "$BUNDLE"
+
+echo "== notmuch safety =="
+test -r "$CONFIG"
+DB="$(notmuch --config="$CONFIG" config get database.path | sed -n '1p')"
+ROOT="$(notmuch --config="$CONFIG" config get database.mail_root | sed -n '1p')"
+FLAGS="$(notmuch --config="$CONFIG" config get maildir.synchronize_flags | sed -n '1p')"
+DECRYPT="$(notmuch --config="$CONFIG" config get index.decrypt | sed -n '1p')"
+printf 'database.path=%s\n' "$DB"
+printf 'database.mail_root=%s\n' "$ROOT"
+printf 'maildir.synchronize_flags=%s\n' "$FLAGS"
+printf 'index.decrypt=%s\n' "$DECRYPT"
+notmuch --config="$CONFIG" config get new.ignore | sed 's/^/new.ignore=/'
+
+test "$DB" = '/mail/SearchIndex/notmuch/default'
+test "$ROOT" = '/mail/Mailstore'
+test "$FLAGS" = 'false'
+test "$DECRYPT" = 'false'
+
+echo "== state =="
+notmuch --config="$CONFIG" count '*' | sed 's/^/messages=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/files=/'
+test -d "$MBSYNC_LOCK" && echo 'mbsync_lock=present' || echo 'mbsync_lock=absent'
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+df -h /mail "$HOME"
+echo 'status=antix_prerequisite_audit_complete'
+```
+
+Stop if any safety assertion fails. Go must be 1.25 or newer. A present mbsync
+lock is not corruption; wait for that sync to finish before index refresh or
+installation.
+
+-------------------------------------------------------------------------------
+6. Chunk A2 - Verify, test, vet, and build without replacing production
+-------------------------------------------------------------------------------
+
+```sh
+set -eu
+
+BUNDLE="$HOME/notmuch-browser-attachment-src-20260712-164424.tar.gz"
+WORK="$HOME/notmuch-browser-attachment-src"
+STAGE="$HOME/notmuch-browser-stage"
+
+case "$WORK" in "$HOME"/*) ;; *) echo 'unsafe WORK'; exit 1 ;; esac
+case "$STAGE" in "$HOME"/*) ;; *) echo 'unsafe STAGE'; exit 1 ;; esac
+
+rm -rf "$WORK" "$STAGE"
+mkdir -p "$WORK" "$STAGE"
 tar -xzf "$BUNDLE" -C "$WORK"
 cd "$WORK"
 
 test -f go.mod
 test -f go.sum
-test -d cmd/notmuch-browser
-test -d internal/notmuchbrowser/templates
+test -f cmd/notmuch-browser/main.go
 test -f internal/notmuchbrowser/static/app.css
-test -f scripts/notmuch_browser_control.sh
-test -f scripts/notmuch_browser_index_control.sh
-pwd
-```
-
-## Chunk 1: antiX Safety Audit
-
-Run before building or changing the service.
-
-```sh
-set -eu
-
-CONFIG="$HOME/.config/notmuch/default/config"
-MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
-
-echo "== antiX notmuch browser safety audit =="
-date -Is
-echo
-
-echo "== required commands =="
-for c in go notmuch curl sh install; do
-  if command -v "$c" >/dev/null 2>&1; then
-    printf '%s=OK %s\n' "$c" "$(command -v "$c")"
-  else
-    printf '%s=MISSING\n' "$c"
-  fi
-done
-echo
-
-echo "== notmuch config safety =="
-test -r "$CONFIG"
-notmuch --config="$CONFIG" config get database.path
-notmuch --config="$CONFIG" config get database.mail_root
-notmuch --config="$CONFIG" config get maildir.synchronize_flags
-notmuch --config="$CONFIG" config get index.decrypt
-notmuch --config="$CONFIG" config get new.ignore
-echo
-
-echo "== notmuch counts =="
-notmuch --config="$CONFIG" count '*'
-notmuch --config="$CONFIG" count --output=files '*'
-notmuch --config="$CONFIG" count tag:inbox
-echo
-
-echo "== locks and tmp files =="
-test -d "$MBSYNC_LOCK" && echo "mbsync_lock=present" || echo "mbsync_lock=absent"
-find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
-
-echo "status=chunk1_safety_audit_complete"
-```
-
-Expected safety values:
-
-```text
-database.path=/mail/SearchIndex/notmuch/default
-database.mail_root=/mail/Mailstore
-maildir.synchronize_flags=false
-index.decrypt=false
-```
-
-Stop if any value differs.
-
-## Chunk 2: Build and Install From Source
-
-Run from the source directory containing `go.mod`.
-
-```sh
-set -eu
-
-SRC="${SRC:-$PWD}"
-cd "$SRC"
-
-echo "== source root =="
-pwd
-test -f go.mod
-test -f go.sum
-test -d cmd/notmuch-browser
-test -d internal/notmuchbrowser
-test -d internal/notmuchbrowser/templates
-test -d internal/notmuchbrowser/templates/partials
-test -d internal/notmuchbrowser/static
-test -d internal/notmuchbrowser/styles
-test -f internal/notmuchbrowser/static/app.css
+test -f internal/notmuchbrowser/static/app.js
 test -f internal/notmuchbrowser/static/htmx.min.js
-test -f internal/notmuchbrowser/styles/app.tailwind.css
+test -f internal/notmuchbrowser/templates/layout.html
 test -f scripts/notmuch_browser_control.sh
 test -f scripts/notmuch_browser_index_control.sh
-echo
 
-echo "== syntax checks =="
+grep -F 'github.com/go-chi/chi/v5 v5.3.1' go.mod
+grep -F 'golang.org/x/net v0.57.0' go.mod
+grep -F 'go 1.25.0' go.mod
+
 sh -n scripts/notmuch_browser_control.sh
 sh -n scripts/notmuch_browser_index_control.sh
-echo "shell_syntax=ok"
-echo
-
-echo "== Go tests and build =="
+go mod download
+go mod verify
 go test ./...
-mkdir -p "$HOME/.local/bin"
-go build -trimpath -ldflags='-s -w' -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
-install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
-install -m 700 scripts/notmuch_browser_index_control.sh "$HOME/.local/bin/notmuch-browser-index-control"
-echo
+go vet ./...
 
-echo "== installed files =="
-ls -lh "$HOME/.local/bin/notmuch-browser" \
-       "$HOME/.local/bin/notmuch-browser-control" \
-       "$HOME/.local/bin/notmuch-browser-index-control"
-sha256sum "$HOME/.local/bin/notmuch-browser" \
-          "$HOME/.local/bin/notmuch-browser-control" \
-          "$HOME/.local/bin/notmuch-browser-index-control"
-echo
+go build -trimpath -ldflags='-s -w' \
+  -o "$STAGE/notmuch-browser" ./cmd/notmuch-browser
+install -m 700 scripts/notmuch_browser_control.sh \
+  "$STAGE/notmuch-browser-control"
+install -m 700 scripts/notmuch_browser_index_control.sh \
+  "$STAGE/notmuch-browser-index-control"
 
-echo "status=chunk2_build_install_complete"
+echo "== stage artifacts =="
+ls -l "$STAGE"
+sha256sum "$STAGE/notmuch-browser" \
+  "$STAGE/notmuch-browser-control" \
+  "$STAGE/notmuch-browser-index-control"
+
+echo "== embedded asset budget =="
+wc -c internal/notmuchbrowser/static/app.css \
+  internal/notmuchbrowser/static/app.js \
+  internal/notmuchbrowser/static/htmx.min.js
+
+echo 'status=stage_build_complete'
 ```
 
-## Chunk 3: Start Browser and Validate Read-Only Search
+With Go 1.26.4 and the exact source, the reference hashes are:
+  binary: 50e6b1ad...
+  browser control: 1b1277b0...
+  index control: df07cd07...
+
+A different supported Go patch release can change the binary hash. The two shell
+control hashes and source-bundle hash must remain exact.
+
+-------------------------------------------------------------------------------
+7. Chunk A3 - Backup and atomic installation
+-------------------------------------------------------------------------------
+
+Run only after Chunk A2 passes. This chunk keeps a dated copy of any installed
+artifacts. It does not modify mail or notmuch tags.
 
 ```sh
 set -eu
 
-CONFIG="$HOME/.config/notmuch/default/config"
-
-echo "== restart browser =="
-"$HOME/.local/bin/notmuch-browser-control" restart
-sleep 1
-"$HOME/.local/bin/notmuch-browser-control" status
-echo
-
-echo "== health =="
-curl -fsS http://127.0.0.1:8765/healthz
-echo
-echo
-
-echo "== search endpoint =="
-curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' >/tmp/notmuch-browser-search-check.html
-wc -c /tmp/notmuch-browser-search-check.html
-echo
-
-echo "== read-only tmp proof =="
-notmuch --config="$CONFIG" count '*'
-notmuch --config="$CONFIG" count --output=files '*'
-find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
-
-echo "status=chunk3_browser_validate_complete"
-```
-
-Open locally in antiX:
-
-```sh
-xdg-open http://127.0.0.1:8765/ >/dev/null 2>&1 || true
-```
-
-Manual browser checks:
-
-1. Search `tag:inbox`.
-2. Open one message.
-3. Confirm body, HTML iframe, attachments, duplicate selector, and Status page.
-
-## Chunk 4: Install IceWM Startup Blocks
-
-Install both the browser service startup block and the index-refresh loop
-startup block. Both are user-level and use neutral markers.
-
-```sh
-set -eu
-
-"$HOME/.local/bin/notmuch-browser-control" install-icewm-startup
-"$HOME/.local/bin/notmuch-browser-index-control" install-icewm-startup
-echo
-
-echo "== marker counts =="
-grep -F "# BEGIN NOTMUCH BROWSER SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/browser_begin=/'
-grep -F "# END NOTMUCH BROWSER SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/browser_end=/'
-grep -F "# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/index_begin=/'
-grep -F "# END NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/index_end=/'
-echo
-
-echo "== service status =="
-"$HOME/.local/bin/notmuch-browser-control" status
-"$HOME/.local/bin/notmuch-browser-index-control" status
-echo
-
-echo "status=chunk4_icewm_startup_complete"
-```
-
-Expected marker counts are all `1`.
-
-## Chunk 5: Repair Stale notmuch Paths
-
-Use this if browser search shows errors like:
-
-```text
-Error opening /mail/Mailstore/mbsync/provider-live/new/...: No such file or directory
-```
-
-This is a stale notmuch database reference after Maildir renames. Do not
-reinstall the app. Run a safe refresh.
-
-```sh
-set -eu
-
-CONFIG="$HOME/.config/notmuch/default/config"
-CONTROL="$HOME/.local/bin/notmuch-browser-control"
-MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
+STAGE="$HOME/notmuch-browser-stage"
+BIN_DIR="$HOME/.local/bin"
 STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="/mail/Backups/notmuch-browser/$STAMP-before-install"
+STATE="/mail/AppData/notmuch-browser"
+LOGS="/mail/Logs/notmuch-browser"
+MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
 
-echo "== stale index repair =="
-date -Is
-echo
+test -x "$STAGE/notmuch-browser"
+test -x "$STAGE/notmuch-browser-control"
+test -x "$STAGE/notmuch-browser-index-control"
 
-echo "== before counts =="
-notmuch --config="$CONFIG" count '*'
-notmuch --config="$CONFIG" count --output=files '*'
-notmuch --config="$CONFIG" count tag:inbox
-echo
+mkdir -p "$BIN_DIR" "$BACKUP" "$STATE/download-tmp" "$LOGS"
+chmod 700 "$STATE" "$STATE/download-tmp" "$LOGS" "$BACKUP"
 
-echo "== reproduce inbox metadata query =="
-if notmuch --config="$CONFIG" show --format=json --entire-thread=false --body=false --offset=0 --limit=50 tag:inbox >/tmp/notmuch-before-"$STAMP".json 2>/tmp/notmuch-before-"$STAMP".err; then
-  echo "before_query=OK"
-else
-  echo "before_query=FAILED"
-  sed -n '1,80p' /tmp/notmuch-before-"$STAMP".err
+for name in notmuch-browser notmuch-browser-control notmuch-browser-index-control; do
+  if [ -f "$BIN_DIR/$name" ]; then
+    cp -p "$BIN_DIR/$name" "$BACKUP/$name"
+    : > "$BACKUP/.had-$name"
+  fi
+done
+[ ! -f "$HOME/.icewm/startup" ] ||
+  cp -p "$HOME/.icewm/startup" "$BACKUP/icewm-startup"
+cp -p "$HOME/.config/notmuch/default/config" "$BACKUP/notmuch-config"
+sha256sum "$BACKUP"/* > "$BACKUP/SHA256SUMS"
+printf '%s\n' "$BACKUP" > "$STATE/latest-install-backup"
+chmod 600 "$STATE/latest-install-backup"
+
+if command -v mbsync-provider-live-control >/dev/null 2>&1; then
+  mbsync-provider-live-control status > "$BACKUP/mbsync-before.txt" 2>&1 || true
+  if grep -Fqx 'paused=no' "$BACKUP/mbsync-before.txt"; then
+    MBSYNC_WAS_UNPAUSED=yes
+    mbsync-provider-live-control pause
+  fi
 fi
-echo
-
-echo "== refresh =="
-if [ -d "$MBSYNC_LOCK" ]; then
-  echo "status=blocked_mbsync_lock_present"
-  exit 0
+if [ -x "$BIN_DIR/notmuch-browser-index-control" ]; then
+  "$BIN_DIR/notmuch-browser-index-control" stop || true
 fi
-"$CONTROL" refresh-index
-echo
+if [ -x "$BIN_DIR/notmuch-browser-control" ]; then
+  "$BIN_DIR/notmuch-browser-control" stop || true
+fi
 
-echo "== after query and browser =="
-notmuch --config="$CONFIG" show --format=json --entire-thread=false --body=false --offset=0 --limit=50 tag:inbox >/tmp/notmuch-after-"$STAMP".json
-wc -c /tmp/notmuch-after-"$STAMP".json
-curl -fsS http://127.0.0.1:8765/healthz
-echo
-curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' >/tmp/notmuch-browser-after-repair.html
-wc -c /tmp/notmuch-browser-after-repair.html
-echo
+i=0
+while [ -d "$MBSYNC_LOCK" ] && [ "$i" -lt 80 ]; do
+  i=$((i + 1))
+  sleep 2
+done
+test ! -d "$MBSYNC_LOCK"
 
-echo "== tmp proof =="
-find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
+rollback_failed_install() {
+  rc=$?
+  [ "$rc" -ne 0 ] || return 0
+  trap - EXIT HUP INT TERM
+  set +e
+  [ ! -x "$BIN_DIR/notmuch-browser-index-control" ] ||
+    "$BIN_DIR/notmuch-browser-index-control" stop
+  [ ! -x "$BIN_DIR/notmuch-browser-control" ] ||
+    "$BIN_DIR/notmuch-browser-control" stop
+  for name in notmuch-browser notmuch-browser-control notmuch-browser-index-control; do
+    if [ -f "$BACKUP/.had-$name" ]; then
+      install -m 700 "$BACKUP/$name" "$BIN_DIR/$name"
+    else
+      rm -f "$BIN_DIR/$name"
+    fi
+  done
+  if [ -f "$BACKUP/.had-notmuch-browser-control" ] &&
+     [ -f "$BACKUP/.had-notmuch-browser" ]; then
+    "$BIN_DIR/notmuch-browser-control" start
+  fi
+  if [ -f "$BACKUP/.had-notmuch-browser-index-control" ]; then
+    "$BIN_DIR/notmuch-browser-index-control" start
+  fi
+  if [ "$MBSYNC_WAS_UNPAUSED" = yes ]; then
+    mbsync-provider-live-control resume
+  fi
+  echo "status=automatic_rollback_complete failed_rc=$rc"
+  exit "$rc"
+}
+trap rollback_failed_install EXIT HUP INT TERM
 
-echo "status=chunk5_stale_index_repair_complete"
+install -m 700 "$STAGE/notmuch-browser" "$BIN_DIR/.notmuch-browser.new"
+install -m 700 "$STAGE/notmuch-browser-control" \
+  "$BIN_DIR/.notmuch-browser-control.new"
+install -m 700 "$STAGE/notmuch-browser-index-control" \
+  "$BIN_DIR/.notmuch-browser-index-control.new"
+
+mv -f "$BIN_DIR/.notmuch-browser.new" "$BIN_DIR/notmuch-browser"
+mv -f "$BIN_DIR/.notmuch-browser-control.new" \
+  "$BIN_DIR/notmuch-browser-control"
+mv -f "$BIN_DIR/.notmuch-browser-index-control.new" \
+  "$BIN_DIR/notmuch-browser-index-control"
+
+sha256sum "$BIN_DIR/notmuch-browser" \
+  "$BIN_DIR/notmuch-browser-control" \
+  "$BIN_DIR/notmuch-browser-index-control"
+
+"$BIN_DIR/notmuch-browser-control" start
+"$BIN_DIR/notmuch-browser-index-control" start
+
+sleep 2
+"$BIN_DIR/notmuch-browser-control" status
+"$BIN_DIR/notmuch-browser-index-control" status
+curl -fsS http://127.0.0.1:8765/healthz > /tmp/notmuch-browser-health.json
+cat /tmp/notmuch-browser-health.json
+grep -F '"ok":true' /tmp/notmuch-browser-health.json
+grep -F '"read_only":true' /tmp/notmuch-browser-health.json
+grep -F '"mail_mutation":false' /tmp/notmuch-browser-health.json
+grep -F '"downloads_enabled":true' /tmp/notmuch-browser-health.json
+grep -F '"temporary_download_files":true' /tmp/notmuch-browser-health.json
+if [ "$MBSYNC_WAS_UNPAUSED" = yes ]; then
+  mbsync-provider-live-control resume
+fi
+trap - EXIT HUP INT TERM
+echo
+echo "backup=$BACKUP"
+echo 'status=atomic_install_complete'
 ```
 
-Validated 2026-07-09 repair result:
+Expected idle status includes:
+  server=running
+  loop=running
+  download_tmp_files=0
+  download_tmp_bytes=0
+  mbsync_lock=absent
+  refresh_lock=absent
 
-```text
-before: 457 messages / 867 files
-detected: 12 file renames
-added: 102 new messages
-after: 559 messages / 1,025 files
-maildir_tmp_files=0
-```
-
-Counts will change as new mail arrives.
-
-## Chunk 6: Install and Validate Automatic Index Refresh Loop
-
-Run after installing `~/.local/bin/notmuch-browser-index-control`.
+-------------------------------------------------------------------------------
+8. Chunk A4 - Route, asset, listener, and capability rejection checks
+-------------------------------------------------------------------------------
 
 ```sh
 set -eu
 
-INDEX="$HOME/.local/bin/notmuch-browser-index-control"
+BASE='http://127.0.0.1:8765'
+RUN="/tmp/notmuch-browser-check-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$RUN"
 
-echo "== syntax and restart =="
-sh -n "$INDEX"
-"$INDEX" stop || true
-"$INDEX" start
-sleep 5
-echo
+curl -fsS "$BASE/" > "$RUN/root.html"
+curl -fsS "$BASE/search?q=tag%3Ainbox&offset=0&limit=10" > "$RUN/search.html"
+curl -fsS "$BASE/status" > "$RUN/status.html"
+curl -fsS "$BASE/static/app.css" > "$RUN/app.css"
+curl -fsS "$BASE/static/app.js" > "$RUN/app.js"
+curl -fsS "$BASE/static/htmx.min.js" > "$RUN/htmx.min.js"
 
-echo "== status =="
-"$INDEX" status
-echo
+wc -c "$RUN/root.html" "$RUN/search.html" "$RUN/status.html" \
+  "$RUN/app.css" "$RUN/app.js" "$RUN/htmx.min.js"
 
-echo "== logs =="
-"$INDEX" logs
-echo
+test "$(wc -c < "$RUN/app.css" | tr -d ' ')" = 20775
+test "$(wc -c < "$RUN/app.js" | tr -d ' ')" = 5371
+test "$(wc -c < "$RUN/htmx.min.js" | tr -d ' ')" = 51238
 
-echo "== startup block =="
-"$INDEX" install-icewm-startup
-grep -F "# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/begin_marker_count=/'
-grep -F "# END NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/end_marker_count=/'
-echo
+code="$(curl -sS -o "$RUN/bad-cap.txt" -w '%{http_code}' \
+  "$BASE/attachment?cap=invalid")"
+test "$code" = 403
+printf 'tampered_capability_http=%s\n' "$code"
 
-echo "== health/search/tmp proof =="
+ss -ltn | grep -F '127.0.0.1:8765'
+if ss -ltn | grep -E '(^|[[:space:]])(0\.0\.0\.0|\[::\]):8765([[:space:]]|$)'; then
+  echo 'blocked: public listener detected'
+  exit 1
+fi
+
+notmuch-browser-control status
+echo 'status=route_asset_listener_checks_complete'
+```
+
+-------------------------------------------------------------------------------
+9. Chunk A5 - Install idempotent IceWM startup and index refresh
+-------------------------------------------------------------------------------
+
+```sh
+set -eu
+
+notmuch-browser-control install-icewm-startup
+notmuch-browser-index-control install-icewm-startup
+notmuch-browser-control install-icewm-startup
+notmuch-browser-index-control install-icewm-startup
+
+STARTUP="$HOME/.icewm/startup"
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER SERVICE' "$STARTUP")" = 1
+test "$(grep -Fxc '# END NOTMUCH BROWSER SERVICE' "$STARTUP")" = 1
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE' "$STARTUP")" = 1
+test "$(grep -Fxc '# END NOTMUCH BROWSER INDEX REFRESH SERVICE' "$STARTUP")" = 1
+
+notmuch-browser-control restart
+notmuch-browser-index-control restart
+sleep 3
+notmuch-browser-control status
+notmuch-browser-index-control status
 curl -fsS http://127.0.0.1:8765/healthz
 echo
-curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' >/tmp/notmuch-browser-search-index-loop.html
-wc -c /tmp/notmuch-browser-search-index-loop.html
-find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
+echo 'status=icewm_and_index_loop_complete'
+```
+
+The index loop calls the locked refresh command every 60 seconds and skips while
+either /mail/AppData/isync/provider-live-loop/lock or the browser refresh lock
+exists. It prevents stale notmuch paths after mbsync moves files between new and
+cur.
+
+-------------------------------------------------------------------------------
+10. Chunk A6 - Manual antiX UI acceptance
+-------------------------------------------------------------------------------
+
+Open:
+
+  http://127.0.0.1:8765/
+
+Confirm all of these:
+
+1. Frost/Sapphire shell, sidebar, compact search, dense results, and reading
+   pane have no overlap, clipping, broken icons, or unreadable text.
+2. Search tag:inbox works and paging works.
+3. Open a normal HTML message and a plain-text message.
+4. HTML remains inside the sandboxed iframe.
+5. Duplicate 1 and duplicate 2 switch correctly.
+6. Each attachment row shows filename/type and individual download.
+7. Save All appears only when downloadable attachments exist.
+8. Individual download opens/saves correctly.
+9. Save All ZIP opens and contains only the selected duplicate's attachments.
+10. Initial message load blocks images.
+11. "Show embedded images" displays its confirmation and then CID/data/browser-
+    native embedded images.
+12. SVG preview stays inside image rendering, not the parent page.
+13. "Load remote images" appears only after embedded images are allowed and
+    displays the privacy warning.
+14. Reload resets image permission to blocked.
+15. Changing duplicate resets image permission to blocked.
+16. The draggable divider and keyboard interaction work.
+17. Narrow/mobile-width layout remains usable.
+18. Status reports read-only service and zero temporary files when idle.
+
+After the checks:
+
+```sh
+set -eu
+notmuch-browser-control status
+notmuch-browser-index-control status
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+curl -fsS http://127.0.0.1:8765/healthz
 echo
-
-echo "status=chunk6_index_loop_validate_complete"
 ```
 
-Validated 2026-07-09 result:
+Validated owner result:
+  antiX Chunk 7: all 18 manual UI checks passed
 
-```text
-loop=running
-interval_seconds=60
-mbsync_lock=absent
-refresh_lock=absent
-notmuch_unique_messages=638
-notmuch_indexed_files=1158
-status=refresh_index_complete
-begin_marker_count=1
-end_marker_count=1
-maildir_tmp_files=0
+-------------------------------------------------------------------------------
+11. Chunk A7 - Stable read-only before/after proof
+-------------------------------------------------------------------------------
+
+This is the strongest portable proof available without the private production
+sample map. It pauses mbsync and stops the index loop so legitimate background
+changes cannot be mistaken for browser mutation. The cleanup trap restores both.
+
+Run the chunk, perform search/view/download/Save All/embedded/remote checks when
+it pauses, return to the terminal, and press Enter.
+
+```sh
+set -eu
+
+CONFIG="$HOME/.config/notmuch/default/config"
+RUN="$HOME/codex-runs/notmuch-browser-readonly-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$RUN"
+INDEX_WAS_RUNNING=no
+MBSYNC_WAS_UNPAUSED=no
+
+notmuch-browser-index-control status > "$RUN/index-before.txt" 2>&1 || true
+if grep -Fqx 'loop=running' "$RUN/index-before.txt"; then
+  INDEX_WAS_RUNNING=yes
+fi
+
+if command -v mbsync-provider-live-control >/dev/null 2>&1; then
+  mbsync-provider-live-control status > "$RUN/mbsync-before.txt" 2>&1 || true
+  if grep -Fqx 'paused=no' "$RUN/mbsync-before.txt"; then
+    MBSYNC_WAS_UNPAUSED=yes
+    mbsync-provider-live-control pause
+  fi
+fi
+
+cleanup() {
+  if [ "$INDEX_WAS_RUNNING" = yes ]; then
+    notmuch-browser-index-control start >/dev/null 2>&1 || true
+  fi
+  if [ "$MBSYNC_WAS_UNPAUSED" = yes ]; then
+    mbsync-provider-live-control resume >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+notmuch-browser-index-control stop || true
+
+i=0
+while { [ -d /mail/AppData/isync/provider-live-loop/lock ] ||
+        [ -d /mail/AppData/notmuch-browser/index-refresh.lock ]; } &&
+      [ "$i" -lt 80 ]; do
+  i=$((i + 1))
+  sleep 2
+done
+test ! -d /mail/AppData/isync/provider-live-loop/lock
+test ! -d /mail/AppData/notmuch-browser/index-refresh.lock
+
+snapshot() {
+  label="$1"
+  {
+    notmuch --config="$CONFIG" count '*' | sed 's/^/messages=/'
+    notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/files=/'
+    notmuch --config="$CONFIG" count tag:inbox | sed 's/^/inbox=/'
+    notmuch --config="$CONFIG" search --output=files '*' |
+      LC_ALL=C sort | sha256sum | sed 's/^/indexed_paths_sha256=/'
+    notmuch --config="$CONFIG" dump --format=batch-tag '*' |
+      sha256sum | sed 's/^/tags_sha256=/'
+    find /mail/Mailstore -type f -printf '%P\0%s\0%T@\0' 2>/dev/null |
+      LC_ALL=C sort -z | sha256sum | sed 's/^/mailstore_metadata_sha256=/'
+    find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null |
+      wc -l | sed 's/^/maildir_tmp_files=/'
+    find /mail/AppData/notmuch-browser/download-tmp -maxdepth 1 \
+      -type f -name 'nmb-*' 2>/dev/null |
+      wc -l | sed 's/^/download_tmp_files=/'
+  } > "$RUN/$label.txt"
+  cat "$RUN/$label.txt"
+}
+
+echo '===== BEFORE ====='
+snapshot before
+printf '%s\n' \
+  'Use the browser now: search, open messages, switch duplicates, download one' \
+  'attachment, Save All, confirm embedded images, optionally confirm remote' \
+  'images, then wait for downloads to finish and return here.'
+printf 'Press Enter to capture AFTER: '
+read answer
+
+echo '===== AFTER ====='
+snapshot after
+diff -u "$RUN/before.txt" "$RUN/after.txt"
+grep -Fqx 'maildir_tmp_files=0' "$RUN/after.txt"
+grep -Fqx 'download_tmp_files=0' "$RUN/after.txt"
+
+echo 'strict_snapshot_match=yes'
+echo 'mail_and_index_mutation=no'
+echo 'download_temp_cleanup=verified'
+echo "log_dir=$RUN"
+
+cleanup
+trap - EXIT HUP INT TERM
+notmuch-browser-control status
+notmuch-browser-index-control status
+echo 'status=readonly_proof_complete'
 ```
 
-## Chunk 7: Windows 11 SSH Tunnel
+A short warning such as "cannot open /proc/PID/cmdline: No such file" while
+stopping the index loop is a harmless process-exit race only when the next lines
+confirm loop=stopped and the final lines confirm a newly running loop.
 
-Use the real antiX IP. The validated IP was `192.168.254.128`, but another VM
-may get a different address.
+The original final strict proof additionally compared decoded bytes to direct
+notmuch --part output and validated ZIP integrity. Its July 14 results were:
 
-From Windows PowerShell:
+  attachment bytes: 4,078
+  attachment SHA256:
+    4814092b854d37e6cfa9057a2d6ce65fcccd07f3a9c626e95c43b5c693cbc563
+  ZIP entries per selected duplicate: 4
+  ZIP bytes: 827,904
+  decoded ZIP bytes: 827,296
+  ZIP SHA256:
+    b82ceaa72c582851c5e2a53a5148862cc193a2f14aeedc42d9fb07372d4559f4
+  tampered capability: HTTP 403
+  wrong-purpose capability: HTTP 403
+  blocked/embedded/remote CSP: verified
+  temporary cleanup: verified
+
+Those MIME hashes are sample-specific and should not be asserted on another
+mailbox.
+
+-------------------------------------------------------------------------------
+12. Chunk W2 - Windows 11 SSH tunnel and UI acceptance
+-------------------------------------------------------------------------------
+
+First discover the antiX IP if needed:
+
+```sh
+hostname -I
+```
+
+Then run in Windows PowerShell:
 
 ```powershell
 Test-NetConnection 192.168.254.128 -Port 22
 ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128
 ```
 
-Keep the SSH window open. Then open this in Windows:
+Keep that PowerShell window open and browse:
 
-```text
-http://127.0.0.1:8765/
+  http://127.0.0.1:8765/
+
+Repeat search, message body, duplicate switching, individual attachment, Save
+All, blocked images, embedded confirmation, remote confirmation, permission
+resets, sidebar/divider/narrow layout, and Status. The antiX service must still
+listen only on 127.0.0.1:8765.
+
+Validated owner result:
+  Windows Chunk 8: all 14 manual UI checks passed
+
+If Windows port 8765 is already occupied, use another local port without
+changing antiX:
+
+```powershell
+ssh -N -L 8876:127.0.0.1:8765 atiq@192.168.254.128
 ```
 
-Validated 2026-07-09 result: Windows tunnel chi UI confirmed for
-search/results/message/body/HTML/status.
+Then open http://127.0.0.1:8876/.
 
-## Daily Monitor Commands
+-------------------------------------------------------------------------------
+13. Chunk A8 - Controlled reboot/autostart proof
+-------------------------------------------------------------------------------
+
+Before reboot:
+
+```sh
+set -eu
+
+STATE="/mail/AppData/notmuch-browser/pre-reboot-boot-id"
+cat /proc/sys/kernel/random/boot_id | tee "$STATE"
+chmod 600 "$STATE"
+notmuch-browser-control status
+notmuch-browser-index-control status
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER SERVICE' "$HOME/.icewm/startup")" = 1
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE' "$HOME/.icewm/startup")" = 1
+```
+
+Reboot antiX, log into IceWM, open a terminal, and run:
+
+```sh
+set -eu
+
+OLD="$(cat /mail/AppData/notmuch-browser/pre-reboot-boot-id)"
+NEW="$(cat /proc/sys/kernel/random/boot_id)"
+printf 'boot_id_before=%s\nboot_id_current=%s\n' "$OLD" "$NEW"
+test "$OLD" != "$NEW"
+
+i=0
+until notmuch-browser-control status > /tmp/browser-post-reboot.txt 2>&1 &&
+      grep -Fqx 'server=running' /tmp/browser-post-reboot.txt &&
+      notmuch-browser-index-control status > /tmp/index-post-reboot.txt 2>&1 &&
+      grep -Fqx 'loop=running' /tmp/index-post-reboot.txt; do
+  i=$((i + 1))
+  test "$i" -lt 30
+  sleep 2
+done
+
+cat /tmp/browser-post-reboot.txt
+cat /tmp/index-post-reboot.txt
+ss -ltn | grep -F '127.0.0.1:8765'
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+find /mail/AppData/notmuch-browser/download-tmp -maxdepth 1 \
+  -type f -name 'nmb-*' 2>/dev/null |
+  wc -l | sed 's/^/download_tmp_files=/'
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+echo 'status=post_reboot_autostart_complete'
+```
+
+Open the browser once more and recheck one search, message, attachment, Save
+All, and embedded-image confirmation.
+
+The validated July 14 reboot changed boot ID, passed readiness on the first
+attempt at 92.62 seconds uptime, auto-started exactly one browser and one index
+loop, reran exact download/image/ZIP and strict read-only proofs, and ended with:
+
+  status=chunk9_post_reboot_complete
+  download_tmp_files_final=0
+  maildir_tmp_files_final=0
+
+-------------------------------------------------------------------------------
+14. Rollback
+-------------------------------------------------------------------------------
+
+On the original validated VM, the pre-attachment rollback is:
+
+```sh
+set -eu
+POINTER='/mail/AppData/notmuch-browser/attachment-rollback-current'
+test -r "$POINTER"
+BACKUP="$(cat "$POINTER")"
+test -x "$BACKUP/rollback.sh"
+sha256sum -c "$BACKUP/SHA256SUMS"
+"$BACKUP/rollback.sh"
+notmuch-browser-control status
+notmuch-browser-index-control status
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+```
+
+For a recreated VM, Chunk A3 prints and records its dated backup in:
+
+  /mail/AppData/notmuch-browser/latest-install-backup
+
+To restore those saved binaries manually:
+
+```sh
+set -eu
+
+BACKUP="$(cat /mail/AppData/notmuch-browser/latest-install-backup)"
+BIN_DIR="$HOME/.local/bin"
+test -d "$BACKUP"
+sha256sum -c "$BACKUP/SHA256SUMS"
+
+[ ! -x "$BIN_DIR/notmuch-browser-index-control" ] ||
+  "$BIN_DIR/notmuch-browser-index-control" stop || true
+[ ! -x "$BIN_DIR/notmuch-browser-control" ] ||
+  "$BIN_DIR/notmuch-browser-control" stop || true
+
+for name in notmuch-browser notmuch-browser-control notmuch-browser-index-control; do
+  if [ -f "$BACKUP/$name" ]; then
+    install -m 700 "$BACKUP/$name" "$BIN_DIR/$name"
+  fi
+done
+
+"$BIN_DIR/notmuch-browser-control" start
+"$BIN_DIR/notmuch-browser-index-control" start
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+echo 'status=rollback_complete'
+```
+
+If Chunk A3 was a first-ever install and the backup contains no older binaries,
+stop the new service and remove only the three installed browser artifacts after
+reviewing their paths. Never remove Maildir, notmuch database, config, state, or
+logs as part of application rollback.
+
+-------------------------------------------------------------------------------
+15. Stale notmuch path repair
+-------------------------------------------------------------------------------
+
+Symptom:
+
+  Error opening /mail/Mailstore/.../new/...: No such file or directory
+
+Cause: mbsync moved or renamed Maildir files after the last notmuch refresh.
+This is not a chi, HTMX, Tailwind, download, or rendering failure.
+
+Repair:
+
+```sh
+set -eu
+
+if [ -d /mail/AppData/isync/provider-live-loop/lock ]; then
+  echo 'mbsync is active; wait and rerun'
+  exit 0
+fi
+
+notmuch-browser-control refresh-index
+notmuch-browser-control status
+curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&offset=0&limit=10' \
+  > /tmp/notmuch-browser-search-after-refresh.html
+wc -c /tmp/notmuch-browser-search-after-refresh.html
+find /mail/Mailstore -type f -path '*/tmp/*' 2>/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+```
+
+The automatic index loop normally prevents recurrence by refreshing every 60
+seconds without overlapping mbsync.
+
+-------------------------------------------------------------------------------
+16. Troubleshooting
+-------------------------------------------------------------------------------
+
+Service does not start:
+- Run notmuch-browser-control logs.
+- Confirm all four notmuch safety values match Section 5.
+- Confirm port 8765 is not already occupied:
+  ss -ltnp | grep ':8765'
+- Confirm /mail/AppData/notmuch-browser and /mail/Logs/notmuch-browser are
+  writable by atiq and mode 0700.
+
+Health is good but search reports missing files:
+- Use Section 15. Do not reinstall the browser.
+
+Download returns 403:
+- Refresh the message page. Capabilities intentionally expire after service
+  restart and are bound to route purpose, message, duplicate, part, filename,
+  and media type.
+
+Download returns 413:
+- The decoded part or ZIP exceeded the configured safety limit. Download
+  supported parts individually; do not raise limits without reviewing VM disk
+  capacity and threat model.
+
+Download returns 429:
+- Another download/ZIP occupies the single bounded slot. Wait for it to finish.
+
+Download returns 502 or 504:
+- Inspect browser logs. 502 means notmuch failed; 504 means the bounded command
+  timed out. Check disk, source file existence, and index freshness.
+
+Temporary files are nonzero while idle:
+- Confirm no download is still active.
+- Run notmuch-browser-control status and logs.
+- Do not manually delete active nmb-* files.
+- After stopping the browser, files older than 24 hours can be reviewed; normal
+  startup cleanup removes them.
+
+Embedded images do not render:
+- Confirm "Show embedded images" was accepted for the current message and
+  duplicate.
+- Confirm the format is browser-native. TIFF/HEIC remain downloads.
+- Reloading or changing duplicate intentionally resets permission.
+
+Remote images do not render:
+- Embedded permission must be accepted first.
+- The second confirmation allows direct browser HTTP/HTTPS requests. Proxy,
+  DNS, firewall, or sender-server behavior can still prevent display.
+- The Go service never fetches remote images.
+
+Terminal closes before output can be copied:
+- Run chunks from an already-open terminal, not a launcher configured to close.
+- Capture output and locate the newest log:
+
+```sh
+~/codex-runs/codex-batch.sh 2>&1 | tee \
+  ~/codex-runs/codex-batch-$(date +%Y%m%d-%H%M%S).log
+
+ls -lt ~/codex-runs/*.log | head
+```
+
+- Reopen it with: less /path/to/the/newest.log
+
+"unexpected EOF while looking for matching backtick":
+- The saved shell file was truncated or a Markdown fence/backtick was copied.
+  Run sh -n FILE, inspect the first error line, and replace the whole command
+  file from a clean raw block. Do not patch a batch script with commands stored
+  inside that same batch script.
+
+"corrected probe count is not one":
+- A self-patch guard found unexpected content. Preserve the failed file and
+  create a complete corrected script at a separate stable filename.
+
+Pipeline says a running loop is stopped:
+- Under pipefail, producer | grep -q can fail after grep exits early. Capture
+  complete status to a file first, then grep the file, as Chunk A7 does.
+
+"/proc/PID/cmdline: No such file":
+- This can occur when a process exits between two checks. It is harmless only if
+  stop then reports loop=stopped and final restoration reports loop=running.
+
+Python validator IndexError:
+- The validated private production validator requires exactly three arguments:
+  base URL, audit JSON path, and run directory. It is validation evidence, not
+  part of the 30-member rebuild bundle.
+
+Windows says ANTI_X_VM_IP cannot be resolved:
+- ANTI_X_VM_IP is a placeholder. Use the numeric result from hostname -I, such
+  as 192.168.254.128.
+
+Windows port forwarding fails:
+- Check Test-NetConnection VM_IP -Port 22.
+- Keep the ssh -N terminal open.
+- If local 8765 is occupied, forward 8876 to antiX 8765.
+
+-------------------------------------------------------------------------------
+17. Daily operations and control reference
+-------------------------------------------------------------------------------
 
 ```sh
 notmuch-browser-control status
 notmuch-browser-index-control status
 mbsync-provider-live-control status
-```
 
-Use logs only when needed:
-
-```sh
 notmuch-browser-control logs
 notmuch-browser-index-control logs
-```
 
-## Control Command Reference
-
-```sh
 notmuch-browser-control start
 notmuch-browser-control stop
 notmuch-browser-control restart
-notmuch-browser-control status
-notmuch-browser-control logs
 notmuch-browser-control refresh-index
 notmuch-browser-control tunnel-hint
 notmuch-browser-control install-icewm-startup
@@ -491,38 +1046,37 @@ notmuch-browser-control print-runit-service
 notmuch-browser-index-control start
 notmuch-browser-index-control stop
 notmuch-browser-index-control restart
-notmuch-browser-index-control status
-notmuch-browser-index-control logs
 notmuch-browser-index-control install-icewm-startup
 notmuch-browser-index-control remove-icewm-startup
 ```
 
-## Runit Versus IceWM Startup
+IceWM is the validated user-session supervisor. Use runit only if the browser
+must be available before login and only after reviewing the generated service
+with notmuch-browser-control print-runit-service. tmux is for manual debugging,
+not supervision.
 
-The validated current setup is IceWM user-session startup:
+-------------------------------------------------------------------------------
+18. Completion checklist
+-------------------------------------------------------------------------------
 
-- `# BEGIN NOTMUCH BROWSER SERVICE`
-- `# END NOTMUCH BROWSER SERVICE`
-- `# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE`
-- `# END NOTMUCH BROWSER INDEX REFRESH SERVICE`
+Do not call a recreated installation complete until:
 
-Use root-level runit only if boot-before-login is required. Do not use `tmux`
-as the supervisor. It is acceptable only as a manual debugging console.
+1. Exact source bundle hash, 65,392-byte size, and 30-member count pass.
+2. Go is 1.25 or newer; go mod verify, go test ./..., and go vet ./... pass.
+3. Browser/control/index artifacts build and shell syntax passes.
+4. Browser binds only to 127.0.0.1:8765.
+5. Expanded /healthz fields all pass.
+6. CSS/JS/HTMX exact embedded asset sizes pass.
+7. Search, paging, HTML/plain message view, attachments, duplicates, and Status
+   work.
+8. Individual attachment and selected-duplicate Save All work.
+9. Blocked, embedded-confirmed, and remote-confirmed image modes work and reset
+   correctly.
+10. Idle download temp and every Maildir tmp are zero.
+11. Stable before/after proof reports no mail/index mutation.
+12. IceWM marker counts are exactly one and use NOTMUCH BROWSER SERVICE wording.
+13. Windows SSH tunnel passes the full manual UI check.
+14. A real reboot changes boot ID and auto-starts one browser and one index loop.
+15. A dated rollback path exists and its checksum inventory verifies.
 
-## Validation Checklist
-
-On a recreated VM, do not consider the service complete until:
-
-1. `go test ./...` passes.
-2. `internal/notmuchbrowser/static/app.css` exists and is served from `/static/app.css`.
-3. Browser service reports `server=running`.
-4. Index loop reports `loop=running`.
-5. `/healthz` returns `ok:true`.
-6. `tag:inbox` search renders.
-7. A single message opens.
-8. HTML mail renders in the sandboxed iframe.
-9. Attachment names display.
-10. Duplicate selector displays for duplicate Message-ID messages.
-11. Windows SSH tunnel works.
-12. Maildir `tmp` count remains 0 after search/view/refresh.
-13. IceWM startup has exactly one begin/end marker for both browser and index loop.
+End of guide.

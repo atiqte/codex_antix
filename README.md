@@ -12,7 +12,7 @@ The broader application direction is now selected for v1: a lightweight Go web s
 - `docs/WORK_VALIDATION_LEDGER.md` records topic-neutral command-chunk validation outcomes for future terminal-guided work.
 - Approved mail migration utilities live in `src/`.
 - The Go notmuch browser service lives under `cmd/notmuch-browser` and `internal/notmuchbrowser`.
-- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the deletion-safe production `provider-live` setup, the approval-gated provider-live local archive controller, the browser-only notmuch pilot workflow, and the current Go chi/Tailwind notmuch browser service rebuild workflow.
+- Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the deletion-safe production `provider-live` setup, the approval-gated provider-live local archive controller, the browser-only notmuch pilot workflow, and the complete Go chi/HTMX/Tailwind notmuch browser reconstruction workflow with attachment/Save All export, privacy-gated images, rollback, read-only proof, Windows tunnel, and reboot validation.
 - AntiX helper scripts are available for Evolution Flatpak integration, production mbsync/Sent upload, provider-live archive monitoring and transactions, and Go notmuch browser control/index refresh.
 - Windows 11 and Debian Linux portability is a project requirement.
 

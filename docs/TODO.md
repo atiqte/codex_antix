@@ -4,8 +4,8 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
-- [ ] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.
+- [x] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
+- [x] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.
 - [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
@@ -156,4 +156,4 @@
 - [x] Manually validate the installed attachment/image UI on antiX.
 - [x] Repeat attachment downloads and image confirmations through the Windows SSH tunnel.
 - [x] Reboot antiX and prove exactly one browser and one index loop auto-start with healthy search, downloads, confirmed images, localhost binding, and empty temporary state.
-- [ ] Regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with every successful attachment/image rollout command, exact hashes, rollback path, expected output, troubleshooting, and copy controls.
+- [x] Regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with every successful attachment/image rollout command, exact hashes, rollback path, expected output, troubleshooting, and copy controls.

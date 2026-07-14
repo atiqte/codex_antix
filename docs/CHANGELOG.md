@@ -2,6 +2,12 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-14
+
+- Completed the attachment/image rollout through exact production download/ZIP validation, strict stable-state read-only proof, owner-confirmed 18-item antiX and 14-item Windows-tunnel UI checks, and a controlled IceWM reboot/autostart proof.
+- Regenerated `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` as complete no-clone reconstruction guides for the validated 30-member source bundle, including exact dependency/artifact hashes, state-preserving atomic install with automatic rollback, attachment/image privacy behavior, portable no-mutation checks, tunnel/reboot steps, and rollout troubleshooting.
+- Validated the final offline HTML guide with 19 visible command blocks and 19 unique matching copy controls, no missing/duplicate targets, no external resources, ASCII-only content, command parity with the TXT guide, clean targeted diff checks, and passing `go test ./...` plus `go vet ./...`.
+
 ## 2026-07-12
 
 - Added capability-gated individual attachment downloads, selected-duplicate Save All ZIP, signed inline-image delivery, bounded private temp files, concurrency/time/size limits, and expanded read-only health/status reporting to the Go notmuch browser source.

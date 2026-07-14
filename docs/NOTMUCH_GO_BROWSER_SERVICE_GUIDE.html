@@ -3,415 +3,1018 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Go chi notmuch Browser Service for antiX</title>
+  <title>NOTMUCH BROWSER SERVICE - antiX DIY Guide</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4f6f8;
-      --panel: #ffffff;
-      --ink: #172027;
-      --muted: #5a6570;
-      --line: #d6dde3;
-      --nav: #1f2d36;
-      --accent: #0f6b78;
-      --ok-bg: #edf8f1;
-      --ok-line: #2d7a45;
-      --warn-bg: #fff8e7;
-      --warn-line: #b87b15;
-      --code-bg: #101820;
-      --code-bar: #27323a;
-      --code-text: #e8eef2;
+      --page: #f4f7fa;
+      --surface: #ffffff;
+      --ink: #16202a;
+      --muted: #596775;
+      --line: #d5dee7;
+      --nav: #17232d;
+      --nav-soft: #223542;
+      --sapphire: #126f9b;
+      --sapphire-dark: #0b5275;
+      --green: #197249;
+      --green-bg: #eaf7f0;
+      --amber: #986300;
+      --amber-bg: #fff7df;
+      --red: #a12c35;
+      --red-bg: #fff0f1;
+      --code: #101820;
+      --code-bar: #202d37;
+      --code-text: #edf4f8;
+      --focus: #ef9f20;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, Helvetica, sans-serif; line-height: 1.5; }
-    header { background: var(--nav); color: #fff; padding: 24px 28px; border-bottom: 4px solid var(--accent); }
-    main { width: min(1180px, calc(100% - 32px)); margin: 20px auto 48px; }
-    section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; margin: 16px 0; }
-    h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.2; }
-    h2 { margin: 22px 0 10px; color: var(--nav); font-size: 21px; line-height: 1.2; }
-    h3 { margin: 16px 0 8px; color: var(--nav); font-size: 17px; }
-    p { margin: 8px 0; }
-    ul, ol { margin-top: 8px; padding-left: 24px; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      font-size: 16px;
+      line-height: 1.58;
+      letter-spacing: 0;
+    }
+    a { color: var(--sapphire-dark); }
+    a:focus-visible, button:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+    header {
+      background: var(--nav);
+      color: #fff;
+      border-bottom: 5px solid var(--sapphire);
+    }
+    .hero {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 30px;
+    }
+    .kicker {
+      margin: 0 0 8px;
+      color: #8fd5f1;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      max-width: 850px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+    .lede {
+      max-width: 840px;
+      margin: 14px 0 0;
+      color: #d3e0e8;
+      font-size: 17px;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 18px;
+      margin-top: 20px;
+      color: #b8cad5;
+      font-size: 14px;
+    }
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 56px;
+    }
+    nav {
+      padding: 18px 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+    nav h2 { margin-top: 0; }
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px 20px;
+      margin: 0;
+      padding-left: 22px;
+    }
+    section {
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    section:last-of-type { border-bottom: 0; }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 25px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 19px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+    p { max-width: 930px; }
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #e8eef3;
+      color: #17384b;
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+    ul, ol { max-width: 950px; padding-left: 24px; }
     li { margin: 5px 0; }
-    code { background: #edf1f4; padding: 1px 4px; border-radius: 4px; font-family: Consolas, "Liberation Mono", monospace; font-size: .95em; }
-    .banner { border-left: 5px solid var(--ok-line); background: var(--ok-bg); padding: 12px 14px; margin: 14px 0; }
-    .warn { border-left: 5px solid var(--warn-line); background: var(--warn-bg); padding: 12px 14px; margin: 14px 0; }
-    .cmd { margin: 14px 0; border: 1px solid #26323a; border-radius: 6px; overflow: hidden; background: var(--code-bg); }
-    .cmd-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--code-bar); color: #fff; font-weight: 700; }
-    button { border: 1px solid #bbc5cf; background: #fff; color: var(--ink); border-radius: 5px; padding: 5px 9px; cursor: pointer; font-weight: 700; }
-    pre { margin: 0; padding: 13px 14px; overflow: auto; color: var(--code-text); background: var(--code-bg); font-family: Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.45; white-space: pre; }
-    footer { color: var(--muted); font-size: 13px; margin: 24px 0; }
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      margin: 18px 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--line);
+    }
+    .fact {
+      min-width: 0;
+      padding: 15px 16px;
+      background: var(--surface);
+    }
+    .fact strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .fact span {
+      overflow-wrap: anywhere;
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+    .callout {
+      max-width: 980px;
+      margin: 18px 0;
+      padding: 14px 16px;
+      border-left: 4px solid var(--sapphire);
+      background: #eaf5fb;
+    }
+    .callout.ok { border-left-color: var(--green); background: var(--green-bg); }
+    .callout.warn { border-left-color: var(--amber); background: var(--amber-bg); }
+    .callout.danger { border-left-color: var(--red); background: var(--red-bg); }
+    .callout p { margin: 0; }
+    .cmd {
+      overflow: hidden;
+      margin: 16px 0 24px;
+      border: 1px solid #33434f;
+      border-radius: 6px;
+      background: var(--code);
+      box-shadow: 0 5px 16px rgba(15, 28, 38, 0.12);
+    }
+    .cmd-head {
+      display: flex;
+      min-height: 45px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 9px 7px 15px;
+      background: var(--code-bar);
+      color: #cbd9e2;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .copy {
+      min-width: 80px;
+      min-height: 32px;
+      border: 1px solid #6d899a;
+      border-radius: 5px;
+      background: #f5f8fa;
+      color: #17303e;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+    .copy:hover { background: #dff1f8; }
+    pre {
+      overflow: auto;
+      max-height: 660px;
+      margin: 0;
+      padding: 17px;
+      background: var(--code);
+      color: var(--code-text);
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      tab-size: 2;
+      white-space: pre;
+    }
+    .hash {
+      overflow-wrap: anywhere;
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+    .members {
+      columns: 2;
+      column-gap: 36px;
+      max-width: 1000px;
+      padding: 16px 16px 16px 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      font-family: Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+    .members li { break-inside: avoid; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #e8eef3; }
+    footer {
+      padding: 24px 0 40px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+    @media (max-width: 800px) {
+      .toc, .facts { grid-template-columns: 1fr; }
+      .members { columns: 1; }
+      .hero, main { width: min(100% - 22px, 1180px); }
+      h1 { font-size: 31px; }
+      pre { font-size: 12px; }
+    }
+    @media print {
+      body { background: #fff; }
+      header { color: #000; background: #fff; border-bottom: 2px solid #000; }
+      .lede, .meta, .kicker { color: #222; }
+      .copy { display: none; }
+      .cmd { box-shadow: none; break-inside: avoid; }
+      pre { max-height: none; white-space: pre-wrap; }
+    }
   </style>
 </head>
 <body>
 <header>
-  <h1>Go chi notmuch Browser Service for antiX</h1>
-  <p>Read-only search/view service with automatic notmuch index refresh, localhost binding, local HTMX, compiled Tailwind CSS, and Windows SSH tunnel access.</p>
+  <div class="hero">
+    <p class="kicker">Offline reconstruction runbook</p>
+    <h1>NOTMUCH BROWSER SERVICE</h1>
+    <p class="lede">Go chi, local HTMX, compiled Tailwind CSS, controlled attachment export, and privacy-gated image rendering on antiX runit/IceWM.</p>
+    <div class="meta">
+      <span>Updated 2026-07-14</span>
+      <span>Read-only mail/index posture</span>
+      <span>Windows access through SSH tunnel</span>
+      <span>No full repo clone on antiX</span>
+    </div>
+  </div>
 </header>
+
 <main>
-<section>
-  <div class="banner">Updated 2026-07-09. This HTML guide is offline-safe; commands are visible directly in each block and copy buttons only copy the visible command text.</div>
-  <p>This guide rebuilds the validated Go chi notmuch browser service on antiX Linux runit with zzzFM/IceWM. The service is search/view only. Evolution remains the reply, forward, compose, and send client.</p>
+<nav aria-label="Guide contents">
+  <h2>Start Here</h2>
+  <ol class="toc">
+    <li><a href="#architecture">Architecture and safety</a></li>
+    <li><a href="#reference">Validated artifacts</a></li>
+    <li><a href="#members">Exact bundle members</a></li>
+    <li><a href="#windows-transfer">Windows verify and transfer</a></li>
+    <li><a href="#audit">antiX safety audit</a></li>
+    <li><a href="#build">Test and stage build</a></li>
+    <li><a href="#install">Backup and atomic install</a></li>
+    <li><a href="#routes">Routes, assets, and listener</a></li>
+    <li><a href="#startup">IceWM and index loop</a></li>
+    <li><a href="#ui">antiX UI acceptance</a></li>
+    <li><a href="#readonly">Strict read-only proof</a></li>
+    <li><a href="#tunnel">Windows tunnel acceptance</a></li>
+    <li><a href="#reboot">Reboot proof</a></li>
+    <li><a href="#rollback">Rollback</a></li>
+    <li><a href="#repair">Stale-index repair</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#operations">Daily operations</a></li>
+    <li><a href="#checklist">Completion checklist</a></li>
+  </ol>
+</nav>
+
+<section id="architecture">
+  <h2>1. Architecture and Safety</h2>
+  <p>The service uses Go <code>net/http</code> with <code>github.com/go-chi/chi/v5 v5.3.1</code>, structured HTML processing with <code>golang.org/x/net/html v0.57.0</code>, server-rendered embedded templates, local HTMX, compiled local Tailwind CSS, local application JavaScript, and local Lucide icons. notmuch remains the only search/index backend.</p>
+  <div class="callout ok"><p><strong>Read-only boundary:</strong> browser routes do not edit Maildir files, notmuch tags, or the notmuch database. Evolution remains the reply, forward, compose, and send client.</p></div>
+  <p>Available routes are <code>/</code>, <code>/search</code>, <code>/message</code>, <code>/attachment</code>, <code>/attachments.zip</code>, <code>/inline-image</code>, <code>/status</code>, <code>/healthz</code>, and <code>/static/*</code>.</p>
+  <h3>Attachment and Image Controls</h3>
   <ul>
-    <li>Backend: Go <code>net/http</code> with <code>github.com/go-chi/chi/v5</code>, no Gin or Flask.</li>
-    <li>Frontend: modular embedded HTML templates, compiled local Tailwind CSS, and vendored local HTMX.</li>
-    <li>Bind address: <code>127.0.0.1:8765</code> inside antiX.</li>
-    <li>Windows access: SSH tunnel only.</li>
-    <li>No React, Node/npm/Tailwind runtime on antiX, CDN, uv runtime, or tmux supervisor.</li>
-    <li>notmuch database: <code>/mail/SearchIndex/notmuch/default</code>.</li>
-    <li>Mail root: <code>/mail/Mailstore</code>.</li>
-    <li>Safety flags: <code>maildir.synchronize_flags=false</code>, <code>index.decrypt=false</code>.</li>
-    <li>Full 59G archive remains excluded until count drift is explained or accepted.</li>
+    <li>Process-lifetime HMAC-SHA256 capabilities bind route purpose, message, selected duplicate, MIME part, filename, and media type.</li>
+    <li>Save All includes only the selected duplicate and uses ZIP Store with safe collision-resolved names.</li>
+    <li>Message HTML starts with all images blocked.</li>
+    <li>Embedded CID/data/local images require the first confirmation.</li>
+    <li>Remote HTTP/HTTPS images require a second privacy confirmation. The Go service never proxies or fetches them.</li>
+    <li>Email HTML stays inside a sandboxed, no-referrer iframe. SVG stays behind an image response with a separate restrictive CSP.</li>
   </ul>
-  <div class="warn">Do not delete or rebuild Maildir data to fix browser search. Stale browser search errors are repaired through <code>notmuch-browser-control refresh-index</code>, which updates only the notmuch sidecar database.</div>
+  <h3>Default Limits</h3>
+  <table>
+    <thead><tr><th>Operation</th><th>Limit</th></tr></thead>
+    <tbody>
+      <tr><td>Inline images</td><td>2 concurrent, 64 MiB each, 2-minute timeout</td></tr>
+      <tr><td>Individual/ZIP download</td><td>1 concurrent, 512 MiB per attachment, 15-minute timeout</td></tr>
+      <tr><td>Save All</td><td>200 attachments, 2 GiB total decoded output</td></tr>
+      <tr><td>Temporary output</td><td><code>/mail/AppData/notmuch-browser/download-tmp</code>, 0700 directory, 0600 files, automatic cleanup</td></tr>
+    </tbody>
+  </table>
+  <p>No CDN, npm/Node runtime on antiX, React, Gin, Flask, uv runtime, Material UI package, full repository clone, tmux supervisor, or remote-image proxy is required.</p>
 </section>
 
-<section>
-  <h2>Validated State</h2>
-  <ul>
-    <li>Browser binary: <code>~/.local/bin/notmuch-browser</code></li>
-    <li>Browser control: <code>~/.local/bin/notmuch-browser-control</code></li>
-    <li>Index loop control: <code>~/.local/bin/notmuch-browser-index-control</code></li>
-    <li>Current URL: <code>http://127.0.0.1:8765/</code></li>
-    <li>Validated Windows tunnel: <code>ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128</code></li>
-    <li>Installed chi binary SHA256: <code>78f3fce722240999ad6bcfe57866a29a4fb58cceb0852d57529fac78b0ad58bd</code></li>
-    <li>Validated source bundle: <code>/mail/notmuch-browser-chi-src-20260709-222603.tar.gz</code></li>
-    <li>Source bundle SHA256: <code>9a53fabf109e492723e8619dd1e07b09d210ebd30c67197c840a11d26a21dbf5</code></li>
-    <li>Compiled local Tailwind CSS: <code>/static/app.css</code>, 10,801 bytes</li>
-    <li>Latest validated count after chi install: 638 unique messages and 1,158 indexed files</li>
-    <li>Latest validated Maildir <code>tmp</code> count: 0</li>
-    <li>Manual antiX and Windows tunnel UI validation confirmed search/results/message/body/HTML/status.</li>
-  </ul>
-  <p>Counts will change as new mail arrives. The safety baseline and zero <code>tmp</code> proof are the important checks.</p>
+<section id="reference">
+  <h2>2. Validated Artifacts</h2>
+  <p>These are reference artifacts from the final July 14 validation. Mail counts change normally as mbsync receives mail.</p>
+  <div class="facts">
+    <div class="fact"><strong>Source bundle</strong><span>notmuch-browser-attachment-src-20260712-164424.tar.gz</span></div>
+    <div class="fact"><strong>Bundle size</strong><span>65,392 bytes / 30 members</span></div>
+    <div class="fact"><strong>Bundle SHA256</strong><span>f56332f7746ba0a621da784135cdb1379a8e3f1310e7bfd2de9ed00ac2af5f9e</span></div>
+    <div class="fact"><strong>Browser binary</strong><span>9,724,169 bytes<br>50e6b1adbcf32201496f6d6f5a3d53c060d0c39e1831ca1b5ecac3d48838f37e</span></div>
+    <div class="fact"><strong>Browser control</strong><span>1b1277b0af3ab582ab307dd8763115ed754121c8a61643737888aa11d97b34b7</span></div>
+    <div class="fact"><strong>Index control</strong><span>df07cd071d1976ea43b8c4c44655b60a179f9809a24995980bdf8e8958eae0b3</span></div>
+  </div>
+  <p>Embedded assets: <code>app.css=20,775</code>, <code>app.js=5,371</code>, <code>htmx.min.js=51,238</code>, total <code>77,384</code> bytes.</p>
+  <p>Final reboot proof completed at 827 messages / 1,507 indexed files with exactly one browser and index loop, zero Maildir/download temporary files, <code>strict_snapshot_match=yes</code>, <code>mail_and_index_mutation=no</code>, and <code>status=chunk9_post_reboot_complete</code>.</p>
 </section>
 
-<section>
-  <h2>Required Source Files</h2>
-  <p>To rebuild from this repository, the antiX source tree needs these paths. If you do not clone the whole repository, copy only these paths while preserving the relative layout.</p>
-  <div class="cmd"><div class="cmd-head"><span>Required paths</span><button data-copy-target="cmd-paths">Copy</button></div><pre id="cmd-paths">go.mod
-go.sum
-cmd/notmuch-browser/
-internal/notmuchbrowser/
-scripts/notmuch_browser_control.sh
-scripts/notmuch_browser_index_control.sh</pre></div>
-  <p>The <code>internal/notmuchbrowser/</code> directory must include <code>templates/</code>, <code>static/</code>, and <code>styles/</code>. antiX serves the compiled local <code>static/app.css</code>; <code>styles/app.tailwind.css</code> is only for future CSS regeneration.</p>
-  <div class="cmd"><div class="cmd-head"><span>Development host only: regenerate CSS</span><button data-copy-target="cmd-tailwind">Copy</button></div><pre id="cmd-tailwind">npx @tailwindcss/cli@4 -i internal/notmuchbrowser/styles/app.tailwind.css -o internal/notmuchbrowser/static/app.css --minify
-go test ./...</pre></div>
+<section id="members">
+  <h2>3. Exact 30-Member Source Bundle</h2>
+  <ol class="members">
+    <li>go.mod</li>
+    <li>go.sum</li>
+    <li>cmd/notmuch-browser/main.go</li>
+    <li>internal/notmuchbrowser/capability_test.go</li>
+    <li>internal/notmuchbrowser/capability.go</li>
+    <li>internal/notmuchbrowser/config.go</li>
+    <li>internal/notmuchbrowser/downloads_test.go</li>
+    <li>internal/notmuchbrowser/downloads.go</li>
+    <li>internal/notmuchbrowser/handlers.go</li>
+    <li>internal/notmuchbrowser/html_email_test.go</li>
+    <li>internal/notmuchbrowser/html_email.go</li>
+    <li>internal/notmuchbrowser/mime_test.go</li>
+    <li>internal/notmuchbrowser/notmuch_test.go</li>
+    <li>internal/notmuchbrowser/notmuch.go</li>
+    <li>internal/notmuchbrowser/server.go</li>
+    <li>internal/notmuchbrowser/templates.go</li>
+    <li>internal/notmuchbrowser/visual_preview_test.go</li>
+    <li>internal/notmuchbrowser/static/app.css</li>
+    <li>internal/notmuchbrowser/static/app.js</li>
+    <li>internal/notmuchbrowser/static/htmx.LICENSE.txt</li>
+    <li>internal/notmuchbrowser/static/htmx.min.js</li>
+    <li>internal/notmuchbrowser/static/lucide.LICENSE.txt</li>
+    <li>internal/notmuchbrowser/styles/app.tailwind.css</li>
+    <li>internal/notmuchbrowser/templates/layout.html</li>
+    <li>internal/notmuchbrowser/templates/message.html</li>
+    <li>internal/notmuchbrowser/templates/partials/results.html</li>
+    <li>internal/notmuchbrowser/templates/search.html</li>
+    <li>internal/notmuchbrowser/templates/status.html</li>
+    <li>scripts/notmuch_browser_control.sh</li>
+    <li>scripts/notmuch_browser_index_control.sh</li>
+  </ol>
 </section>
 
-<section>
-  <h2>Optional: Create a Minimal Source Bundle on Windows</h2>
-  <p>Use this when you do not want to clone the whole repository on antiX. Run from the Windows repository root after the latest changes are committed.</p>
-  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button data-copy-target="cmd-bundle-win">Copy</button></div><pre id="cmd-bundle-win">cd C:\Users\Admin\Documents\antiX_VM_Laptop
+<section id="windows-transfer">
+  <h2>4. Chunk W1: Verify and Transfer From Windows</h2>
+  <p>Run in PowerShell from the repository root. Change only the VM IP when needed.</p>
+  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button class="copy" data-copy="cmd-w1">Copy</button></div><pre id="cmd-w1"><code>Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$bundle = "C:\Users\Admin\Documents\antiX_VM_Laptop\notmuch-browser-chi-src-$stamp.tar.gz"
-if (Test-Path $bundle) { Remove-Item -LiteralPath $bundle -Force }
+Set-Location 'C:\Users\Admin\Documents\antiX_VM_Laptop'
+$Bundle = Join-Path $PWD 'notmuch-browser-attachment-src-20260712-164424.tar.gz'
+$ExpectedHash = 'F56332F7746BA0A621DA784135CDB1379A8E3F1310E7BFD2DE9ED00AC2AF5F9E'
 
-tar -czf $bundle `
-  go.mod `
-  go.sum `
-  cmd/notmuch-browser `
-  internal/notmuchbrowser `
-  scripts/notmuch_browser_control.sh `
-  scripts/notmuch_browser_index_control.sh
+if (-not (Test-Path -LiteralPath $Bundle -PathType Leaf)) {
+    throw "Missing bundle: $Bundle"
+}
 
-Get-Item $bundle | Select-Object FullName,Length
-Get-FileHash -Algorithm SHA256 $bundle</pre></div>
-  <p>Copy that <code>.tar.gz</code> to antiX by VMware shared folder, USB, SSH, or another trusted local transfer path. Then extract it on antiX.</p>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-bundle-antix">Copy</button></div><pre id="cmd-bundle-antix">set -eu
+$Item = Get-Item -LiteralPath $Bundle
+$Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Bundle).Hash
+$Members = @(tar -tzf $Bundle)
 
-BUNDLE="/path/to/notmuch-browser-chi-src-YYYYMMDD-HHMMSS.tar.gz"
-WORK="$HOME/notmuch-browser-src"
+if ($Item.Length -ne 65392) { throw "Unexpected size: $($Item.Length)" }
+if ($Hash -ne $ExpectedHash) { throw "Unexpected SHA256: $Hash" }
+if ($Members.Count -ne 30) { throw "Unexpected member count: $($Members.Count)" }
+if (@($Members | Sort-Object -Unique).Count -ne 30) {
+    throw 'Duplicate bundle member detected'
+}
 
-rm -rf "$WORK"
-mkdir -p "$WORK"
+$Item | Select-Object FullName, Length
+"SHA256=$Hash"
+"member_count=$($Members.Count)"
+$Members
+Test-NetConnection 192.168.254.128 -Port 22
+scp $Bundle atiq@192.168.254.128:/home/atiq/</code></pre></div>
+  <div class="callout"><p>Expected: <code>Length=65392</code>, exact SHA256, <code>member_count=30</code>, and <code>TcpTestSucceeded=True</code>. A trusted VMware shared folder or USB may replace scp.</p></div>
+  <h3>Optional Future Tailwind Regeneration</h3>
+  <p>Do not run Tailwind on antiX. Use the checked-in compiled CSS. Run this only for intentional future design changes on Windows.</p>
+  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button class="copy" data-copy="cmd-tailwind">Copy</button></div><pre id="cmd-tailwind"><code>Set-Location 'C:\Users\Admin\Documents\antiX_VM_Laptop'
+.\tailwindcss.exe -i internal/notmuchbrowser/styles/app.tailwind.css `
+  -o internal/notmuchbrowser/static/app.css --minify
+go test ./...</code></pre></div>
+</section>
+
+<section id="audit">
+  <h2>5. Chunk A1: antiX Prerequisite and Safety Audit</h2>
+  <div class="callout danger"><p>Stop if any of the four notmuch safety assertions fails. A present mbsync lock means wait for the active sync; it is not corruption.</p></div>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-a1">Copy</button></div><pre id="cmd-a1"><code>set -eu
+
+CONFIG="$HOME/.config/notmuch/default/config"
+BUNDLE="$HOME/notmuch-browser-attachment-src-20260712-164424.tar.gz"
+MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
+MBSYNC_WAS_UNPAUSED=no
+
+echo "== tools =="
+go version
+go env GOVERSION
+notmuch --version
+command -v curl
+command -v tar
+command -v sha256sum
+command -v install
+
+echo "== bundle =="
+test -f "$BUNDLE"
+printf '%s  %s\n' \
+  'f56332f7746ba0a621da784135cdb1379a8e3f1310e7bfd2de9ed00ac2af5f9e' \
+  "$BUNDLE" | sha256sum -c -
+test "$(tar -tzf "$BUNDLE" | wc -l | tr -d ' ')" = 30
+tar -tzf "$BUNDLE"
+
+echo "== notmuch safety =="
+test -r "$CONFIG"
+DB="$(notmuch --config="$CONFIG" config get database.path | sed -n '1p')"
+ROOT="$(notmuch --config="$CONFIG" config get database.mail_root | sed -n '1p')"
+FLAGS="$(notmuch --config="$CONFIG" config get maildir.synchronize_flags | sed -n '1p')"
+DECRYPT="$(notmuch --config="$CONFIG" config get index.decrypt | sed -n '1p')"
+printf 'database.path=%s\n' "$DB"
+printf 'database.mail_root=%s\n' "$ROOT"
+printf 'maildir.synchronize_flags=%s\n' "$FLAGS"
+printf 'index.decrypt=%s\n' "$DECRYPT"
+notmuch --config="$CONFIG" config get new.ignore | sed 's/^/new.ignore=/'
+
+test "$DB" = '/mail/SearchIndex/notmuch/default'
+test "$ROOT" = '/mail/Mailstore'
+test "$FLAGS" = 'false'
+test "$DECRYPT" = 'false'
+
+echo "== state =="
+notmuch --config="$CONFIG" count '*' | sed 's/^/messages=/'
+notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/files=/'
+test -d "$MBSYNC_LOCK" &amp;&amp; echo 'mbsync_lock=present' || echo 'mbsync_lock=absent'
+find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+df -h /mail "$HOME"
+echo 'status=antix_prerequisite_audit_complete'</code></pre></div>
+</section>
+
+<section id="build">
+  <h2>6. Chunk A2: Verify, Test, Vet, and Stage the Build</h2>
+  <p>This does not replace the running production binary.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-a2">Copy</button></div><pre id="cmd-a2"><code>set -eu
+
+BUNDLE="$HOME/notmuch-browser-attachment-src-20260712-164424.tar.gz"
+WORK="$HOME/notmuch-browser-attachment-src"
+STAGE="$HOME/notmuch-browser-stage"
+
+case "$WORK" in "$HOME"/*) ;; *) echo 'unsafe WORK'; exit 1 ;; esac
+case "$STAGE" in "$HOME"/*) ;; *) echo 'unsafe STAGE'; exit 1 ;; esac
+
+rm -rf "$WORK" "$STAGE"
+mkdir -p "$WORK" "$STAGE"
 tar -xzf "$BUNDLE" -C "$WORK"
 cd "$WORK"
 
 test -f go.mod
 test -f go.sum
-test -d cmd/notmuch-browser
-test -d internal/notmuchbrowser/templates
+test -f cmd/notmuch-browser/main.go
 test -f internal/notmuchbrowser/static/app.css
-test -f scripts/notmuch_browser_control.sh
-test -f scripts/notmuch_browser_index_control.sh
-pwd</pre></div>
-</section>
-
-<section>
-  <h2>Chunk 1: antiX Safety Audit</h2>
-  <p>Run before building or changing the service.</p>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-1">Copy</button></div><pre id="cmd-1">set -eu
-
-CONFIG="$HOME/.config/notmuch/default/config"
-MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
-
-echo "== antiX notmuch browser safety audit =="
-date -Is
-echo
-
-echo "== required commands =="
-for c in go notmuch curl sh install; do
-  if command -v "$c" &gt;/dev/null 2&gt;&amp;1; then
-    printf '%s=OK %s\n' "$c" "$(command -v "$c")"
-  else
-    printf '%s=MISSING\n' "$c"
-  fi
-done
-echo
-
-echo "== notmuch config safety =="
-test -r "$CONFIG"
-notmuch --config="$CONFIG" config get database.path
-notmuch --config="$CONFIG" config get database.mail_root
-notmuch --config="$CONFIG" config get maildir.synchronize_flags
-notmuch --config="$CONFIG" config get index.decrypt
-notmuch --config="$CONFIG" config get new.ignore
-echo
-
-echo "== notmuch counts =="
-notmuch --config="$CONFIG" count '*'
-notmuch --config="$CONFIG" count --output=files '*'
-notmuch --config="$CONFIG" count tag:inbox
-echo
-
-echo "== locks and tmp files =="
-test -d "$MBSYNC_LOCK" &amp;&amp; echo "mbsync_lock=present" || echo "mbsync_lock=absent"
-find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
-
-echo "status=chunk1_safety_audit_complete"</pre></div>
-  <p>Stop if <code>database.path</code>, <code>database.mail_root</code>, <code>maildir.synchronize_flags</code>, or <code>index.decrypt</code> differs from the validated values.</p>
-</section>
-
-<section>
-  <h2>Chunk 2: Build and Install From Source</h2>
-  <p>Run from the source directory containing <code>go.mod</code>.</p>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-2">Copy</button></div><pre id="cmd-2">set -eu
-
-SRC="${SRC:-$PWD}"
-cd "$SRC"
-
-echo "== source root =="
-pwd
-test -f go.mod
-test -f go.sum
-test -d cmd/notmuch-browser
-test -d internal/notmuchbrowser
-test -d internal/notmuchbrowser/templates
-test -d internal/notmuchbrowser/templates/partials
-test -d internal/notmuchbrowser/static
-test -d internal/notmuchbrowser/styles
-test -f internal/notmuchbrowser/static/app.css
+test -f internal/notmuchbrowser/static/app.js
 test -f internal/notmuchbrowser/static/htmx.min.js
-test -f internal/notmuchbrowser/styles/app.tailwind.css
+test -f internal/notmuchbrowser/templates/layout.html
 test -f scripts/notmuch_browser_control.sh
 test -f scripts/notmuch_browser_index_control.sh
-echo
 
-echo "== syntax checks =="
+grep -F 'github.com/go-chi/chi/v5 v5.3.1' go.mod
+grep -F 'golang.org/x/net v0.57.0' go.mod
+grep -F 'go 1.25.0' go.mod
+
 sh -n scripts/notmuch_browser_control.sh
 sh -n scripts/notmuch_browser_index_control.sh
-echo "shell_syntax=ok"
-echo
-
-echo "== Go tests and build =="
+go mod download
+go mod verify
 go test ./...
-mkdir -p "$HOME/.local/bin"
-go build -trimpath -ldflags='-s -w' -o "$HOME/.local/bin/notmuch-browser" ./cmd/notmuch-browser
-install -m 700 scripts/notmuch_browser_control.sh "$HOME/.local/bin/notmuch-browser-control"
-install -m 700 scripts/notmuch_browser_index_control.sh "$HOME/.local/bin/notmuch-browser-index-control"
-echo
+go vet ./...
 
-echo "== installed files =="
-ls -lh "$HOME/.local/bin/notmuch-browser" \
-       "$HOME/.local/bin/notmuch-browser-control" \
-       "$HOME/.local/bin/notmuch-browser-index-control"
-sha256sum "$HOME/.local/bin/notmuch-browser" \
-          "$HOME/.local/bin/notmuch-browser-control" \
-          "$HOME/.local/bin/notmuch-browser-index-control"
-echo
+go build -trimpath -ldflags='-s -w' \
+  -o "$STAGE/notmuch-browser" ./cmd/notmuch-browser
+install -m 700 scripts/notmuch_browser_control.sh \
+  "$STAGE/notmuch-browser-control"
+install -m 700 scripts/notmuch_browser_index_control.sh \
+  "$STAGE/notmuch-browser-index-control"
 
-echo "status=chunk2_build_install_complete"</pre></div>
+echo "== stage artifacts =="
+ls -l "$STAGE"
+sha256sum "$STAGE/notmuch-browser" \
+  "$STAGE/notmuch-browser-control" \
+  "$STAGE/notmuch-browser-index-control"
+
+echo "== embedded asset budget =="
+wc -c internal/notmuchbrowser/static/app.css \
+  internal/notmuchbrowser/static/app.js \
+  internal/notmuchbrowser/static/htmx.min.js
+
+echo 'status=stage_build_complete'</code></pre></div>
+  <p>With Go 1.26.4 and the exact source, expect browser <code>50e6b1ad...</code>, control <code>1b1277b0...</code>, and index control <code>df07cd07...</code>. A supported Go patch can change only the compiled binary hash.</p>
 </section>
 
-<section>
-  <h2>Chunk 3: Start Browser and Validate Read-Only Search</h2>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-3">Copy</button></div><pre id="cmd-3">set -eu
+<section id="install">
+  <h2>7. Chunk A3: Backup and Atomic Installation</h2>
+  <p>Run only after Chunk A2 passes. Existing application artifacts, IceWM startup, and notmuch config are copied to a dated backup first.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-a3">Copy</button></div><pre id="cmd-a3"><code>set -eu
 
-CONFIG="$HOME/.config/notmuch/default/config"
+STAGE="$HOME/notmuch-browser-stage"
+BIN_DIR="$HOME/.local/bin"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="/mail/Backups/notmuch-browser/$STAMP-before-install"
+STATE="/mail/AppData/notmuch-browser"
+LOGS="/mail/Logs/notmuch-browser"
+MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
 
-echo "== restart browser =="
-"$HOME/.local/bin/notmuch-browser-control" restart
-sleep 1
-"$HOME/.local/bin/notmuch-browser-control" status
+test -x "$STAGE/notmuch-browser"
+test -x "$STAGE/notmuch-browser-control"
+test -x "$STAGE/notmuch-browser-index-control"
+
+mkdir -p "$BIN_DIR" "$BACKUP" "$STATE/download-tmp" "$LOGS"
+chmod 700 "$STATE" "$STATE/download-tmp" "$LOGS" "$BACKUP"
+
+for name in notmuch-browser notmuch-browser-control notmuch-browser-index-control; do
+  if [ -f "$BIN_DIR/$name" ]; then
+    cp -p "$BIN_DIR/$name" "$BACKUP/$name"
+    : &gt; "$BACKUP/.had-$name"
+  fi
+done
+[ ! -f "$HOME/.icewm/startup" ] ||
+  cp -p "$HOME/.icewm/startup" "$BACKUP/icewm-startup"
+cp -p "$HOME/.config/notmuch/default/config" "$BACKUP/notmuch-config"
+sha256sum "$BACKUP"/* &gt; "$BACKUP/SHA256SUMS"
+printf '%s\n' "$BACKUP" &gt; "$STATE/latest-install-backup"
+chmod 600 "$STATE/latest-install-backup"
+
+if command -v mbsync-provider-live-control &gt;/dev/null 2&gt;&amp;1; then
+  mbsync-provider-live-control status &gt; "$BACKUP/mbsync-before.txt" 2&gt;&amp;1 || true
+  if grep -Fqx 'paused=no' "$BACKUP/mbsync-before.txt"; then
+    MBSYNC_WAS_UNPAUSED=yes
+    mbsync-provider-live-control pause
+  fi
+fi
+if [ -x "$BIN_DIR/notmuch-browser-index-control" ]; then
+  "$BIN_DIR/notmuch-browser-index-control" stop || true
+fi
+if [ -x "$BIN_DIR/notmuch-browser-control" ]; then
+  "$BIN_DIR/notmuch-browser-control" stop || true
+fi
+
+i=0
+while [ -d "$MBSYNC_LOCK" ] &amp;&amp; [ "$i" -lt 80 ]; do
+  i=$((i + 1))
+  sleep 2
+done
+test ! -d "$MBSYNC_LOCK"
+
+rollback_failed_install() {
+  rc=$?
+  [ "$rc" -ne 0 ] || return 0
+  trap - EXIT HUP INT TERM
+  set +e
+  [ ! -x "$BIN_DIR/notmuch-browser-index-control" ] ||
+    "$BIN_DIR/notmuch-browser-index-control" stop
+  [ ! -x "$BIN_DIR/notmuch-browser-control" ] ||
+    "$BIN_DIR/notmuch-browser-control" stop
+  for name in notmuch-browser notmuch-browser-control notmuch-browser-index-control; do
+    if [ -f "$BACKUP/.had-$name" ]; then
+      install -m 700 "$BACKUP/$name" "$BIN_DIR/$name"
+    else
+      rm -f "$BIN_DIR/$name"
+    fi
+  done
+  if [ -f "$BACKUP/.had-notmuch-browser-control" ] &amp;&amp;
+     [ -f "$BACKUP/.had-notmuch-browser" ]; then
+    "$BIN_DIR/notmuch-browser-control" start
+  fi
+  if [ -f "$BACKUP/.had-notmuch-browser-index-control" ]; then
+    "$BIN_DIR/notmuch-browser-index-control" start
+  fi
+  if [ "$MBSYNC_WAS_UNPAUSED" = yes ]; then
+    mbsync-provider-live-control resume
+  fi
+  echo "status=automatic_rollback_complete failed_rc=$rc"
+  exit "$rc"
+}
+trap rollback_failed_install EXIT HUP INT TERM
+
+install -m 700 "$STAGE/notmuch-browser" "$BIN_DIR/.notmuch-browser.new"
+install -m 700 "$STAGE/notmuch-browser-control" \
+  "$BIN_DIR/.notmuch-browser-control.new"
+install -m 700 "$STAGE/notmuch-browser-index-control" \
+  "$BIN_DIR/.notmuch-browser-index-control.new"
+
+mv -f "$BIN_DIR/.notmuch-browser.new" "$BIN_DIR/notmuch-browser"
+mv -f "$BIN_DIR/.notmuch-browser-control.new" \
+  "$BIN_DIR/notmuch-browser-control"
+mv -f "$BIN_DIR/.notmuch-browser-index-control.new" \
+  "$BIN_DIR/notmuch-browser-index-control"
+
+sha256sum "$BIN_DIR/notmuch-browser" \
+  "$BIN_DIR/notmuch-browser-control" \
+  "$BIN_DIR/notmuch-browser-index-control"
+
+"$BIN_DIR/notmuch-browser-control" start
+"$BIN_DIR/notmuch-browser-index-control" start
+
+sleep 2
+"$BIN_DIR/notmuch-browser-control" status
+"$BIN_DIR/notmuch-browser-index-control" status
+curl -fsS http://127.0.0.1:8765/healthz &gt; /tmp/notmuch-browser-health.json
+cat /tmp/notmuch-browser-health.json
+grep -F '"ok":true' /tmp/notmuch-browser-health.json
+grep -F '"read_only":true' /tmp/notmuch-browser-health.json
+grep -F '"mail_mutation":false' /tmp/notmuch-browser-health.json
+grep -F '"downloads_enabled":true' /tmp/notmuch-browser-health.json
+grep -F '"temporary_download_files":true' /tmp/notmuch-browser-health.json
+if [ "$MBSYNC_WAS_UNPAUSED" = yes ]; then
+  mbsync-provider-live-control resume
+fi
+trap - EXIT HUP INT TERM
 echo
+echo "backup=$BACKUP"
+echo 'status=atomic_install_complete'</code></pre></div>
+  <div class="callout ok"><p>Expected idle state: <code>server=running</code>, <code>loop=running</code>, both locks absent, and download temporary files/bytes both zero.</p></div>
+</section>
 
-echo "== health =="
+<section id="routes">
+  <h2>8. Chunk A4: Routes, Assets, Listener, and Capability Rejection</h2>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-a4">Copy</button></div><pre id="cmd-a4"><code>set -eu
+
+BASE='http://127.0.0.1:8765'
+RUN="/tmp/notmuch-browser-check-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$RUN"
+
+curl -fsS "$BASE/" &gt; "$RUN/root.html"
+curl -fsS "$BASE/search?q=tag%3Ainbox&amp;offset=0&amp;limit=10" &gt; "$RUN/search.html"
+curl -fsS "$BASE/status" &gt; "$RUN/status.html"
+curl -fsS "$BASE/static/app.css" &gt; "$RUN/app.css"
+curl -fsS "$BASE/static/app.js" &gt; "$RUN/app.js"
+curl -fsS "$BASE/static/htmx.min.js" &gt; "$RUN/htmx.min.js"
+
+wc -c "$RUN/root.html" "$RUN/search.html" "$RUN/status.html" \
+  "$RUN/app.css" "$RUN/app.js" "$RUN/htmx.min.js"
+
+test "$(wc -c &lt; "$RUN/app.css" | tr -d ' ')" = 20775
+test "$(wc -c &lt; "$RUN/app.js" | tr -d ' ')" = 5371
+test "$(wc -c &lt; "$RUN/htmx.min.js" | tr -d ' ')" = 51238
+
+code="$(curl -sS -o "$RUN/bad-cap.txt" -w '%{http_code}' \
+  "$BASE/attachment?cap=invalid")"
+test "$code" = 403
+printf 'tampered_capability_http=%s\n' "$code"
+
+ss -ltn | grep -F '127.0.0.1:8765'
+if ss -ltn | grep -E '(^|[[:space:]])(0\.0\.0\.0|\[::\]):8765([[:space:]]|$)'; then
+  echo 'blocked: public listener detected'
+  exit 1
+fi
+
+notmuch-browser-control status
+echo 'status=route_asset_listener_checks_complete'</code></pre></div>
+</section>
+
+<section id="startup">
+  <h2>9. Chunk A5: IceWM Startup and Lock-Aware Index Loop</h2>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-a5">Copy</button></div><pre id="cmd-a5"><code>set -eu
+
+notmuch-browser-control install-icewm-startup
+notmuch-browser-index-control install-icewm-startup
+notmuch-browser-control install-icewm-startup
+notmuch-browser-index-control install-icewm-startup
+
+STARTUP="$HOME/.icewm/startup"
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER SERVICE' "$STARTUP")" = 1
+test "$(grep -Fxc '# END NOTMUCH BROWSER SERVICE' "$STARTUP")" = 1
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE' "$STARTUP")" = 1
+test "$(grep -Fxc '# END NOTMUCH BROWSER INDEX REFRESH SERVICE' "$STARTUP")" = 1
+
+notmuch-browser-control restart
+notmuch-browser-index-control restart
+sleep 3
+notmuch-browser-control status
+notmuch-browser-index-control status
 curl -fsS http://127.0.0.1:8765/healthz
 echo
-echo
-
-echo "== search endpoint =="
-curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&amp;offset=0&amp;limit=10' &gt;/tmp/notmuch-browser-search-check.html
-wc -c /tmp/notmuch-browser-search-check.html
-echo
-
-echo "== read-only tmp proof =="
-notmuch --config="$CONFIG" count '*'
-notmuch --config="$CONFIG" count --output=files '*'
-find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
-
-echo "status=chunk3_browser_validate_complete"</pre></div>
-  <p>Open <code>http://127.0.0.1:8765/</code> in antiX and manually check <code>tag:inbox</code>, single-message view, HTML body, attachments, duplicate selector, and Status page.</p>
+echo 'status=icewm_and_index_loop_complete'</code></pre></div>
+  <p>The loop refreshes every 60 seconds and skips while the mbsync or notmuch refresh lock exists. This prevents stale indexed paths after mbsync moves mail between <code>new</code> and <code>cur</code>.</p>
 </section>
 
-<section>
-  <h2>Chunk 4: Install IceWM Startup Blocks</h2>
-  <p>This installs both the browser service and the index-refresh loop into <code>~/.icewm/startup</code> with neutral markers.</p>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-4">Copy</button></div><pre id="cmd-4">set -eu
-
-"$HOME/.local/bin/notmuch-browser-control" install-icewm-startup
-"$HOME/.local/bin/notmuch-browser-index-control" install-icewm-startup
-echo
-
-echo "== marker counts =="
-grep -F "# BEGIN NOTMUCH BROWSER SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/browser_begin=/'
-grep -F "# END NOTMUCH BROWSER SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/browser_end=/'
-grep -F "# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/index_begin=/'
-grep -F "# END NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/index_end=/'
-echo
-
-echo "== service status =="
-"$HOME/.local/bin/notmuch-browser-control" status
-"$HOME/.local/bin/notmuch-browser-index-control" status
-echo
-
-echo "status=chunk4_icewm_startup_complete"</pre></div>
-  <p>Expected marker counts are all <code>1</code>.</p>
+<section id="ui">
+  <h2>10. Chunk A6: Manual antiX UI Acceptance</h2>
+  <p>Open <code>http://127.0.0.1:8765/</code>. Verify all 18 items:</p>
+  <ol>
+    <li>No overlap, clipping, broken icons, or unreadable text.</li>
+    <li><code>tag:inbox</code> search and paging work.</li>
+    <li>Normal HTML and plain-text messages open.</li>
+    <li>HTML remains inside the sandboxed iframe.</li>
+    <li>Duplicate 1 and duplicate 2 switch correctly.</li>
+    <li>Attachment rows show filename/type and individual download.</li>
+    <li>Save All appears only with downloadable attachments.</li>
+    <li>Individual download opens or saves correctly.</li>
+    <li>Save All contains only the selected duplicate's attachments.</li>
+    <li>Initial message load blocks images.</li>
+    <li>Show embedded images asks first and renders supported CID/data/local images.</li>
+    <li>SVG remains an image response, outside the parent DOM.</li>
+    <li>Load remote images appears only after embedded permission and warns about privacy.</li>
+    <li>Reload resets image permission.</li>
+    <li>Changing duplicate resets image permission.</li>
+    <li>The draggable divider and keyboard interaction work.</li>
+    <li>Narrow/mobile-width layout stays usable.</li>
+    <li>Status is readable and idle temporary count is zero.</li>
+  </ol>
+  <div class="cmd"><div class="cmd-head"><span>antiX post-check</span><button class="copy" data-copy="cmd-a6">Copy</button></div><pre id="cmd-a6"><code>set -eu
+notmuch-browser-control status
+notmuch-browser-index-control status
+find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+curl -fsS http://127.0.0.1:8765/healthz
+echo</code></pre></div>
+  <div class="callout ok"><p>Validated owner result: <strong>antiX Chunk 7: all 18 manual UI checks passed.</strong></p></div>
 </section>
 
-<section>
-  <h2>Chunk 5: Repair Stale notmuch Paths</h2>
-  <p>Use this when browser search shows <code>Error opening ... No such file or directory</code> for indexed Maildir paths.</p>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-5">Copy</button></div><pre id="cmd-5">set -eu
+<section id="readonly">
+  <h2>11. Chunk A7: Stable Read-Only Before/After Proof</h2>
+  <p>This pauses mbsync and the index loop so legitimate background changes cannot look like browser mutation. The trap restores both. When prompted, perform browser search/view/download/Save All/image checks, return, and press Enter.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal - interactive</span><button class="copy" data-copy="cmd-a7">Copy</button></div><pre id="cmd-a7"><code>set -eu
 
 CONFIG="$HOME/.config/notmuch/default/config"
-CONTROL="$HOME/.local/bin/notmuch-browser-control"
-MBSYNC_LOCK="/mail/AppData/isync/provider-live-loop/lock"
-STAMP="$(date +%Y%m%d-%H%M%S)"
+RUN="$HOME/codex-runs/notmuch-browser-readonly-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$RUN"
+INDEX_WAS_RUNNING=no
+MBSYNC_WAS_UNPAUSED=no
 
-echo "== stale index repair =="
-date -Is
-echo
-
-echo "== before counts =="
-notmuch --config="$CONFIG" count '*'
-notmuch --config="$CONFIG" count --output=files '*'
-notmuch --config="$CONFIG" count tag:inbox
-echo
-
-echo "== reproduce inbox metadata query =="
-if notmuch --config="$CONFIG" show --format=json --entire-thread=false --body=false --offset=0 --limit=50 tag:inbox &gt;/tmp/notmuch-before-"$STAMP".json 2&gt;/tmp/notmuch-before-"$STAMP".err; then
-  echo "before_query=OK"
-else
-  echo "before_query=FAILED"
-  sed -n '1,80p' /tmp/notmuch-before-"$STAMP".err
+notmuch-browser-index-control status &gt; "$RUN/index-before.txt" 2&gt;&amp;1 || true
+if grep -Fqx 'loop=running' "$RUN/index-before.txt"; then
+  INDEX_WAS_RUNNING=yes
 fi
-echo
 
-echo "== refresh =="
-if [ -d "$MBSYNC_LOCK" ]; then
-  echo "status=blocked_mbsync_lock_present"
+if command -v mbsync-provider-live-control &gt;/dev/null 2&gt;&amp;1; then
+  mbsync-provider-live-control status &gt; "$RUN/mbsync-before.txt" 2&gt;&amp;1 || true
+  if grep -Fqx 'paused=no' "$RUN/mbsync-before.txt"; then
+    MBSYNC_WAS_UNPAUSED=yes
+    mbsync-provider-live-control pause
+  fi
+fi
+
+cleanup() {
+  if [ "$INDEX_WAS_RUNNING" = yes ]; then
+    notmuch-browser-index-control start &gt;/dev/null 2&gt;&amp;1 || true
+  fi
+  if [ "$MBSYNC_WAS_UNPAUSED" = yes ]; then
+    mbsync-provider-live-control resume &gt;/dev/null 2&gt;&amp;1 || true
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+notmuch-browser-index-control stop || true
+
+i=0
+while { [ -d /mail/AppData/isync/provider-live-loop/lock ] ||
+        [ -d /mail/AppData/notmuch-browser/index-refresh.lock ]; } &amp;&amp;
+      [ "$i" -lt 80 ]; do
+  i=$((i + 1))
+  sleep 2
+done
+test ! -d /mail/AppData/isync/provider-live-loop/lock
+test ! -d /mail/AppData/notmuch-browser/index-refresh.lock
+
+snapshot() {
+  label="$1"
+  {
+    notmuch --config="$CONFIG" count '*' | sed 's/^/messages=/'
+    notmuch --config="$CONFIG" count --output=files '*' | sed 's/^/files=/'
+    notmuch --config="$CONFIG" count tag:inbox | sed 's/^/inbox=/'
+    notmuch --config="$CONFIG" search --output=files '*' |
+      LC_ALL=C sort | sha256sum | sed 's/^/indexed_paths_sha256=/'
+    notmuch --config="$CONFIG" dump --format=batch-tag '*' |
+      sha256sum | sed 's/^/tags_sha256=/'
+    find /mail/Mailstore -type f -printf '%P\0%s\0%T@\0' 2&gt;/dev/null |
+      LC_ALL=C sort -z | sha256sum | sed 's/^/mailstore_metadata_sha256=/'
+    find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null |
+      wc -l | sed 's/^/maildir_tmp_files=/'
+    find /mail/AppData/notmuch-browser/download-tmp -maxdepth 1 \
+      -type f -name 'nmb-*' 2&gt;/dev/null |
+      wc -l | sed 's/^/download_tmp_files=/'
+  } &gt; "$RUN/$label.txt"
+  cat "$RUN/$label.txt"
+}
+
+echo '===== BEFORE ====='
+snapshot before
+printf '%s\n' \
+  'Use the browser now: search, open messages, switch duplicates, download one' \
+  'attachment, Save All, confirm embedded images, optionally confirm remote' \
+  'images, then wait for downloads to finish and return here.'
+printf 'Press Enter to capture AFTER: '
+read answer
+
+echo '===== AFTER ====='
+snapshot after
+diff -u "$RUN/before.txt" "$RUN/after.txt"
+grep -Fqx 'maildir_tmp_files=0' "$RUN/after.txt"
+grep -Fqx 'download_tmp_files=0' "$RUN/after.txt"
+
+echo 'strict_snapshot_match=yes'
+echo 'mail_and_index_mutation=no'
+echo 'download_temp_cleanup=verified'
+echo "log_dir=$RUN"
+
+cleanup
+trap - EXIT HUP INT TERM
+notmuch-browser-control status
+notmuch-browser-index-control status
+echo 'status=readonly_proof_complete'</code></pre></div>
+  <p>The final private sample proof also byte-matched 4,078-byte duplicate attachments, rejected tampered/wrong-purpose capabilities with HTTP 403, verified all three CSP modes, and validated two four-entry Store ZIPs of 827,904 bytes. Those MIME hashes are sample-specific and must not be asserted on another mailbox.</p>
+  <div class="callout warn"><p>A disappearing <code>/proc/PID/cmdline</code> warning is a harmless process-exit race only when the next line confirms <code>loop=stopped</code> and final restoration confirms <code>loop=running</code>.</p></div>
+</section>
+
+<section id="tunnel">
+  <h2>12. Chunk W2: Windows SSH Tunnel and Acceptance</h2>
+  <div class="cmd"><div class="cmd-head"><span>antiX: discover IP</span><button class="copy" data-copy="cmd-ip">Copy</button></div><pre id="cmd-ip"><code>hostname -I</code></pre></div>
+  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button class="copy" data-copy="cmd-w2">Copy</button></div><pre id="cmd-w2"><code>Test-NetConnection 192.168.254.128 -Port 22
+ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128</code></pre></div>
+  <p>Keep PowerShell open and browse <code>http://127.0.0.1:8765/</code>. Repeat search/message, duplicate 1/2, individual and Save All downloads, both image confirmations and resets, body/layout/status checks.</p>
+  <div class="callout ok"><p>Validated owner result: <strong>Windows Chunk 8: all 14 manual UI checks passed.</strong></p></div>
+  <p>If local port 8765 is occupied, keep antiX unchanged and use:</p>
+  <div class="cmd"><div class="cmd-head"><span>Windows alternate local port</span><button class="copy" data-copy="cmd-w2-alt">Copy</button></div><pre id="cmd-w2-alt"><code>ssh -N -L 8876:127.0.0.1:8765 atiq@192.168.254.128</code></pre></div>
+</section>
+
+<section id="reboot">
+  <h2>13. Chunk A8: Controlled Reboot and Autostart Proof</h2>
+  <h3>Before Reboot</h3>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-reboot-before">Copy</button></div><pre id="cmd-reboot-before"><code>set -eu
+
+STATE="/mail/AppData/notmuch-browser/pre-reboot-boot-id"
+cat /proc/sys/kernel/random/boot_id | tee "$STATE"
+chmod 600 "$STATE"
+notmuch-browser-control status
+notmuch-browser-index-control status
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER SERVICE' "$HOME/.icewm/startup")" = 1
+test "$(grep -Fxc '# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE' "$HOME/.icewm/startup")" = 1</code></pre></div>
+  <h3>After Reboot and IceWM Login</h3>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-reboot-after">Copy</button></div><pre id="cmd-reboot-after"><code>set -eu
+
+OLD="$(cat /mail/AppData/notmuch-browser/pre-reboot-boot-id)"
+NEW="$(cat /proc/sys/kernel/random/boot_id)"
+printf 'boot_id_before=%s\nboot_id_current=%s\n' "$OLD" "$NEW"
+test "$OLD" != "$NEW"
+
+i=0
+until notmuch-browser-control status &gt; /tmp/browser-post-reboot.txt 2&gt;&amp;1 &amp;&amp;
+      grep -Fqx 'server=running' /tmp/browser-post-reboot.txt &amp;&amp;
+      notmuch-browser-index-control status &gt; /tmp/index-post-reboot.txt 2&gt;&amp;1 &amp;&amp;
+      grep -Fqx 'loop=running' /tmp/index-post-reboot.txt; do
+  i=$((i + 1))
+  test "$i" -lt 30
+  sleep 2
+done
+
+cat /tmp/browser-post-reboot.txt
+cat /tmp/index-post-reboot.txt
+ss -ltn | grep -F '127.0.0.1:8765'
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+find /mail/AppData/notmuch-browser/download-tmp -maxdepth 1 \
+  -type f -name 'nmb-*' 2&gt;/dev/null |
+  wc -l | sed 's/^/download_tmp_files=/'
+find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'
+echo 'status=post_reboot_autostart_complete'</code></pre></div>
+  <p>Recheck one search, message, attachment, Save All, and embedded-image confirmation.</p>
+  <div class="callout ok"><p>The validated July 14 reboot changed boot ID, passed readiness on its first attempt at 92.62 seconds uptime, auto-started one browser and one index loop, reran full byte/CSP/ZIP/read-only validation, and ended with <code>status=chunk9_post_reboot_complete</code>.</p></div>
+</section>
+
+<section id="rollback">
+  <h2>14. Rollback</h2>
+  <h3>Original Validated VM</h3>
+  <div class="cmd"><div class="cmd-head"><span>antiX rollback</span><button class="copy" data-copy="cmd-rollback-original">Copy</button></div><pre id="cmd-rollback-original"><code>set -eu
+POINTER='/mail/AppData/notmuch-browser/attachment-rollback-current'
+test -r "$POINTER"
+BACKUP="$(cat "$POINTER")"
+test -x "$BACKUP/rollback.sh"
+sha256sum -c "$BACKUP/SHA256SUMS"
+"$BACKUP/rollback.sh"
+notmuch-browser-control status
+notmuch-browser-index-control status
+curl -fsS http://127.0.0.1:8765/healthz
+echo</code></pre></div>
+  <h3>Recreated VM Dated Backup</h3>
+  <div class="cmd"><div class="cmd-head"><span>antiX rollback</span><button class="copy" data-copy="cmd-rollback-generic">Copy</button></div><pre id="cmd-rollback-generic"><code>set -eu
+
+BACKUP="$(cat /mail/AppData/notmuch-browser/latest-install-backup)"
+BIN_DIR="$HOME/.local/bin"
+test -d "$BACKUP"
+sha256sum -c "$BACKUP/SHA256SUMS"
+
+[ ! -x "$BIN_DIR/notmuch-browser-index-control" ] ||
+  "$BIN_DIR/notmuch-browser-index-control" stop || true
+[ ! -x "$BIN_DIR/notmuch-browser-control" ] ||
+  "$BIN_DIR/notmuch-browser-control" stop || true
+
+for name in notmuch-browser notmuch-browser-control notmuch-browser-index-control; do
+  if [ -f "$BACKUP/$name" ]; then
+    install -m 700 "$BACKUP/$name" "$BIN_DIR/$name"
+  fi
+done
+
+"$BIN_DIR/notmuch-browser-control" start
+"$BIN_DIR/notmuch-browser-index-control" start
+curl -fsS http://127.0.0.1:8765/healthz
+echo
+echo 'status=rollback_complete'</code></pre></div>
+  <div class="callout warn"><p>Application rollback never removes Maildir, the notmuch database, notmuch config, state, or logs. A first-ever installation has no previous binary to restore.</p></div>
+</section>
+
+<section id="repair">
+  <h2>15. Stale notmuch Path Repair</h2>
+  <p><code>Error opening .../new/...: No such file or directory</code> means mbsync renamed a Maildir file after the last index refresh. It is not a chi, HTMX, Tailwind, download, or rendering failure.</p>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-repair">Copy</button></div><pre id="cmd-repair"><code>set -eu
+
+if [ -d /mail/AppData/isync/provider-live-loop/lock ]; then
+  echo 'mbsync is active; wait and rerun'
   exit 0
 fi
-"$CONTROL" refresh-index
-echo
 
-echo "== after query and browser =="
-notmuch --config="$CONFIG" show --format=json --entire-thread=false --body=false --offset=0 --limit=50 tag:inbox &gt;/tmp/notmuch-after-"$STAMP".json
-wc -c /tmp/notmuch-after-"$STAMP".json
-curl -fsS http://127.0.0.1:8765/healthz
-echo
-curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&amp;offset=0&amp;limit=10' &gt;/tmp/notmuch-browser-after-repair.html
-wc -c /tmp/notmuch-browser-after-repair.html
-echo
-
-echo "== tmp proof =="
-find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
-
-echo "status=chunk5_stale_index_repair_complete"</pre></div>
-  <p>Validated 2026-07-09 repair: 12 renames detected, 102 new messages added, final count 559 messages / 1,025 files, and <code>maildir_tmp_files=0</code>.</p>
+notmuch-browser-control refresh-index
+notmuch-browser-control status
+curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&amp;offset=0&amp;limit=10' \
+  &gt; /tmp/notmuch-browser-search-after-refresh.html
+wc -c /tmp/notmuch-browser-search-after-refresh.html
+find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null |
+  wc -l | sed 's/^/maildir_tmp_files=/'</code></pre></div>
 </section>
 
-<section>
-  <h2>Chunk 6: Install and Validate Automatic Index Refresh Loop</h2>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-6">Copy</button></div><pre id="cmd-6">set -eu
+<section id="troubleshooting">
+  <h2>16. Troubleshooting</h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>Service will not start</td><td>Run <code>notmuch-browser-control logs</code>, check all four safety values, port 8765, directory ownership, and 0700 state/log modes.</td></tr>
+      <tr><td>Search reports missing files</td><td>Run the stale-index repair. Do not reinstall the app.</td></tr>
+      <tr><td>Download 403</td><td>Refresh the message page. Capabilities intentionally expire at service restart and are purpose-bound.</td></tr>
+      <tr><td>Download 413 / 429</td><td>Decoded size/count limit exceeded, or the single download slot is busy. Wait or download supported parts individually.</td></tr>
+      <tr><td>Download 502 / 504</td><td>Inspect logs. notmuch failed or timed out; check disk, source path, and index freshness.</td></tr>
+      <tr><td>Idle temporary count is nonzero</td><td>Confirm no active download and inspect status/logs. Do not delete active <code>nmb-*</code> files.</td></tr>
+      <tr><td>Embedded image does not render</td><td>Accept embedded permission for this exact message/duplicate; TIFF/HEIC remain downloads. Reload/duplicate change resets permission.</td></tr>
+      <tr><td>Remote image does not render</td><td>Accept embedded first, then remote. Proxy/DNS/firewall/sender behavior still applies; Go never fetches it.</td></tr>
+      <tr><td>Terminal closes</td><td>Run from an already-open terminal and pipe output through <code>tee</code>. Reopen the newest log afterward.</td></tr>
+      <tr><td>Unexpected EOF/backtick</td><td>A shell file was truncated or copied with Markdown fences. Run <code>sh -n FILE</code> and replace the full file from a clean raw block.</td></tr>
+      <tr><td>Corrected probe count is not one</td><td>Do not self-patch the running batch. Preserve it and write a complete corrected script under a separate name.</td></tr>
+      <tr><td>Running loop appears stopped</td><td>With pipefail, <code>producer | grep -q</code> can race. Capture full status to a file, then grep that file.</td></tr>
+      <tr><td><code>/proc/PID/cmdline</code> vanished</td><td>Harmless only when stop confirms stopped and final restoration confirms running.</td></tr>
+      <tr><td>Validator IndexError</td><td>The private validator takes base URL, audit JSON, and run directory. It is evidence, not part of the rebuild bundle.</td></tr>
+      <tr><td>ANTI_X_VM_IP cannot resolve</td><td>It is a placeholder. Use the numeric result from <code>hostname -I</code>.</td></tr>
+    </tbody>
+  </table>
+  <h3>Capture a Long Run</h3>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-log">Copy</button></div><pre id="cmd-log"><code>~/codex-runs/codex-batch.sh 2&gt;&amp;1 | tee \
+  ~/codex-runs/codex-batch-$(date +%Y%m%d-%H%M%S).log
 
-INDEX="$HOME/.local/bin/notmuch-browser-index-control"
-
-echo "== syntax and restart =="
-sh -n "$INDEX"
-"$INDEX" stop || true
-"$INDEX" start
-sleep 5
-echo
-
-echo "== status =="
-"$INDEX" status
-echo
-
-echo "== logs =="
-"$INDEX" logs
-echo
-
-echo "== startup block =="
-"$INDEX" install-icewm-startup
-grep -F "# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/begin_marker_count=/'
-grep -F "# END NOTMUCH BROWSER INDEX REFRESH SERVICE" "$HOME/.icewm/startup" | wc -l | sed 's/^/end_marker_count=/'
-echo
-
-echo "== health/search/tmp proof =="
-curl -fsS http://127.0.0.1:8765/healthz
-echo
-curl -fsS 'http://127.0.0.1:8765/search?q=tag%3Ainbox&amp;offset=0&amp;limit=10' &gt;/tmp/notmuch-browser-search-index-loop.html
-wc -c /tmp/notmuch-browser-search-index-loop.html
-find /mail/Mailstore -type f -path '*/tmp/*' 2&gt;/dev/null | wc -l | sed 's/^/maildir_tmp_files=/'
-echo
-
-echo "status=chunk6_index_loop_validate_complete"</pre></div>
-  <p>Validated 2026-07-09 chi result: <code>loop=running</code>, <code>interval_seconds=60</code>, <code>notmuch_unique_messages=638</code>, <code>notmuch_indexed_files=1158</code>, <code>status=refresh_index_complete</code>, marker counts 1/1, and <code>maildir_tmp_files=0</code>.</p>
+ls -lt ~/codex-runs/*.log | head</code></pre></div>
 </section>
 
-<section>
-  <h2>Chunk 7: Windows 11 SSH Tunnel</h2>
-  <p>Use the real antiX IP. The validated IP was <code>192.168.254.128</code>, but another VM may get a different address.</p>
-  <div class="cmd"><div class="cmd-head"><span>Windows PowerShell</span><button data-copy-target="cmd-7">Copy</button></div><pre id="cmd-7">Test-NetConnection 192.168.254.128 -Port 22
-ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128</pre></div>
-  <p>Keep the SSH window open, then open <code>http://127.0.0.1:8765/</code> in the Windows browser.</p>
-  <p>Validated 2026-07-09 result: Windows tunnel chi UI confirmed for search/results/message/body/HTML/status.</p>
-</section>
-
-<section>
-  <h2>Daily Monitor Commands</h2>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-8">Copy</button></div><pre id="cmd-8">notmuch-browser-control status
+<section id="operations">
+  <h2>17. Daily Operations</h2>
+  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button class="copy" data-copy="cmd-ops">Copy</button></div><pre id="cmd-ops"><code>notmuch-browser-control status
 notmuch-browser-index-control status
-mbsync-provider-live-control status</pre></div>
-  <h3>Logs When Needed</h3>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-9">Copy</button></div><pre id="cmd-9">notmuch-browser-control logs
-notmuch-browser-index-control logs</pre></div>
-</section>
+mbsync-provider-live-control status
 
-<section>
-  <h2>Control Reference</h2>
-  <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy-target="cmd-10">Copy</button></div><pre id="cmd-10">notmuch-browser-control start
+notmuch-browser-control logs
+notmuch-browser-index-control logs
+
+notmuch-browser-control start
 notmuch-browser-control stop
 notmuch-browser-control restart
-notmuch-browser-control status
-notmuch-browser-control logs
 notmuch-browser-control refresh-index
 notmuch-browser-control tunnel-hint
 notmuch-browser-control install-icewm-startup
@@ -420,43 +1023,76 @@ notmuch-browser-control print-runit-service
 notmuch-browser-index-control start
 notmuch-browser-index-control stop
 notmuch-browser-index-control restart
-notmuch-browser-index-control status
-notmuch-browser-index-control logs
 notmuch-browser-index-control install-icewm-startup
-notmuch-browser-index-control remove-icewm-startup</pre></div>
+notmuch-browser-index-control remove-icewm-startup</code></pre></div>
+  <p>IceWM is the validated user-session supervisor. Use runit only for boot-before-login availability after reviewing the generated service. Use tmux only as a manual debugging console.</p>
 </section>
 
-<section>
-  <h2>Completion Checklist</h2>
+<section id="checklist">
+  <h2>18. Completion Checklist</h2>
   <ol>
-    <li><code>go test ./...</code> passes.</li>
-    <li><code>internal/notmuchbrowser/static/app.css</code> exists and is served from <code>/static/app.css</code>.</li>
-    <li>Browser service reports <code>server=running</code>.</li>
-    <li>Index loop reports <code>loop=running</code>.</li>
-    <li><code>/healthz</code> returns <code>ok:true</code>.</li>
-    <li><code>tag:inbox</code> search renders.</li>
-    <li>A single message opens and HTML renders in the sandboxed iframe.</li>
-    <li>Attachment names and duplicate selector render.</li>
-    <li>Windows SSH tunnel works.</li>
-    <li>Maildir <code>tmp</code> count remains 0 after search, view, and refresh.</li>
-    <li>IceWM startup has exactly one begin/end marker for both browser and index loop.</li>
+    <li>Exact bundle hash, 65,392-byte size, and 30-member count pass.</li>
+    <li>Go 1.25+, module verification, tests, and vet pass.</li>
+    <li>Browser and both controls build; shell syntax passes.</li>
+    <li>Listener is only <code>127.0.0.1:8765</code>.</li>
+    <li>Expanded health contract passes.</li>
+    <li>Embedded asset sizes are exact.</li>
+    <li>Search, paging, HTML/plain message, attachment, duplicate, and Status views work.</li>
+    <li>Individual attachment and selected-duplicate Save All work.</li>
+    <li>Blocked, embedded-confirmed, and remote-confirmed image modes work and reset.</li>
+    <li>Idle download temp and every Maildir tmp are zero.</li>
+    <li>Stable before/after proof reports no mail/index mutation.</li>
+    <li>IceWM markers appear exactly once and use NOTMUCH BROWSER SERVICE wording.</li>
+    <li>Windows SSH tunnel passes full UI acceptance.</li>
+    <li>A real reboot changes boot ID and auto-starts one browser and one index loop.</li>
+    <li>A dated rollback path exists and verifies.</li>
   </ol>
 </section>
 
-<footer>Generated for offline antiX rebuild use. Keep this guide beside the TXT guide.</footer>
+<footer>
+  Offline companion to <code>NOTMUCH_GO_BROWSER_SERVICE_GUIDE.txt</code>. Keep both beside the exact source bundle.
+</footer>
 </main>
+
 <script>
-  document.querySelectorAll('button[data-copy-target]').forEach(function(button) {
-    button.addEventListener('click', function() {
-      var target = document.getElementById(button.getAttribute('data-copy-target'));
+(function () {
+  function fallbackCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    var ok = document.execCommand('copy');
+    document.body.removeChild(area);
+    return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return fallbackCopy(text);
+  }
+
+  document.querySelectorAll('button[data-copy]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var target = document.getElementById(button.getAttribute('data-copy'));
       if (!target) return;
-      navigator.clipboard.writeText(target.textContent).then(function() {
-        var old = button.textContent;
+      var original = button.textContent;
+      copyText(target.textContent.replace(/\n$/, '')).then(function () {
         button.textContent = 'Copied';
-        setTimeout(function() { button.textContent = old; }, 1200);
+      }).catch(function () {
+        button.textContent = 'Select text';
+      }).finally(function () {
+        window.setTimeout(function () {
+          button.textContent = original;
+        }, 1400);
       });
     });
   });
+}());
 </script>
 </body>
 </html>
