@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 ## Project Identity
 
@@ -18,7 +18,7 @@ The owner approved Python standard-library utilities for transporting a full Bet
 
 ## Current Objective
 
-Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, maintain the approved mail migration utilities, and use the completed reproducible HTML/TXT guides to operate or recreate the validated Go notmuch browser attachment/image revision.
+Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, maintain the approved mail migration utilities, and roll out the locally validated horizontal desktop message workspace to antiX without changing the browser's established read-only behavior.
 
 ## What Exists Now
 
@@ -65,6 +65,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `scripts/notmuch_browser_index_control.sh`, a user-level helper intended to keep the notmuch index fresh by running the existing locked `notmuch-browser-control refresh-index` path in a small loop that skips while the provider-live mbsync lock or notmuch refresh lock is present.
 - `cmd/notmuch-browser/main.go`, the Go service entrypoint.
 - `internal/notmuchbrowser/`, the Go service package, including chi routing, notmuch command execution, MIME/JSON parsing, HMAC capabilities, bounded attachment/ZIP/inline-image handlers, structured email HTML sanitization, adaptive embedded server-rendered templates, compiled local Tailwind CSS, local application JavaScript, a pinned Lucide icon subset/license, vendored local HTMX 2.0.10, and focused tests.
+- The current Windows source revision changes only the desktop workspace orientation: full-width results above a full-width reader, a saved 35% horizontal splitter with a 25-70% range, and up/down keyboard controls. Local tests, vet, deterministic Tailwind regeneration, clean-bundle tests, and 1440/1024/390 browser layout checks pass; antiX installation and operator validation remain pending.
 
 ## What Is Intentionally Undecided
 
@@ -150,6 +151,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
   - `tests/test_betterbird_post_archive_delta.py`
 
 ## Current Implementation Notes
+
+- Horizontal message-view rollout source bundle `notmuch-browser-horizontal-src-20260715-073049.tar.gz` contains the exact 30 required members, is 65,788 bytes, and has SHA256 `44398af72673cf2019822b74bd81e37d9f513d8fa4b713f671e3224e23fc930f`. Its clean extraction passes `go test -count=1 ./...` and `go vet ./...`. The compiled assets are 20,712-byte CSS, 5,380-byte app JavaScript, and 77,330 bytes total with HTMX. This bundle has not been installed on antiX.
+- The validated July 14 HTML/TXT reconstruction guides intentionally remain unchanged until the horizontal layout passes staged antiX build/port-8876 checks, atomic production rollout, antiX and Windows UI confirmation, read-only proof, and reboot/autostart validation.
 
 - The transport utility is designed to run `pack` on Fedora against `~/Betterbird-Email`, write split `betterbird-profile.tar.gz.partNNNN` files with `manifest.json` and `inventory.jsonl`, then run `verify-archive`, `unpack`, and `verify-tree` on antiX.
 - The transport utility defaults to whole-profile scope, Python stdlib gzip compression level 6, and 1900 MiB part files.

@@ -2,6 +2,11 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-15
+
+- Changed only the desktop notmuch browser workspace to full-width results above a full-width message reader, with a saved 35% horizontal splitter, 25-70% bounds, pointer Y-axis handling, and up/down keyboard controls; the existing mobile stack and all mail behavior remain unchanged.
+- Added focused layout/static-asset tests, regenerated deterministic Tailwind CSS, passed Go test/vet and responsive local browser checks, and prepared the exact 30-member staged antiX source bundle. Production rollout and reconstruction-guide regeneration remain pending reviewed operator gates.
+
 ## 2026-07-14
 
 - Completed the attachment/image rollout through exact production download/ZIP validation, strict stable-state read-only proof, owner-confirmed 18-item antiX and 14-item Windows-tunnel UI checks, and a controlled IceWM reboot/autostart proof.

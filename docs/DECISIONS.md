@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-15: Use a Horizontal Desktop Results and Message Workspace
+
+- Status: accepted
+- Context: The owner requested that the selected message use the full browser width below the result list, matching the supplied desktop mail-client reference, without changing any other browser feature.
+- Decision: Above the existing `860px` mobile breakpoint, render full-width search results above a full-width message reader with a 7px horizontal divider. Default the result height to 35%, persist it under the new `notmuch-browser.result-pane-height-percent` key, clamp it to 25-70%, and support pointer Y-axis dragging plus Up/Down/Home/End keys. Ignore the prior width preference. Preserve the mobile stack, HTMX targets, routes, styling system, message rendering, downloads, duplicate selection, image permissions, localhost binding, and read-only guarantees.
+- Consequences: chi and notmuch backend behavior do not change, no dependency or route is added, and the asset footprint stays within the established limits. The existing HTML/TXT reconstruction guides remain the production source of truth until the staged antiX and Windows rollout is fully validated and those guides are regenerated.
+
 ### 2026-07-12: Add Capability-Gated Attachment Export and Confirmed Image Rendering
 
 - Status: accepted

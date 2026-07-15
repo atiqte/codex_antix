@@ -262,8 +262,14 @@ func TestStaticAssetServedLocally(t *testing.T) {
 	if res.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.Code)
 	}
-	if !strings.Contains(res.Body.String(), "tailwindcss") || !strings.Contains(res.Body.String(), ".app-sidebar") {
+	css := res.Body.String()
+	if !strings.Contains(css, "tailwindcss") || !strings.Contains(css, ".app-sidebar") {
 		t.Fatalf("static CSS did not look like compiled local Tailwind output")
+	}
+	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize"} {
+		if !strings.Contains(css, want) {
+			t.Fatalf("compiled CSS missing horizontal splitter rule %q", want)
+		}
 	}
 }
 
@@ -271,8 +277,19 @@ func TestApplicationJavaScriptServedLocally(t *testing.T) {
 	server := newHTTPTestServer(t)
 	res := httptest.NewRecorder()
 	server.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/static/app.js", nil))
-	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "data-pane-divider") {
+	if res.Code != http.StatusOK {
 		t.Fatalf("local application JavaScript missing: status=%d body=%s", res.Code, res.Body.String())
+	}
+	js := res.Body.String()
+	for _, want := range []string{"data-pane-divider", "notmuch-browser.result-pane-height-percent", "event.clientY", "bounds.height", "ArrowUp", "ArrowDown"} {
+		if !strings.Contains(js, want) {
+			t.Fatalf("local application JavaScript missing horizontal splitter behavior %q", want)
+		}
+	}
+	for _, unwanted := range []string{"notmuch-browser.result-pane-percent", "event.clientX", "bounds.width", "ArrowLeft", "ArrowRight"} {
+		if strings.Contains(js, unwanted) {
+			t.Fatalf("local application JavaScript retained vertical splitter behavior %q", unwanted)
+		}
 	}
 }
 
@@ -282,6 +299,24 @@ func TestSearchShellIncludesReusableEmptyReaderState(t *testing.T) {
 	server.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `<template id="reader-empty-template">`) || strings.Count(res.Body.String(), "No message selected") != 2 {
 		t.Fatalf("search shell reader reset template missing: status=%d body=%s", res.Code, res.Body.String())
+	}
+}
+
+func TestSearchShellUsesHorizontalSplitter(t *testing.T) {
+	server := newHTTPTestServer(t)
+	res := httptest.NewRecorder()
+	server.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.Code)
+	}
+	out := res.Body.String()
+	for _, want := range []string{`aria-orientation="horizontal"`, `aria-valuemin="25"`, `aria-valuemax="70"`, `aria-valuenow="35"`, `id="results"`, `id="reading-pane-content"`} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("search shell missing horizontal splitter contract %q", want)
+		}
+	}
+	if strings.Contains(out, `aria-orientation="vertical"`) {
+		t.Fatalf("search shell retained vertical splitter orientation")
 	}
 }
 

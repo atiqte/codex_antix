@@ -3,7 +3,7 @@
 
   const root = document.documentElement;
   const sidebarKey = "notmuch-browser.sidebar-collapsed";
-  const splitKey = "notmuch-browser.result-pane-percent";
+  const splitKey = "notmuch-browser.result-pane-height-percent";
   const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
   const setSidebarCollapsed = (collapsed) => {
@@ -67,14 +67,14 @@
   function setupSplitter(workspace) {
     const divider = workspace.querySelector("[data-pane-divider]");
     if (!divider) return;
-    let percent = 44;
+    let percent = 35;
     try {
-      percent = clamp(Number(localStorage.getItem(splitKey)) || 44, 28, 68);
+      percent = clamp(Number(localStorage.getItem(splitKey)) || 35, 25, 70);
     } catch (_) {}
 
     const apply = (value, persist) => {
-      percent = clamp(value, 28, 68);
-      workspace.style.setProperty("--result-pane", `${percent}%`);
+      percent = clamp(value, 25, 70);
+      workspace.style.setProperty("--result-pane-height", `${percent}%`);
       divider.setAttribute("aria-valuenow", String(Math.round(percent)));
       if (persist) {
         try {
@@ -92,7 +92,7 @@
     divider.addEventListener("pointermove", (event) => {
       if (!divider.hasPointerCapture(event.pointerId)) return;
       const bounds = workspace.getBoundingClientRect();
-      apply(((event.clientX - bounds.left) / bounds.width) * 100, false);
+      apply(((event.clientY - bounds.top) / bounds.height) * 100, false);
     });
     const finish = (event) => {
       if (divider.hasPointerCapture(event.pointerId)) divider.releasePointerCapture(event.pointerId);
@@ -102,12 +102,12 @@
     divider.addEventListener("pointerup", finish);
     divider.addEventListener("pointercancel", finish);
     divider.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         event.preventDefault();
-        apply(percent + (event.key === "ArrowLeft" ? -2 : 2), true);
+        apply(percent + (event.key === "ArrowUp" ? -2 : 2), true);
       } else if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
-        apply(event.key === "Home" ? 28 : 68, true);
+        apply(event.key === "Home" ? 25 : 70, true);
       }
     });
   }

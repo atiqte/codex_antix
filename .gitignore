@@ -42,6 +42,7 @@ build/
 /notmuch-browser.exe
 notmuch-browser-chi-src-*.tar.gz
 notmuch-browser-attachment-src-*.tar.gz
+notmuch-browser-horizontal-src-*.tar.gz
 *.test
 coverage.out
 
