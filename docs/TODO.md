@@ -24,9 +24,9 @@
 - [x] Independently extract/test/vet/race/shell/build bundle `533235a5...` on antiX; exact temporary Linux binary is 9,769,225 bytes, SHA256 `e80fb11d...`, and production remained unchanged.
 - [x] Transfer only standalone validator `d0b3ce6c...` from the Windows checkout by SCP and independently verify its exact size/hash, LF endings, Bash syntax, four embedded Python programs, production invariants, and free port 8876 on antiX.
 - [x] Read-only audit failed isolated PID 54952, port 8876, private pointer, exact isolated temp path, and production; process/listener/pointer cleanup passed and only the exact empty mode-700 isolated directory remains.
-- [ ] Remove only that exact empty isolated directory after repeating PID/process/port/pointer guards.
+- [x] Remove only the exact empty isolated directory after repeating PID/process/port/pointer guards; preserve failed-run evidence and reprove unchanged production before and after.
 - [x] Implement and locally validate replacement harness `cfd2ce4f...`, 31,961 bytes, whose inner `srcdoc` CSP and tag checks use structured HTML parsing.
-- [ ] Transfer and independently verify replacement harness `cfd2ce4f...`, then rerun the isolated candidate gate.
+- [ ] Transfer replacement harness `cfd2ce4f...` under a new evidence-preserving filename, independently verify its structured `srcdoc` regression on antiX, then rerun the isolated candidate gate.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
