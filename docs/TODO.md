@@ -16,7 +16,8 @@
 - [x] Transfer only replacement bundle `d9943dfe...` to antiX through a guarded incoming path and independently verify the final remote bytes without extraction or service changes.
 - [x] Independently verify/extract/test/vet/race/build replacement bundle `d9943dfe...` on antiX; exact temporary Linux binary SHA256 is `f12882ab...`, and production/temp state remained unchanged.
 - [x] Run exact temporary binary `f12882ab...` on isolated `127.0.0.1:8876`; ten concurrent CID requests returned ten HTTP 200 responses and zero 429 responses with clean temp state, but manual typography review rejected the artifact for installation.
-- [ ] Identity-check and stop retained queue-fix PID 121748 through its private pointer, remove only its isolated temp/pointer state, and reprove production 8765 unchanged before transferring a replacement.
+- [x] Read-only identity-audit retained queue-fix PID 121748 through pointer `fd5ddf65...`; binary, boot ID, start ticks, command line, listener, health, production hashes, and empty temp state all matched exactly.
+- [ ] Revalidate and stop retained queue-fix PID 121748, remove only its exact empty isolated temp directory and private pointer, and reprove production 8765 unchanged before transferring a replacement.
 - [x] Implement and locally validate Office-only Aptos 10.5pt Readable rendering as the default plus a sanitized Original display toggle that preserves duplicate/image state according to the approved privacy rules.
 - [x] Produce deterministic 32-member no-font replacement bundle `notmuch-browser-outlook-readable-src-20260718-215557.tar.gz`, 77,445 bytes, SHA256 `533235a5...`, and pass clean extraction, tests, vet, shell, build, browser, Tailwind, and asset-budget gates.
 - [ ] Transfer and stage replacement bundle `533235a5...`; repeat antiX build, ten-CID, Readable/Original visual, Windows tunnel, read-only, install/rollback, and reboot gates one reviewed chunk at a time.
