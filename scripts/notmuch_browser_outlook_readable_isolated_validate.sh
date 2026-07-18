@@ -373,6 +373,26 @@ class MessageParser(HTMLParser):
             self.current_row.append(value)
 
 
+class SrcdocParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.csp_values = []
+        self.ids = set()
+        self.tags = []
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        values = {key.lower(): value for key, value in attrs}
+        self.tags.append(tag)
+        if values.get("id"):
+            self.ids.add(values["id"])
+        if tag == "meta" and (values.get("http-equiv") or "").lower() == "content-security-policy":
+            self.csp_values.append(values.get("content") or "")
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+
 def parse_message(body):
     parser = MessageParser()
     parser.feed(body.decode("utf-8", errors="strict"))
@@ -382,7 +402,12 @@ def parse_message(body):
     require("sandbox" in iframe, "message iframe is missing sandbox")
     require(iframe.get("referrerpolicy") == "no-referrer", "message iframe referrer policy changed")
     require(iframe.get("srcdoc"), "message iframe srcdoc is empty")
-    return parser, iframe["srcdoc"]
+    srcdoc = iframe["srcdoc"]
+    inner = SrcdocParser()
+    inner.feed(srcdoc)
+    inner.close()
+    require(len(inner.csp_values) == 1, f"expected one iframe CSP meta value, found {len(inner.csp_values)}")
+    return parser, srcdoc, inner
 
 
 def message_path(display, images, *, duplicate=0):
@@ -407,7 +432,8 @@ def inspect_message(label, display, requested_images, *, htmx, effective_images=
     verify_outer_headers(label, headers)
     if htmx:
         require("HX-Request" in headers.get("vary", ""), f"{label}: Vary lacks HX-Request")
-    parser, srcdoc = parse_message(body)
+    parser, srcdoc, inner = parse_message(body)
+    frame_csp = inner.csp_values[0]
     visible = " ".join(parser.text)
     active = " ".join(parser.active_text)
     require(active == display.capitalize(), f"{label}: active display is {active!r}")
@@ -415,29 +441,26 @@ def inspect_message(label, display, requested_images, *, htmx, effective_images=
     require(".zip" in parser.attachment_rows[0].lower(), f"{label}: genuine ZIP attachment not found")
     zip_links = [link["href"] for link in parser.links if link.get("href", "").startswith("/attachments.zip?cap=")]
     require(len(zip_links) == 1, f"{label}: expected one Save All capability, found {len(zip_links)}")
-    require("font-src 'none'" in srcdoc, f"{label}: iframe font-src changed")
-    require("script-src 'none'" in srcdoc, f"{label}: iframe script-src changed")
-    require("<script" not in srcdoc.lower(), f"{label}: script element survived")
-    require("<object" not in srcdoc.lower(), f"{label}: object element survived")
-    require("<embed" not in srcdoc.lower(), f"{label}: embed element survived")
-    require("<iframe" not in srcdoc.lower(), f"{label}: nested iframe survived")
-    require("foreignobject" not in srcdoc.lower(), f"{label}: SVG foreignObject survived")
+    require("font-src 'none'" in frame_csp, f"{label}: iframe font-src changed")
+    require("script-src 'none'" in frame_csp, f"{label}: iframe script-src changed")
+    for forbidden_tag in ("script", "object", "embed", "iframe", "foreignobject"):
+        require(forbidden_tag not in inner.tags, f"{label}: {forbidden_tag} element survived")
     if display == "readable":
-        require('id="notmuch-browser-office-readable"' in srcdoc, f"{label}: Office Readable override missing")
+        require("notmuch-browser-office-readable" in inner.ids, f"{label}: Office Readable override missing")
         require("font-size:10.5pt!important" in srcdoc, f"{label}: Readable font size missing")
         require("line-height:1.35!important" in srcdoc, f"{label}: Readable line height missing")
     else:
-        require("notmuch-browser-office-readable" not in srcdoc, f"{label}: Original contains Readable override")
+        require("notmuch-browser-office-readable" not in inner.ids, f"{label}: Original contains Readable override")
     if effective_images == "blocked":
         require("Images blocked" in visible, f"{label}: blocked permission state missing")
-        require("img-src 'none'" in srcdoc, f"{label}: blocked iframe CSP changed")
+        require("img-src 'none'" in frame_csp, f"{label}: blocked iframe CSP changed")
     elif effective_images == "embedded":
         require("Embedded images shown" in visible, f"{label}: embedded permission state missing")
-        require(f"img-src {candidate_base} data:" in srcdoc, f"{label}: embedded iframe CSP changed")
-        require(" http: https:" not in srcdoc, f"{label}: embedded mode permits remote images")
+        require(f"img-src {candidate_base} data:" in frame_csp, f"{label}: embedded iframe CSP changed")
+        require(" http: https:" not in frame_csp, f"{label}: embedded mode permits remote images")
     else:
         require("Remote images allowed" in visible, f"{label}: remote permission state missing")
-        require(f"img-src {candidate_base} data: http: https:" in srcdoc, f"{label}: remote iframe CSP changed")
+        require(f"img-src {candidate_base} data: http: https:" in frame_csp, f"{label}: remote iframe CSP changed")
     return {
         "label": label,
         "headers": headers,
