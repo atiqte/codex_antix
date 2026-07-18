@@ -29,7 +29,7 @@
 - [x] Transfer replacement harness `cfd2ce4f...` under a new evidence-preserving filename and independently verify its structured `srcdoc` regression on antiX while retaining the failed harness/run evidence.
 - [x] Audit failed isolated attempt-2 PID 68939, port/pointer/temp/run evidence and production, then collect content-private HTML Office/legacy marker, element, font, and image-reference counts for the exact duplicate-1 body.
 - [x] Retain the current Office-only detector: the real body has zero Office-generation markers and already declares Aptos/sans-serif; Exchange transport headers do not justify reclassification.
-- [ ] Remove only attempt 2's exact audited empty isolated directory using fresh guards.
+- [x] Remove only attempt 2's exact audited empty isolated directory using fresh guards; preserve failed-run evidence and reprove unchanged production before and after.
 - [x] Implement and locally validate final policy-aware harness `c660f120...`, 33,092 bytes, accepting Office override divergence or exact non-Office Readable/Original parity while rejecting mismatches.
 - [ ] Transfer and independently verify final harness `c660f120...` under a new filename, then rerun the isolated gate.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
