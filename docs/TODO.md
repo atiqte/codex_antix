@@ -33,7 +33,8 @@
 - [x] Implement and locally validate final policy-aware harness `c660f120...`, 33,092 bytes, accepting Office override divergence or exact non-Office Readable/Original parity while rejecting mismatches.
 - [x] Transfer and independently verify final harness `c660f120...` under the new mode-700 filename `notmuch-browser-outlook-readable-isolated-validate-e7a2c13.sh` while proving production unchanged.
 - [x] Extract and exercise the transferred harness's actual structured parser and display-policy branches on antiX, proving both valid and both rejection paths with production unchanged.
-- [ ] Execute final validator `c660f120...`, review its automated report and retained pointer/process identity, then manually compare Readable and Original on antiX.
+- [x] Execute final validator `c660f120...`; automated identity/HTTP/policy/attachment/ten-CID/temp gates passed and exact PID 87785 is retained through pointer `84e47fda...`.
+- [ ] At Firefox 100% and identical viewport, manually compare retained Readable and Original views, verify all ten signature images and sole ZIP, and report visual PASS/FAIL before cleanup or installation.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
