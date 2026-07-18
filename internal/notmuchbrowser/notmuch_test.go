@@ -249,8 +249,11 @@ func TestSecurityHeadersAndHTMXFragment(t *testing.T) {
 	if strings.Contains(out, "<!doctype html>") {
 		t.Fatalf("HTMX fragment included full page shell: %s", out)
 	}
-	if !strings.Contains(out, `class="result-toolbar"`) {
-		t.Fatalf("HTMX fragment missing results toolbar: %s", out)
+	if !strings.Contains(out, `id="result-toolbar-slot" hx-swap-oob="innerHTML"`) {
+		t.Fatalf("HTMX fragment missing OOB toolbar update: %s", out)
+	}
+	if strings.Contains(out, `class="result-toolbar"`) {
+		t.Fatalf("HTMX fragment retained dedicated result-toolbar band: %s", out)
 	}
 }
 
@@ -266,12 +269,12 @@ func TestStaticAssetServedLocally(t *testing.T) {
 	if !strings.Contains(css, "tailwindcss") || !strings.Contains(css, ".app-sidebar") {
 		t.Fatalf("static CSS did not look like compiled local Tailwind output")
 	}
-	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".message-fields dt{color:var(--muted);text-align:right"} {
+	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".search-subbar{", "grid-template-columns:minmax(0,1fr) auto", ".result-toolbar-slot{min-width:0}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".result-subject-line .subject,.result-id-line .path,.reader-heading-title h1,.message-id-line .path{overflow-wrap:anywhere;min-width:0;display:inline}", "align-items:baseline", "text-align:right", "white-space:nowrap", "@media (max-width:860px)", ".search-subbar{grid-template-columns:minmax(0,1fr);align-items:stretch}"} {
 		if !strings.Contains(css, want) {
 			t.Fatalf("compiled CSS missing GUI rule %q", want)
 		}
 	}
-	for _, unwanted := range []string{".app-topbar{", ".mode-indicator{", ".pager{"} {
+	for _, unwanted := range []string{".app-topbar{", ".mode-indicator{", ".pager{", ".result-toolbar{"} {
 		if strings.Contains(css, unwanted) {
 			t.Fatalf("compiled CSS retained removed GUI rule %q", unwanted)
 		}
@@ -418,8 +421,12 @@ func newHTTPTestServer(t *testing.T) *Server {
 			"count\x00tag:inbox":                   "1\n",
 			"count\x00--output=files\x00tag:inbox": "2\n",
 			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00tag:inbox": sampleNotmuchJSON,
-			"count\x00*":                                      "1\n",
-			"count\x00--output=files\x00*":                    "2\n",
+			"count\x00tag:attachment":                   "1\n",
+			"count\x00--output=files\x00tag:attachment": "2\n",
+			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00tag:attachment": sampleNotmuchJSON,
+			"count\x00*":                   "1\n",
+			"count\x00--output=files\x00*": "2\n",
+			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00*": sampleNotmuchJSON,
 			"config\x00get\x00database.path":                  cfg.ExpectedDatabasePath + "\n",
 			"config\x00get\x00database.mail_root":             cfg.ExpectedMailRoot + "\n",
 			"config\x00get\x00maildir.synchronize_flags":      cfg.ExpectedSyncFlags + "\n",

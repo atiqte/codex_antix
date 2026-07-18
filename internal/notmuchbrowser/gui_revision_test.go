@@ -21,6 +21,9 @@ func TestAnnotatedGUIResultToolbarAndCopyControls(t *testing.T) {
 		}},
 	}}
 	out := executeTemplateForTest(t, "results", view)
+	if !strings.Contains(out, `id="result-toolbar-slot" hx-swap-oob="innerHTML"`) {
+		t.Fatalf("HTMX result fragment is missing the OOB toolbar update: %s", out)
+	}
 
 	queryAt := strings.Index(out, `class="result-query"`)
 	countsAt := strings.Index(out, `class="result-counts"`)
@@ -30,6 +33,9 @@ func TestAnnotatedGUIResultToolbarAndCopyControls(t *testing.T) {
 	}
 	if strings.Contains(out, `class="pager"`) || strings.Contains(out, ">Previous<") || strings.Contains(out, ">Next<") {
 		t.Fatalf("legacy bottom text pager remains: %s", out)
+	}
+	if strings.Contains(out, `class="result-toolbar"`) {
+		t.Fatalf("dedicated result-toolbar band remains: %s", out)
 	}
 	for _, want := range []string{
 		`data-copy-text="Quarterly &#34;special&#34; &lt;plan&gt;"`,
@@ -41,6 +47,41 @@ func TestAnnotatedGUIResultToolbarAndCopyControls(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("annotated result output missing %q: %s", want, out)
 		}
+	}
+	subjectEnd := strings.Index(out, `&lt;plan&gt;</a>`)
+	subjectCopy := strings.Index(out, `data-copy-text="Quarterly &#34;special&#34; &lt;plan&gt;"`)
+	if subjectEnd < 0 || subjectCopy <= subjectEnd || subjectCopy-subjectEnd > 180 {
+		t.Fatalf("result subject copy button is not immediately after its text: %s", out)
+	}
+	idEnd := strings.Index(out, `<span class="path">abc@example.test</span>`)
+	idCopy := strings.Index(out, `data-copy-text="Message-ID: abc@example.test"`)
+	if idEnd < 0 || idCopy <= idEnd || idCopy-idEnd > 180 {
+		t.Fatalf("result Message-ID copy button is not immediately after its text: %s", out)
+	}
+}
+
+func TestGUI2InitialSearchSubbarOwnsToolbarSlot(t *testing.T) {
+	out := executeTemplateForTest(t, "page", pageView{
+		Query: "tag:inbox",
+		SearchPage: SearchPage{
+			Query: "tag:inbox", Limit: 50,
+			Counts: Counts{Messages: 101, Files: 151},
+		},
+	})
+	if !strings.Contains(out, `class="search-subbar"`) {
+		t.Fatalf("search subbar is missing: %s", out)
+	}
+	if got := strings.Count(out, `id="result-toolbar-slot"`); got != 1 {
+		t.Fatalf("initial toolbar slot count=%d, want 1: %s", got, out)
+	}
+	shortcutsAt := strings.Index(out, `class="query-shortcuts"`)
+	toolbarAt := strings.Index(out, `id="result-toolbar-slot"`)
+	resultsAt := strings.Index(out, `id="results"`)
+	if shortcutsAt < 0 || toolbarAt <= shortcutsAt || resultsAt <= toolbarAt {
+		t.Fatalf("initial layout is not shortcuts, toolbar slot, results: %s", out)
+	}
+	if strings.Contains(out, `hx-swap-oob=`) || strings.Contains(out, `class="result-toolbar"`) {
+		t.Fatalf("initial page contains an OOB marker or dedicated toolbar band: %s", out)
 	}
 }
 
@@ -99,6 +140,16 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 			t.Fatalf("annotated reader output missing %q: %s", want, out)
 		}
 	}
+	subjectEnd := strings.Index(out, `Quarterly &amp; Special</h1>`)
+	subjectCopy := strings.Index(out, `data-copy-text="Quarterly &amp; Special"`)
+	if subjectEnd < 0 || subjectCopy <= subjectEnd || subjectCopy-subjectEnd > 180 {
+		t.Fatalf("reader subject copy button is not immediately after its text: %s", out)
+	}
+	idEnd := strings.Index(out, `<span class="path">abc@example.test</span>`)
+	idCopy := strings.Index(out, `data-copy-text="Message-ID: abc@example.test"`)
+	if idEnd < 0 || idCopy <= idEnd || idCopy-idEnd > 180 {
+		t.Fatalf("reader Message-ID copy button is not immediately after its text: %s", out)
+	}
 
 	view.Detail.Summary.Cc = ""
 	out = executeTemplateForTest(t, "messageFragment", view)
@@ -110,11 +161,17 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 func TestAnnotatedGUIDateFormatting(t *testing.T) {
 	dhaka := time.FixedZone("Asia/Dhaka", 6*60*60)
 	raw := "Tue, 14 Jul 2026 16:23:01 +0200"
-	if got := formatDateInLocation(raw, "02 Jan 2006, 03:04:05 PM", dhaka); got != "14 Jul 2026, 08:23:01 PM" {
+	if got := formatDateInLocation(raw, "Mon, 02 Jan 2006, 03:04:05 PM", dhaka); got != "Tue, 14 Jul 2026, 08:23:01 PM" {
 		t.Fatalf("reader date=%q", got)
 	}
-	if got := formatDateInLocation("not a date", "02 Jan 2006, 03:04:05 PM", dhaka); got != "not a date" {
+	if got := formatDateInLocation("not a date", "Mon, 02 Jan 2006, 03:04:05 PM", dhaka); got != "not a date" {
 		t.Fatalf("invalid date fallback=%q", got)
+	}
+	previousLocal := time.Local
+	time.Local = dhaka
+	t.Cleanup(func() { time.Local = previousLocal })
+	if got := formatReaderDate(raw); got != "Tue, 14 Jul 2026, 08:23:01 PM" {
+		t.Fatalf("formatReaderDate=%q", got)
 	}
 
 	for input, want := range map[string]string{

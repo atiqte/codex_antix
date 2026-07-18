@@ -11,18 +11,23 @@
       <input type="hidden" name="limit" value="{{displayLimit .SearchPage}}">
       <button class="primary-button" type="submit">Search</button>
     </form>
-    <span id="search-progress" class="search-progress htmx-indicator" aria-live="polite">Searching...</span>
-    <div class="query-shortcuts" aria-label="Example searches">
-      <a href="/search?q=tag%3Ainbox">tag:inbox</a>
-      <a href="/search?q=tag%3Aunread">tag:unread</a>
-      <a href="/search?q=tag%3Aattachment">tag:attachment</a>
+    <div class="search-subbar">
+      <div class="query-shortcuts" aria-label="Example searches">
+        <a href="/search?q=tag%3Ainbox">tag:inbox</a>
+        <a href="/search?q=tag%3Aunread">tag:unread</a>
+        <a href="/search?q=tag%3Aattachment">tag:attachment</a>
+        <span id="search-progress" class="search-progress htmx-indicator" aria-live="polite">Searching...</span>
+      </div>
+      <div id="result-toolbar-slot" class="result-toolbar-slot">
+        {{template "resultToolbar" .}}
+      </div>
     </div>
   </div>
   <template id="reader-empty-template">{{template "readerEmpty" .}}</template>
   <div class="split-workspace" data-split-workspace>
     <section class="results-pane" aria-label="Search results">
       <div id="results" class="results" aria-live="polite">
-        {{template "results" .}}
+        {{template "resultBody" .}}
       </div>
     </section>
     <div class="pane-divider" role="separator" aria-label="Resize result and reading panes" aria-orientation="horizontal" aria-valuemin="25" aria-valuemax="70" aria-valuenow="35" tabindex="0" data-pane-divider></div>

@@ -201,7 +201,7 @@ func formatBytes(size int64) string {
 }
 
 func formatReaderDate(raw string) string {
-	return formatDateInLocation(raw, "02 Jan 2006, 03:04:05 PM", time.Local)
+	return formatDateInLocation(raw, "Mon, 02 Jan 2006, 03:04:05 PM", time.Local)
 }
 
 func formatResultDate(relative string, raw string) string {

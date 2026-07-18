@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-18: Compact the Search Subbar and Align Reader Metadata
+
+- Status: accepted
+- Context: The annotated-GUI isolated server was healthy and read-only, but the owner rejected its manual GUI gate because the dedicated result toolbar consumed a blank band, copy controls were detached from their text, the reader date lacked a weekday, and the Message-ID label/value baseline was uneven.
+- Decision: Supersede the uninstalled source bundle SHA256 `a371f5cbb76a173249eac0ad4ac94fff6af1d6c576d455aae7f297256425b8ff` and staged binary SHA256 `1db5b2a0175e29d753a62b24f99be8375d4c97b8435130c86f35c0555b9011e0`. Move query/count/range/pager content into a right-aligned slot in the shortcut subbar, update that slot out of band on HTMX searches while retaining `hx-target="#results"`, remove the dedicated result-toolbar band, keep copy buttons in inline flow immediately after their subject or Message-ID text, format parsed reader dates as `Mon, 02 Jan 2006, 03:04:05 PM`, and baseline-align the two-column metadata grid.
+- Consequence: A newly named minimal bundle must repeat local checks, responsive QA, antiX verification/build, and isolated validation before production installation. Routes, dependencies, notmuch commands, downloads, image permissions, horizontal splitting, security, and read-only behavior remain unchanged.
+
 ### 2026-07-18: Supersede the Uninstalled Horizontal Artifact With the Annotated GUI Revision
 
 - Status: accepted

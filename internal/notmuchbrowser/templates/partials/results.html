@@ -1,8 +1,9 @@
 {{define "results"}}
-{{if .Error}}
-<div class="notice bad">{{.Error}}</div>
-{{else}}
-<div class="result-toolbar">
+<div id="result-toolbar-slot" hx-swap-oob="innerHTML">{{template "resultToolbar" .}}</div>
+{{template "resultBody" .}}
+{{end}}
+
+{{define "resultToolbar"}}
   <div class="result-toolbar-cluster">
     <code class="result-query" title="{{.SearchPage.Query}}">{{.SearchPage.Query}}</code>
     <div class="result-counts">
@@ -25,7 +26,12 @@
       {{end}}
     </nav>
   </div>
-</div>
+{{end}}
+
+{{define "resultBody"}}
+{{if .Error}}
+<div class="notice bad">{{.Error}}</div>
+{{else}}
 {{if .SearchPage.Results}}
 <div class="result-table-wrap">
   <table class="result-table">

@@ -4,8 +4,9 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Replace the superseded horizontal bundle with the approved annotated GUI revision, then repeat preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof one reviewed chunk at a time.
-- [ ] After every annotated-GUI rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, commands, rollback, expected output, copy controls, and troubleshooting.
+- [ ] Replace the rejected uninstalled annotated-GUI bundle with the approved GUI2 compact-subbar and metadata-alignment revision, then repeat preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof one reviewed chunk at a time.
+- [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
+- [ ] After every GUI2 rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, commands, rollback, expected output, copy controls, and troubleshooting.
 - [ ] In that final guide update, correct the retained attachment rollback filenames to `rollback-browser.sh` and `backup-inventory.sha256`; the July 18 antiX inventory proved those are the actual validated files.
 - [x] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
 - [x] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.

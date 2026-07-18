@@ -2,6 +2,12 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-18
+
+- Moved the notmuch result query/count/range/pager cluster into the search shortcut subbar and added HTMX out-of-band updates so searches refresh both that external summary and the result body without replacing the reader.
+- Removed the dedicated result-toolbar band, kept subject and Message-ID copy controls directly after their text, added weekday reader dates, and baseline-aligned the metadata grid while preserving the horizontal workspace and all backend/security behavior.
+- Passed Go test/vet, deterministic Tailwind, clean-bundle, responsive browser, live HTMX, clipboard, and frontend-budget gates; prepared the exact 31-member GUI2 antiX source bundle. Production rollout and final reconstruction-guide updates remain pending reviewed operator gates.
+
 ## 2026-07-15
 
 - Changed only the desktop notmuch browser workspace to full-width results above a full-width message reader, with a saved 35% horizontal splitter, 25-70% bounds, pointer Y-axis handling, and up/down keyboard controls; the existing mobile stack and all mail behavior remain unchanged.
