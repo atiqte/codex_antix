@@ -21,7 +21,9 @@
 - [x] Implement and locally validate Office-only Aptos 10.5pt Readable rendering as the default plus a sanitized Original display toggle that preserves duplicate/image state according to the approved privacy rules.
 - [x] Produce deterministic 32-member no-font replacement bundle `notmuch-browser-outlook-readable-src-20260718-215557.tar.gz`, 77,445 bytes, SHA256 `533235a5...`, and pass clean extraction, tests, vet, shell, build, browser, Tailwind, and asset-budget gates.
 - [x] Transfer and stage replacement bundle `533235a5...` through a guarded incoming path; Windows and antiX independently matched size/hash/member safety, final mode is 600, and production remained unchanged.
-- [ ] Independently extract/test/vet/race/shell/build bundle `533235a5...` on antiX, then repeat ten-CID, Readable/Original visual, Windows tunnel, read-only, install/rollback, and reboot gates one reviewed chunk at a time.
+- [x] Independently extract/test/vet/race/shell/build bundle `533235a5...` on antiX; exact temporary Linux binary is 9,769,225 bytes, SHA256 `e80fb11d...`, and production remained unchanged.
+- [ ] Run exact temporary binary `e80fb11d...` on isolated port 8876; automatically validate Readable/Original state, real ten-CID burst, genuine attachment isolation, security/assets/temp cleanup, then retain it for owner manual comparison.
+- [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
 - [ ] After every replacement rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, font preflight, commands, rollback, expected output, copy controls, and troubleshooting.
