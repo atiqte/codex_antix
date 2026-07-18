@@ -36,7 +36,9 @@
 - [x] Execute final validator `c660f120...`; automated identity/HTTP/policy/attachment/ten-CID/temp gates passed and exact PID 87785 is retained through pointer `84e47fda...`.
 - [x] At Firefox 100% and identical viewport, manually compare retained Readable and Original views; owner explicitly reported `antiX Outlook comparison: PASS`.
 - [x] Read-only audit retained PID 87785/pointer/report/temp and production after manual PASS; every identity and invariant matched with no state change.
-- [ ] Freshly identity-match and stop PID 87785, remove only its empty isolated temp and pointer, preserve evidence, and reprove production before backup.
+- [ ] Do not run the previously issued PID-87785 cleanup chunk: it is superseded while the retained candidate is used for one privacy-limited typography/structure diagnostic.
+- [ ] Collect exact source/sanitized style-property histograms and image/table nesting counts without printing body text, addresses, IDs, filenames, or HTML.
+- [ ] Replace Office-only Readable behavior with deterministic all-HTML readable typography and compact image-signature handling while preserving Original, images, tables, attachments, privacy, and security; then repeat isolated validation.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
