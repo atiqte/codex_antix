@@ -445,12 +445,12 @@ def inspect_message(label, display, requested_images, *, htmx, effective_images=
     require("script-src 'none'" in frame_csp, f"{label}: iframe script-src changed")
     for forbidden_tag in ("script", "object", "embed", "iframe", "foreignobject"):
         require(forbidden_tag not in inner.tags, f"{label}: {forbidden_tag} element survived")
-    if display == "readable":
-        require("notmuch-browser-office-readable" in inner.ids, f"{label}: Office Readable override missing")
+    office_readable_override = "notmuch-browser-office-readable" in inner.ids
+    if display == "readable" and office_readable_override:
         require("font-size:10.5pt!important" in srcdoc, f"{label}: Readable font size missing")
         require("line-height:1.35!important" in srcdoc, f"{label}: Readable line height missing")
-    else:
-        require("notmuch-browser-office-readable" not in inner.ids, f"{label}: Original contains Readable override")
+    if display == "original":
+        require(not office_readable_override, f"{label}: Original contains Readable override")
     if effective_images == "blocked":
         require("Images blocked" in visible, f"{label}: blocked permission state missing")
         require("img-src 'none'" in frame_csp, f"{label}: blocked iframe CSP changed")
@@ -466,6 +466,7 @@ def inspect_message(label, display, requested_images, *, htmx, effective_images=
         "headers": headers,
         "parser": parser,
         "srcdoc": srcdoc,
+        "office_readable_override": office_readable_override,
         "elapsed_ms": round(elapsed * 1000, 1),
     }
 
@@ -486,6 +487,16 @@ def temp_entries(path):
         for name in dirs + files:
             entries.append(os.path.join(root, name))
     return entries
+
+
+def validate_display_policy(readable_embedded, original_embedded, readable_blocked, original_blocked):
+    if readable_embedded["office_readable_override"]:
+        require(readable_embedded["srcdoc"] != original_embedded["srcdoc"], "Office Readable and Original srcdoc unexpectedly match")
+        require(readable_blocked["srcdoc"] != original_blocked["srcdoc"], "Office blocked Readable and Original srcdoc unexpectedly match")
+        return "office-readable-override"
+    require(readable_embedded["srcdoc"] == original_embedded["srcdoc"], "non-Office embedded Readable and Original srcdoc differ")
+    require(readable_blocked["srcdoc"] == original_blocked["srcdoc"], "non-Office blocked Readable and Original srcdoc differ")
+    return "non-office-sanitized-parity"
 
 
 asset_expectations = {
@@ -569,6 +580,16 @@ readable_embedded = inspect_message("readable-embedded", "readable", "embedded",
 original_embedded = inspect_message("original-embedded", "original", "embedded", htmx=True)
 readable_remote = inspect_message("readable-remote", "readable", "remote", htmx=True)
 
+display_classification = validate_display_policy(
+    readable_embedded,
+    original_embedded,
+    readable_blocked,
+    original_blocked,
+)
+
+print(f"display_classification={display_classification}")
+print("readable_original_policy=PASS")
+
 require("/inline-image?cap=" not in readable_blocked["srcdoc"], "blocked mode contains signed inline-image URLs")
 require("/inline-image?cap=" not in original_blocked["srcdoc"], "Original blocked mode contains signed inline-image URLs")
 
@@ -645,6 +666,7 @@ report = {
         "readable_embedded_ms": readable_embedded["elapsed_ms"],
         "original_embedded_ms": original_embedded["elapsed_ms"],
         "readable_remote_ms": readable_remote["elapsed_ms"],
+        "display_classification": display_classification,
         "genuine_attachment_rows": 1,
         "signed_cid_urls": 10,
     },

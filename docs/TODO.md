@@ -27,8 +27,11 @@
 - [x] Remove only the exact empty isolated directory after repeating PID/process/port/pointer guards; preserve failed-run evidence and reprove unchanged production before and after.
 - [x] Implement and locally validate replacement harness `cfd2ce4f...`, 31,961 bytes, whose inner `srcdoc` CSP and tag checks use structured HTML parsing.
 - [x] Transfer replacement harness `cfd2ce4f...` under a new evidence-preserving filename and independently verify its structured `srcdoc` regression on antiX while retaining the failed harness/run evidence.
-- [ ] Audit failed isolated attempt-2 PID 68939, port/pointer/temp/run evidence and production, then collect content-private HTML Office/legacy marker, element, font, and image-reference counts for the exact duplicate-1 body.
-- [ ] Decide from that diagnostic whether the real message should remain non-Office by policy, receive a narrowly justified additional Office detector, or make the harness accept no override; do not alter the application or validator assumption before evidence.
+- [x] Audit failed isolated attempt-2 PID 68939, port/pointer/temp/run evidence and production, then collect content-private HTML Office/legacy marker, element, font, and image-reference counts for the exact duplicate-1 body.
+- [x] Retain the current Office-only detector: the real body has zero Office-generation markers and already declares Aptos/sans-serif; Exchange transport headers do not justify reclassification.
+- [ ] Remove only attempt 2's exact audited empty isolated directory using fresh guards.
+- [x] Implement and locally validate final policy-aware harness `c660f120...`, 33,092 bytes, accepting Office override divergence or exact non-Office Readable/Original parity while rejecting mismatches.
+- [ ] Transfer and independently verify final harness `c660f120...` under a new filename, then rerun the isolated gate.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
