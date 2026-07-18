@@ -4,9 +4,11 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Replace the rejected uninstalled annotated-GUI bundle with the approved GUI2 compact-subbar and metadata-alignment revision, then repeat preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof one reviewed chunk at a time.
+- [ ] Replace the superseded uninstalled GUI2 bundle with reference-aware embedded-image rendering and local-font typography, then repeat preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof one reviewed chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
-- [ ] After every GUI2 rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, commands, rollback, expected output, copy controls, and troubleshooting.
+- [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
+- [x] Implement and locally validate body-resource classification, confirmed CID/data/SVG/relative image rendering, genuine-attachment-only Save All, and local Inter/Aporetic/Aptos font stacks without bundling fonts; package exact no-font bundle `notmuch-browser-body-images-src-20260718-183128.tar.gz`.
+- [ ] After every replacement rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, font preflight, commands, rollback, expected output, copy controls, and troubleshooting.
 - [ ] In that final guide update, correct the retained attachment rollback filenames to `rollback-browser.sh` and `backup-inventory.sha256`; the July 18 antiX inventory proved those are the actual validated files.
 - [x] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
 - [x] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.

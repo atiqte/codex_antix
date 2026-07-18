@@ -5,6 +5,7 @@ import (
 	stdhtml "html"
 	"io"
 	"net/url"
+	pathpkg "path"
 	"regexp"
 	"strings"
 	"unicode"
@@ -26,6 +27,12 @@ const (
 )
 
 var cidReferencePattern = regexp.MustCompile(`(?i)cid:[^\s"'<>(),]+`)
+var cssURLPattern = regexp.MustCompile(`(?i)url\(\s*['"]?([^'")]+)['"]?\s*\)`)
+
+type imageReferenceSet struct {
+	CIDs  map[string]bool
+	Names map[string]bool
+}
 
 func parseImageMode(raw string) imageMode {
 	switch imageMode(strings.ToLower(strings.TrimSpace(raw))) {
@@ -39,6 +46,10 @@ func parseImageMode(raw string) imageMode {
 }
 
 func sanitizeEmailHTML(body string, mode imageMode, origin string, cidURLs map[string]string) (string, error) {
+	return sanitizeEmailHTMLWithResources(body, mode, origin, cidURLs, nil)
+}
+
+func sanitizeEmailHTMLWithResources(body string, mode imageMode, origin string, cidURLs map[string]string, nameURLs map[string]string) (string, error) {
 	if len(body) > maxEmailHTMLBytes {
 		return "", fmt.Errorf("email HTML exceeds %d bytes", maxEmailHTMLBytes)
 	}
@@ -50,6 +61,7 @@ func sanitizeEmailHTML(body string, mode imageMode, origin string, cidURLs map[s
 	out.WriteString(`<meta http-equiv="Content-Security-Policy" content="`)
 	out.WriteString(stdhtml.EscapeString(emailFrameCSP(mode, origin)))
 	out.WriteString(`">`)
+	out.WriteString(`<style id="notmuch-browser-email-defaults">html,body{font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif}img{max-width:100%;height:auto}</style>`)
 
 	dropDepth := 0
 	dropName := ""
@@ -94,7 +106,7 @@ func sanitizeEmailHTML(body string, mode imageMode, origin string, cidURLs map[s
 				}
 				continue
 			}
-			token.Attr = sanitizeEmailAttributes(token.Attr, mode, cidURLs)
+			token.Attr = sanitizeEmailAttributes(name, token.Attr, mode, cidURLs, nameURLs)
 			out.WriteString(token.String())
 			if name == "style" && tokenType == xhtml.StartTagToken {
 				styleDepth++
@@ -106,7 +118,7 @@ func sanitizeEmailHTML(body string, mode imageMode, origin string, cidURLs map[s
 			out.WriteString(token.String())
 		case xhtml.TextToken:
 			if styleDepth > 0 {
-				token.Data = rewriteCIDReferences(token.Data, mode, cidURLs)
+				token.Data = rewriteStyleImageReferences(token.Data, mode, cidURLs, nameURLs)
 			}
 			out.WriteString(token.String())
 		case xhtml.DoctypeToken:
@@ -142,7 +154,7 @@ func shouldDropEmailElement(name string, attrs []xhtml.Attribute) bool {
 	return false
 }
 
-func sanitizeEmailAttributes(attrs []xhtml.Attribute, mode imageMode, cidURLs map[string]string) []xhtml.Attribute {
+func sanitizeEmailAttributes(element string, attrs []xhtml.Attribute, mode imageMode, cidURLs map[string]string, nameURLs map[string]string) []xhtml.Attribute {
 	out := attrs[:0]
 	for _, attr := range attrs {
 		key := strings.ToLower(attr.Key)
@@ -150,8 +162,14 @@ func sanitizeEmailAttributes(attrs []xhtml.Attribute, mode imageMode, cidURLs ma
 			continue
 		}
 		value := attr.Val
-		switch key {
-		case "src", "srcset", "background", "href", "xlink:href", "poster", "style":
+		switch {
+		case key == "style":
+			value = rewriteStyleImageReferences(value, mode, cidURLs, nameURLs)
+		case isImageReferenceAttribute(element, key) && key == "srcset":
+			value = rewriteSrcsetImageReferences(value, mode, cidURLs, nameURLs)
+		case isImageReferenceAttribute(element, key):
+			value = rewriteDirectImageReference(value, mode, cidURLs, nameURLs)
+		case key == "src" || key == "href" || key == "xlink:href" || key == "poster" || key == "background":
 			value = rewriteCIDReferences(value, mode, cidURLs)
 		}
 		trimmed := strings.ToLower(strings.TrimSpace(value))
@@ -162,6 +180,182 @@ func sanitizeEmailAttributes(attrs []xhtml.Attribute, mode imageMode, cidURLs ma
 		out = append(out, attr)
 	}
 	return out
+}
+
+func collectImageReferences(body string) imageReferenceSet {
+	references := imageReferenceSet{CIDs: map[string]bool{}, Names: map[string]bool{}}
+	tokenizer := xhtml.NewTokenizer(strings.NewReader(body))
+	tokenizer.SetMaxBuf(maxHTMLTokenBytes)
+	styleDepth := 0
+	for {
+		tokenType := tokenizer.Next()
+		if tokenType == xhtml.ErrorToken {
+			break
+		}
+		token := tokenizer.Token()
+		element := strings.ToLower(token.Data)
+		switch tokenType {
+		case xhtml.StartTagToken, xhtml.SelfClosingTagToken:
+			for _, attr := range token.Attr {
+				key := strings.ToLower(attr.Key)
+				switch {
+				case key == "style":
+					collectStyleImageReferences(attr.Val, &references)
+				case isImageReferenceAttribute(element, key) && key == "srcset":
+					collectSrcsetImageReferences(attr.Val, &references)
+				case isImageReferenceAttribute(element, key):
+					collectDirectImageReference(attr.Val, &references)
+				}
+			}
+			if element == "style" && tokenType == xhtml.StartTagToken {
+				styleDepth++
+			}
+		case xhtml.EndTagToken:
+			if element == "style" && styleDepth > 0 {
+				styleDepth--
+			}
+		case xhtml.TextToken:
+			if styleDepth > 0 {
+				collectStyleImageReferences(token.Data, &references)
+			}
+		}
+	}
+	return references
+}
+
+func isImageReferenceAttribute(element string, key string) bool {
+	switch key {
+	case "background":
+		return true
+	case "src":
+		return element == "img" || element == "input"
+	case "srcset":
+		return element == "img" || element == "source"
+	case "poster":
+		return element == "video"
+	case "href", "xlink:href":
+		return element == "image" || element == "use"
+	default:
+		return false
+	}
+}
+
+func collectDirectImageReference(value string, references *imageReferenceSet) {
+	collectContentIDs(value, references)
+	if name, relative := relativeImageName(value); relative && name != "" {
+		references.Names[name] = true
+	}
+}
+
+func collectSrcsetImageReferences(value string, references *imageReferenceSet) {
+	collectContentIDs(value, references)
+	if strings.Contains(strings.ToLower(value), "data:") {
+		return
+	}
+	for _, candidate := range strings.Split(value, ",") {
+		fields := strings.Fields(strings.TrimSpace(candidate))
+		if len(fields) > 0 {
+			collectDirectImageReference(fields[0], references)
+		}
+	}
+}
+
+func collectContentIDs(value string, references *imageReferenceSet) {
+	for _, match := range cidReferencePattern.FindAllStringIndex(value, -1) {
+		if insideDataURI(value, match[0]) {
+			continue
+		}
+		if cid := normalizeContentID(value[match[0]:match[1]]); cid != "" {
+			references.CIDs[strings.ToLower(cid)] = true
+		}
+	}
+}
+
+func collectStyleImageReferences(value string, references *imageReferenceSet) {
+	for _, match := range cssURLPattern.FindAllStringSubmatch(value, -1) {
+		if len(match) > 1 {
+			collectDirectImageReference(match[1], references)
+		}
+	}
+}
+
+func rewriteDirectImageReference(value string, mode imageMode, cidURLs map[string]string, nameURLs map[string]string) string {
+	rewritten := rewriteCIDReferences(value, mode, cidURLs)
+	if rewritten != value {
+		return rewritten
+	}
+	name, relative := relativeImageName(value)
+	if !relative {
+		return value
+	}
+	if mode == imagesBlocked {
+		return "about:blank#blocked-image"
+	}
+	if replacement := nameURLs[name]; name != "" && replacement != "" {
+		return replacement
+	}
+	return "about:blank#missing-inline-image"
+}
+
+func rewriteSrcsetImageReferences(value string, mode imageMode, cidURLs map[string]string, nameURLs map[string]string) string {
+	value = rewriteCIDReferences(value, mode, cidURLs)
+	if strings.Contains(strings.ToLower(value), "data:") {
+		return value
+	}
+	parts := strings.Split(value, ",")
+	for i, candidate := range parts {
+		leading := candidate[:len(candidate)-len(strings.TrimLeft(candidate, " \t\r\n"))]
+		fields := strings.Fields(strings.TrimSpace(candidate))
+		if len(fields) == 0 {
+			continue
+		}
+		fields[0] = rewriteDirectImageReference(fields[0], mode, cidURLs, nameURLs)
+		parts[i] = leading + strings.Join(fields, " ")
+	}
+	return strings.Join(parts, ",")
+}
+
+func rewriteStyleImageReferences(value string, mode imageMode, cidURLs map[string]string, nameURLs map[string]string) string {
+	value = rewriteCIDReferences(value, mode, cidURLs)
+	return cssURLPattern.ReplaceAllStringFunc(value, func(match string) string {
+		parts := cssURLPattern.FindStringSubmatch(match)
+		if len(parts) < 2 {
+			return match
+		}
+		rewritten := rewriteDirectImageReference(parts[1], mode, cidURLs, nameURLs)
+		return "url(\"" + strings.ReplaceAll(rewritten, "\"", "%22") + "\")"
+	})
+}
+
+func relativeImageName(value string) (string, bool) {
+	value = strings.TrimSpace(strings.Trim(value, "\"'"))
+	if value == "" {
+		return "", false
+	}
+	lower := strings.ToLower(value)
+	for _, prefix := range []string{"cid:", "data:", "http:", "https:", "ftp:", "about:", "blob:", "//", "#"} {
+		if strings.HasPrefix(lower, prefix) {
+			return "", false
+		}
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.IsAbs() || parsed.Host != "" {
+		return "", false
+	}
+	pathValue, err := url.PathUnescape(parsed.Path)
+	if err != nil {
+		return "", true
+	}
+	if pathValue == "" || strings.HasPrefix(pathValue, "/") || strings.Contains(pathValue, "\\") || strings.ContainsRune(pathValue, '\x00') {
+		return "", true
+	}
+	for _, segment := range strings.Split(pathValue, "/") {
+		if segment == ".." {
+			return "", true
+		}
+	}
+	name := strings.ToLower(sanitizeFilename(pathpkg.Base(pathValue)))
+	return name, true
 }
 
 func rewriteCIDReferences(value string, mode imageMode, cidURLs map[string]string) string {

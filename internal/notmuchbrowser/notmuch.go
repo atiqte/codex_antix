@@ -129,6 +129,11 @@ type Attachment struct {
 	InlineURL   string
 }
 
+type embeddedImagePartLookup struct {
+	CIDs  map[string]int
+	Names map[string]int
+}
+
 type Status struct {
 	ConfigPath           string
 	DatabasePath         string
@@ -422,6 +427,15 @@ func ParseMessageDetails(data []byte) ([]MessageDetail, error) {
 		detail.Parts = parts
 		htmlPart := firstBodyPart(parts, "text/html")
 		plainPart := firstBodyPart(parts, "text/plain")
+		if htmlPart.Content != "" {
+			detail.HTMLBody = htmlPart.Content
+			detail.BodyKind = "html"
+			detail.HasBody = true
+		} else if plainPart.Content != "" {
+			detail.PlainBody = plainPart.Content
+			detail.BodyKind = "plain"
+			detail.HasBody = true
+		}
 		bodyPartIDs := map[int]bool{}
 		if htmlPart.ID > 0 {
 			bodyPartIDs[htmlPart.ID] = true
@@ -429,8 +443,9 @@ func ParseMessageDetails(data []byte) ([]MessageDetail, error) {
 		if plainPart.ID > 0 {
 			bodyPartIDs[plainPart.ID] = true
 		}
+		bodyResourcePartIDs := referencedImagePartIDs(parts, collectImageReferences(detail.HTMLBody))
 		for _, part := range parts {
-			if !downloadablePart(part, bodyPartIDs) {
+			if !downloadablePart(part, bodyPartIDs, bodyResourcePartIDs) {
 				continue
 			}
 			name := attachmentName(part)
@@ -442,15 +457,6 @@ func ParseMessageDetails(data []byte) ([]MessageDetail, error) {
 				Inline:      strings.EqualFold(part.Disposition, "inline"),
 				Previewable: browserImageType(part.MediaType),
 			})
-		}
-		if htmlPart.Content != "" {
-			detail.HTMLBody = htmlPart.Content
-			detail.BodyKind = "html"
-			detail.HasBody = true
-		} else if plainPart.Content != "" {
-			detail.PlainBody = plainPart.Content
-			detail.BodyKind = "plain"
-			detail.HasBody = true
 		}
 		out = append(out, detail)
 	}
@@ -560,14 +566,69 @@ func firstBodyPart(parts []MIMEPart, contentType string) MIMEPart {
 	return MIMEPart{}
 }
 
-func downloadablePart(part MIMEPart, bodyPartIDs map[int]bool) bool {
+func downloadablePart(part MIMEPart, bodyPartIDs map[int]bool, bodyResourcePartIDs map[int]bool) bool {
 	if part.ID <= 0 || bodyPartIDs[part.ID] || part.NestedInAttachment {
 		return false
 	}
-	if strings.TrimSpace(part.FileName) != "" || strings.EqualFold(part.Disposition, "attachment") {
+	if strings.EqualFold(part.Disposition, "attachment") {
+		return true
+	}
+	if bodyResourcePartIDs[part.ID] {
+		return false
+	}
+	if strings.TrimSpace(part.FileName) != "" {
 		return true
 	}
 	return strings.EqualFold(part.MediaType, "message/rfc822")
+}
+
+func embeddedImageParts(parts []MIMEPart) embeddedImagePartLookup {
+	lookup := embeddedImagePartLookup{CIDs: map[string]int{}, Names: map[string]int{}}
+	byID := make(map[int]MIMEPart, len(parts))
+	nameCounts := map[string]int{}
+	for _, part := range parts {
+		if part.ID <= 0 || part.NestedInAttachment || !browserImageType(part.MediaType) {
+			continue
+		}
+		byID[part.ID] = part
+		if cid := strings.ToLower(part.ContentID); cid != "" {
+			currentID := lookup.CIDs[cid]
+			current := byID[currentID]
+			if currentID == 0 || strings.EqualFold(current.Disposition, "attachment") && !strings.EqualFold(part.Disposition, "attachment") {
+				lookup.CIDs[cid] = part.ID
+			}
+		}
+		if name := normalizeEmbeddedImageName(part.FileName); name != "" {
+			nameCounts[name]++
+			lookup.Names[name] = part.ID
+		}
+	}
+	for name, count := range nameCounts {
+		if count != 1 {
+			delete(lookup.Names, name)
+		}
+	}
+	return lookup
+}
+
+func referencedImagePartIDs(parts []MIMEPart, references imageReferenceSet) map[int]bool {
+	selected := map[int]bool{}
+	lookup := embeddedImageParts(parts)
+	for cid := range references.CIDs {
+		if id := lookup.CIDs[strings.ToLower(cid)]; id > 0 {
+			selected[id] = true
+		}
+	}
+	for name := range references.Names {
+		if id := lookup.Names[name]; id > 0 {
+			selected[id] = true
+		}
+	}
+	return selected
+}
+
+func normalizeEmbeddedImageName(name string) string {
+	return strings.ToLower(sanitizeFilename(name))
 }
 
 func normalizeDisposition(value string) string {

@@ -80,6 +80,7 @@ func (s *Server) prepareMessageView(r *http.Request, view *messageView) error {
 	origin := requestOrigin(r, s.Config.Addr)
 	inlineURLs := make(map[int]string)
 	cidURLs := make(map[string]string)
+	nameURLs := make(map[string]string)
 	for _, part := range detail.Parts {
 		if part.ID <= 0 || part.NestedInAttachment || !browserImageType(part.MediaType) {
 			continue
@@ -98,8 +99,16 @@ func (s *Server) prepareMessageView(r *http.Request, view *messageView) error {
 		}
 		path := signedRoute("/inline-image", token)
 		inlineURLs[part.ID] = path
-		if part.ContentID != "" {
-			cidURLs[strings.ToLower(part.ContentID)] = origin + path
+	}
+	imageParts := embeddedImageParts(detail.Parts)
+	for cid, partID := range imageParts.CIDs {
+		if path := inlineURLs[partID]; path != "" {
+			cidURLs[strings.ToLower(cid)] = origin + path
+		}
+	}
+	for name, partID := range imageParts.Names {
+		if path := inlineURLs[partID]; path != "" {
+			nameURLs[name] = origin + path
 		}
 	}
 	for i := range detail.Attachments {
@@ -130,7 +139,7 @@ func (s *Server) prepareMessageView(r *http.Request, view *messageView) error {
 		view.SaveAllURL = signedRoute("/attachments.zip", token)
 	}
 	if detail.BodyKind == "html" {
-		srcdoc, err := sanitizeEmailHTML(detail.HTMLBody, view.ImageMode, origin, cidURLs)
+		srcdoc, err := sanitizeEmailHTMLWithResources(detail.HTMLBody, view.ImageMode, origin, cidURLs, nameURLs)
 		if err != nil {
 			return fmt.Errorf("email HTML cannot be rendered safely: %w", err)
 		}

@@ -133,6 +133,32 @@ func TestSaveAllUsesSelectedDuplicateAndResolvesNames(t *testing.T) {
 	}
 }
 
+func TestSaveAllExcludesReferencedInlineBodyResources(t *testing.T) {
+	server, runner := newDownloadTestServer(t)
+	messageID := "zip-inline@example.test"
+	runner.outputs["search\x00--output=files\x00id:"+messageID] = "/mail/one\n"
+	runner.outputs["show\x00--format=json\x00--entire-thread=false\x00--include-html\x00--decrypt=false\x00--duplicate=1\x00id:"+messageID] = inlineZIPMIMEJSON
+	runner.rawOutputs[rawPartKey(messageID, 0, 4)] = []byte("real attachment")
+	token, _ := server.Signer.Sign(capabilityPayload{Purpose: purposeArchive, MessageID: messageID})
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, signedRoute("/attachments.zip", token), nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("ZIP status=%d body=%s", response.Code, response.Body.String())
+	}
+	reader, err := zip.NewReader(bytes.NewReader(response.Body.Bytes()), int64(response.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reader.File) != 1 || reader.File[0].Name != "report.pdf" {
+		t.Fatalf("body resource leaked into ZIP: %#v", reader.File)
+	}
+	for _, call := range runner.calls {
+		if strings.Contains(strings.Join(call, "\x00"), "--part=3") {
+			t.Fatalf("body resource part was decoded for Save All: %#v", call)
+		}
+	}
+}
+
 func TestDownloadFailureStatusesAndCleanup(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -235,3 +261,5 @@ func rawPartKey(messageID string, duplicate int, part int) string {
 }
 
 const zipMIMEJSON = `[[[{"id":"zip@example.test","match":true,"filename":["/mail/one","/mail/two"],"tags":["attachment"],"headers":{"Subject":"ZIP","From":"a","To":"b","Date":"Today"},"body":[{"id":1,"content-type":"text/plain","content":"body"},{"id":3,"content-type":"text/plain","content-disposition":"attachment","filename":"../report.txt"},{"id":4,"content-type":"text/plain","content-disposition":"attachment","filename":"report.txt"}]} ,[]]]]`
+
+const inlineZIPMIMEJSON = `[[[{"id":"zip-inline@example.test","match":true,"filename":"/mail/one","tags":["attachment"],"headers":{"Subject":"ZIP inline","From":"a","To":"b","Date":"Today"},"body":[{"id":1,"content-type":"multipart/related","content":[{"id":2,"content-type":"text/html","content":"<p>Body<img src=\"cid:logo@example.test\"></p>"},{"id":3,"content-type":"image/png","content-id":"logo@example.test","content-disposition":"inline","filename":"logo.png"},{"id":4,"content-type":"application/pdf","content-disposition":"attachment","filename":"report.pdf"}]}]} ,[]]]]`

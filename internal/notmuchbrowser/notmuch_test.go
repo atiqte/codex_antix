@@ -116,6 +116,33 @@ func TestParseMessageDetailsPrefersHTMLAndAttachments(t *testing.T) {
 	}
 }
 
+func TestPrepareMessageViewMapsBodyResourcesWithoutAttachmentLeakage(t *testing.T) {
+	server, runner := newDownloadTestServer(t)
+	messageID := "resources@example.test"
+	runner.outputs["search\x00--output=files\x00id:"+messageID] = "/mail/resources\n"
+	runner.outputs["show\x00--format=json\x00--entire-thread=false\x00--include-html\x00--decrypt=false\x00--duplicate=1\x00id:"+messageID] = embeddedResourceMIMEJSON
+	detail, err := server.Client.Message(context.Background(), messageID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := messageView{Detail: detail, ImageMode: imagesEmbedded}
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8765/message?id=resources%40example.test&images=embedded", nil)
+	if err := server.prepareMessageView(req, &view); err != nil {
+		t.Fatal(err)
+	}
+	if len(view.Detail.Attachments) != 5 || view.SaveAllURL == "" {
+		t.Fatalf("genuine attachment set mismatch: %#v", view.Detail.Attachments)
+	}
+	if count := strings.Count(view.HTMLSrcdoc, "/inline-image?cap="); count != 3 {
+		t.Fatalf("signed body image count=%d want=3: %s", count, view.HTMLSrcdoc)
+	}
+	for _, want := range []string{"data:image/png", "about:blank#missing-inline-image", "font-family:Aptos"} {
+		if !strings.Contains(view.HTMLSrcdoc, want) {
+			t.Fatalf("prepared HTML missing %q: %s", want, view.HTMLSrcdoc)
+		}
+	}
+}
+
 func TestSearchCommandConstruction(t *testing.T) {
 	cfg := testConfig()
 	runner := &fakeRunner{
@@ -269,14 +296,24 @@ func TestStaticAssetServedLocally(t *testing.T) {
 	if !strings.Contains(css, "tailwindcss") || !strings.Contains(css, ".app-sidebar") {
 		t.Fatalf("static CSS did not look like compiled local Tailwind output")
 	}
-	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".search-subbar{", "grid-template-columns:minmax(0,1fr) auto", ".result-toolbar-slot{min-width:0}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".result-subject-line .subject,.result-id-line .path,.reader-heading-title h1,.message-id-line .path{overflow-wrap:anywhere;min-width:0;display:inline}", "align-items:baseline", "text-align:right", "white-space:nowrap", "@media (max-width:860px)", ".search-subbar{grid-template-columns:minmax(0,1fr);align-items:stretch}"} {
+	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".search-subbar{", "grid-template-columns:minmax(0,1fr) auto", ".result-toolbar-slot{min-width:0}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".result-subject-line .subject,.result-id-line .path,.reader-heading-title h1,.message-id-line .path{overflow-wrap:anywhere;min-width:0;display:inline}", "--font-subject:\"Inter Variable\", Inter, \"Segoe UI\", system-ui, sans-serif", "--font-message-mono:\"AporeticSansMonoNerdFont\", \"Aporetic Sans Mono Nerd Font\", \"Cascadia Mono\", \"Liberation Mono\", monospace", "font-family:var(--font-subject)", "font-family:var(--font-message-mono)", "align-items:baseline", "text-align:right", "white-space:nowrap", "@media (max-width:860px)", ".search-subbar{grid-template-columns:minmax(0,1fr);align-items:stretch}"} {
 		if !strings.Contains(css, want) {
 			t.Fatalf("compiled CSS missing GUI rule %q", want)
 		}
 	}
-	for _, unwanted := range []string{".app-topbar{", ".mode-indicator{", ".pager{", ".result-toolbar{"} {
+	for _, unwanted := range []string{".app-topbar{", ".mode-indicator{", ".pager{", ".result-toolbar{", "@font-face", ".ttf", ".woff"} {
 		if strings.Contains(css, unwanted) {
 			t.Fatalf("compiled CSS retained removed GUI rule %q", unwanted)
+		}
+	}
+	entries, err := staticFiles.ReadDir("static")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		lower := strings.ToLower(entry.Name())
+		if strings.HasSuffix(lower, ".ttf") || strings.HasSuffix(lower, ".otf") || strings.HasSuffix(lower, ".woff") || strings.HasSuffix(lower, ".woff2") {
+			t.Fatalf("font asset must not be embedded: %s", entry.Name())
 		}
 	}
 }

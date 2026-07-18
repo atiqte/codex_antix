@@ -35,6 +35,8 @@
     --shadow: 0 1px 2px rgba(19, 35, 45, 0.08);
     --shadow-raised: 0 8px 24px rgba(19, 35, 45, 0.12);
     --sidebar-width: 224px;
+    --font-subject: "Inter Variable", Inter, "Segoe UI", system-ui, sans-serif;
+    --font-message-mono: "AporeticSansMonoNerdFont", "Aporetic Sans Mono Nerd Font", "Cascadia Mono", "Liberation Mono", monospace;
     font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.4;
@@ -667,6 +669,7 @@
     max-width: 100%;
     overflow-wrap: anywhere;
     color: var(--sapphire-dark);
+    font-family: var(--font-subject);
     font-weight: 700;
   }
 
@@ -685,6 +688,11 @@
     display: inline;
     min-width: 0;
     overflow-wrap: anywhere;
+  }
+
+  .result-id-line .path,
+  .message-id-line .path {
+    font-family: var(--font-message-mono);
   }
 
   .mini-copy-button {
@@ -845,6 +853,7 @@
   .reader-heading h1 {
     margin: 0;
     color: var(--ink);
+    font-family: var(--font-subject);
     font-size: 19px;
     line-height: 1.28;
     overflow-wrap: anywhere;
@@ -1059,6 +1068,7 @@
     margin: 0;
     padding: 18px;
     color: var(--ink);
+    font-family: var(--font-message-mono);
     font-size: 13px;
     line-height: 1.5;
     overflow-wrap: anywhere;

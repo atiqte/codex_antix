@@ -4,6 +4,9 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-18
 
+- Classified selected-HTML CID and safe relative-filename resources before attachment construction so inline signature images render after confirmation without appearing in Attachments or Save All; explicit and unreferenced genuine attachments remain downloadable.
+- Added sandboxed HTML defaults for responsive images and local Aptos fallback typography, plus local Inter subjects and Aporetic Sans Mono Message-ID/plain-text stacks without embedding or serving any font file.
+- Added focused reference, traversal, ambiguity, attachment-precedence, signed-view, ZIP-exclusion, CSP, data-image, and font-policy tests; passed Go tests/vet at 76.6% coverage, deterministic Tailwind, shell/Python checks, frontend budgets, and a clean 31-member no-font bundle validation.
 - Moved the notmuch result query/count/range/pager cluster into the search shortcut subbar and added HTMX out-of-band updates so searches refresh both that external summary and the result body without replacing the reader.
 - Removed the dedicated result-toolbar band, kept subject and Message-ID copy controls directly after their text, added weekday reader dates, and baseline-aligned the metadata grid while preserving the horizontal workspace and all backend/security behavior.
 - Passed Go test/vet, deterministic Tailwind, clean-bundle, responsive browser, live HTMX, clipboard, and frontend-budget gates; prepared the exact 31-member GUI2 antiX source bundle. Production rollout and final reconstruction-guide updates remain pending reviewed operator gates.

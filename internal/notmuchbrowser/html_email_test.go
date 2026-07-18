@@ -90,3 +90,79 @@ func TestCIDRewriteDoesNotCorruptDataImagePayload(t *testing.T) {
 		t.Fatalf("data image payload was rewritten: %q", got)
 	}
 }
+
+func TestCollectImageReferencesCoversCIDRelativeSrcsetAndCSS(t *testing.T) {
+	body := `<style>.hero{background:url("assets/Badge%20One.png?cache=1")}.data{background:url(data:image/svg+xml,%3Csvg%3Ecid:not-a-part%3C/svg%3E)}</style><img src="cid:%3Clogo%40example.test%3E" srcset="photo.png 1x, images/photo@2x.png 2x"><table background="marks/seal.svg"></table><img src="../escape.png"><a href="ordinary.png">link</a>`
+	references := collectImageReferences(body)
+	if !references.CIDs["logo@example.test"] || references.CIDs["not-a-part%3c/svg%3e"] {
+		t.Fatalf("unexpected CID references: %#v", references.CIDs)
+	}
+	for _, name := range []string{"badge one.png", "photo.png", "photo@2x.png", "seal.svg"} {
+		if !references.Names[name] {
+			t.Fatalf("missing relative image reference %q: %#v", name, references.Names)
+		}
+	}
+	for _, name := range []string{"escape.png", "ordinary.png"} {
+		if references.Names[name] {
+			t.Fatalf("unsafe or non-image reference was collected: %q", name)
+		}
+	}
+}
+
+func TestSanitizeEmailHTMLRewritesRelativeResourcesByMode(t *testing.T) {
+	body := `<style>.logo{background-image:url(images/logo.png)}</style><img src="logo.png" srcset="small.png 1x, images/large.png 2x"><img src="../escape.png"><img src="data:image/png;base64,AA=="><img src="https://remote.example/pixel.png">`
+	nameURLs := map[string]string{
+		"logo.png":  "http://127.0.0.1:8765/inline-image?cap=logo",
+		"small.png": "http://127.0.0.1:8765/inline-image?cap=small",
+		"large.png": "http://127.0.0.1:8765/inline-image?cap=large",
+	}
+
+	blocked, err := sanitizeEmailHTMLWithResources(body, imagesBlocked, "http://127.0.0.1:8765", nil, nameURLs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(blocked, "/inline-image?") {
+		t.Fatalf("blocked output retained a signed image URL: %s", blocked)
+	}
+	if count := strings.Count(blocked, "about:blank#blocked-image"); count != 5 {
+		t.Fatalf("blocked relative resource count=%d want=5: %s", count, blocked)
+	}
+
+	embedded, err := sanitizeEmailHTMLWithResources(body, imagesEmbedded, "http://127.0.0.1:8765", nil, nameURLs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"cap=logo", "cap=small", "cap=large", "about:blank#missing-inline-image", "data:image/png", "https://remote.example/pixel.png"} {
+		if !strings.Contains(embedded, want) {
+			t.Fatalf("embedded output missing %q: %s", want, embedded)
+		}
+	}
+	if !strings.Contains(embedded, `font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif`) || !strings.Contains(embedded, `img{max-width:100%;height:auto}`) {
+		t.Fatalf("safe HTML defaults missing: %s", embedded)
+	}
+	if !strings.Contains(embedded, "font-src &#39;none&#39;") && !strings.Contains(embedded, "font-src 'none'") {
+		t.Fatalf("iframe CSP no longer blocks downloaded fonts: %s", embedded)
+	}
+}
+
+func TestEmbeddedImagePartLookupIsDeterministic(t *testing.T) {
+	parts := []MIMEPart{
+		{ID: 1, MediaType: "image/png", ContentID: "same@example.test", FileName: "duplicate.png", Disposition: "attachment"},
+		{ID: 2, MediaType: "image/png", ContentID: "same@example.test", FileName: "duplicate.png", Disposition: "inline"},
+		{ID: 3, MediaType: "image/png", FileName: "unique.png", Disposition: "inline"},
+		{ID: 4, MediaType: "image/tiff", ContentID: "unsupported@example.test", FileName: "scan.tiff", Disposition: "inline"},
+	}
+	lookup := embeddedImageParts(parts)
+	if lookup.CIDs["same@example.test"] != 2 {
+		t.Fatalf("CID did not prefer the non-attachment part: %#v", lookup.CIDs)
+	}
+	if _, ok := lookup.Names["duplicate.png"]; ok {
+		t.Fatalf("ambiguous filename should not be mapped: %#v", lookup.Names)
+	}
+	if lookup.Names["unique.png"] != 3 {
+		t.Fatalf("unique filename missing: %#v", lookup.Names)
+	}
+	if _, ok := lookup.CIDs["unsupported@example.test"]; ok {
+		t.Fatalf("unsupported browser image type was mapped: %#v", lookup.CIDs)
+	}
+}

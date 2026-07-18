@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-18: Separate Embedded Body Resources From Genuine Attachments and Use Local Fonts
+
+- Status: accepted
+- Context: GUI2 passed all 24 isolated manual checks, but filename-bearing inline CID resources still appeared as attachments and the requested subject, Message-ID, plain-body, and HTML-body typography was not expressed. Its route/rejection harness also exited without diagnostics after the successful UI checks; production remained unchanged.
+- Decision: Supersede uninstalled bundle SHA256 `605453250348370000cf90394f01d778545286a8c2bb4042c25820066ea7bdfd` and temporary binary SHA256 `472f7921118853bc22c55f097b56438998880448a929a5cb6441fefd9cf553cd`. Classify normalized CID and exact safe relative-filename references from the selected HTML before building attachments. Referenced inline or undispositioned image parts are body-only; an explicit attachment remains downloadable even if referenced; an unreferenced filename-bearing inline part remains downloadable. Keep the two image confirmations, signed part routes, duplicate isolation, iframe sandbox, and read-only command layer. Use local Inter for subjects, local Aporetic Sans Mono for Message-IDs and plain text, and local Aptos with system fallbacks for unstyled HTML while preserving safe sender CSS.
+- Consequence: Embedded signature resources render in the body after confirmation without polluting Attachments or Save All. No font file is committed, served, or bundled; exact typography depends on local installation on each viewing OS, and Aptos falls back when unavailable or unlicensed. A new source bundle and full staged rollout are required, and replacement validation scripts must print every route status before asserting.
+
 ### 2026-07-18: Compact the Search Subbar and Align Reader Metadata
 
 - Status: accepted
