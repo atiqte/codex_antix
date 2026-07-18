@@ -26,7 +26,8 @@
 - [x] Read-only audit failed isolated PID 54952, port 8876, private pointer, exact isolated temp path, and production; process/listener/pointer cleanup passed and only the exact empty mode-700 isolated directory remains.
 - [x] Remove only the exact empty isolated directory after repeating PID/process/port/pointer guards; preserve failed-run evidence and reprove unchanged production before and after.
 - [x] Implement and locally validate replacement harness `cfd2ce4f...`, 31,961 bytes, whose inner `srcdoc` CSP and tag checks use structured HTML parsing.
-- [ ] Transfer replacement harness `cfd2ce4f...` under a new evidence-preserving filename, independently verify its structured `srcdoc` regression on antiX, then rerun the isolated candidate gate.
+- [x] Transfer replacement harness `cfd2ce4f...` under a new evidence-preserving filename and independently verify its structured `srcdoc` regression on antiX while retaining the failed harness/run evidence.
+- [ ] Rerun the isolated candidate gate using only corrected mode-700 validator `/home/atiq/codex-runs/notmuch-browser-outlook-readable-isolated-validate-9cd83a5.sh` and review all automated output before manual comparison.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
