@@ -867,8 +867,61 @@
     transform: translateY(-1px);
   }
 
-  .reader-tags {
+  .reader-tools-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 7px 12px;
     margin-bottom: 9px;
+  }
+
+  .reader-tags {
+    min-width: 0;
+  }
+
+  .display-mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(68px, 1fr));
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+
+  .display-mode-switch a,
+  .display-mode-switch span {
+    display: inline-flex;
+    min-width: 68px;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .display-mode-switch a + a,
+  .display-mode-switch a + span,
+  .display-mode-switch span + a,
+  .display-mode-switch span + span {
+    border-left: 1px solid var(--line-strong);
+  }
+
+  .display-mode-switch a:hover {
+    background: var(--surface-hover);
+    color: var(--sapphire-dark);
+    text-decoration: none;
+  }
+
+  .display-mode-switch .is-active {
+    background: var(--sapphire);
+    color: #ffffff;
   }
 
   .message-fields {
@@ -1359,6 +1412,11 @@
 
   .reader-header {
     padding-inline: 11px;
+  }
+
+  .reader-tools-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .duplicate-bar,

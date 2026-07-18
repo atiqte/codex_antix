@@ -22,12 +22,13 @@ type pageView struct {
 }
 
 type messageView struct {
-	Error      string
-	BodyError  string
-	Detail     MessageDetail
-	ImageMode  imageMode
-	HTMLSrcdoc string
-	SaveAllURL string
+	Error       string
+	BodyError   string
+	Detail      MessageDetail
+	ImageMode   imageMode
+	DisplayMode displayMode
+	HTMLSrcdoc  string
+	SaveAllURL  string
 }
 
 type statusView struct {
@@ -39,26 +40,30 @@ type statusView struct {
 }
 
 var templates = template.Must(template.New("notmuch-browser").Funcs(template.FuncMap{
-	"add":              func(a, b int) int { return a + b },
-	"displayLimit":     displayLimit,
-	"firstShown":       firstShown,
-	"hasNext":          hasNext,
-	"hasPrev":          hasPrev,
-	"nextOffset":       nextOffset,
-	"prevOffset":       prevOffset,
-	"searchURL":        searchURL,
-	"messageURL":       messageURL,
-	"messageImageURL":  messageImageURL,
-	"selectedDup":      selectedDup,
-	"formatFileCount":  formatFileCount,
-	"formatBytes":      formatBytes,
-	"formatReaderDate": formatReaderDate,
-	"formatResultDate": formatResultDate,
-	"icon":             icon,
-	"isBlocked":        func(mode imageMode) bool { return mode == imagesBlocked || mode == "" },
-	"isEmbedded":       func(mode imageMode) bool { return mode == imagesEmbedded },
-	"imagesAllowed":    func(mode imageMode) bool { return mode == imagesEmbedded || mode == imagesRemote },
-	"dictTitle":        func(title string) pageView { return pageView{Title: title} },
+	"add":                 func(a, b int) int { return a + b },
+	"displayLimit":        displayLimit,
+	"firstShown":          firstShown,
+	"hasNext":             hasNext,
+	"hasPrev":             hasPrev,
+	"nextOffset":          nextOffset,
+	"prevOffset":          prevOffset,
+	"searchURL":           searchURL,
+	"messageURL":          messageURL,
+	"messageImageURL":     messageImageURL,
+	"messageViewURL":      messageViewURL,
+	"messageDuplicateURL": messageDuplicateURL,
+	"selectedDup":         selectedDup,
+	"formatFileCount":     formatFileCount,
+	"formatBytes":         formatBytes,
+	"formatReaderDate":    formatReaderDate,
+	"formatResultDate":    formatResultDate,
+	"icon":                icon,
+	"isBlocked":           func(mode imageMode) bool { return mode == imagesBlocked || mode == "" },
+	"isEmbedded":          func(mode imageMode) bool { return mode == imagesEmbedded },
+	"imagesAllowed":       func(mode imageMode) bool { return mode == imagesEmbedded || mode == imagesRemote },
+	"isReadableDisplay":   func(mode displayMode) bool { return mode == displayReadable || mode == "" },
+	"isOriginalDisplay":   func(mode displayMode) bool { return mode == displayOriginal },
+	"dictTitle":           func(title string) pageView { return pageView{Title: title} },
 }).ParseFS(templateFiles, "templates/*.html", "templates/partials/*.html"))
 
 var lucideIconBodies = map[string]string{
@@ -163,10 +168,18 @@ func searchURL(query string, offset int, limit int) string {
 }
 
 func messageURL(id string, duplicate int) string {
-	return messageImageURL(id, duplicate, imagesBlocked)
+	return messageViewURL(id, duplicate, imagesBlocked, displayReadable)
 }
 
 func messageImageURL(id string, duplicate int, mode imageMode) string {
+	return messageViewURL(id, duplicate, mode, displayReadable)
+}
+
+func messageDuplicateURL(id string, duplicate int, display displayMode) string {
+	return messageViewURL(id, duplicate, imagesBlocked, display)
+}
+
+func messageViewURL(id string, duplicate int, mode imageMode, display displayMode) string {
 	values := url.Values{}
 	values.Set("id", id)
 	if duplicate > 0 {
@@ -174,6 +187,9 @@ func messageImageURL(id string, duplicate int, mode imageMode) string {
 	}
 	if mode != imagesBlocked {
 		values.Set("images", string(mode))
+	}
+	if parseDisplayMode(string(display)) == displayOriginal {
+		values.Set("display", string(displayOriginal))
 	}
 	return "/message?" + values.Encode()
 }

@@ -61,7 +61,11 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 	if isHTMX(r) {
 		mode = parseImageMode(r.URL.Query().Get("images"))
 	}
-	view := messageView{Detail: detail, ImageMode: mode}
+	view := messageView{
+		Detail:      detail,
+		ImageMode:   mode,
+		DisplayMode: parseDisplayMode(r.URL.Query().Get("display")),
+	}
 	if err != nil {
 		view.Error = err.Error()
 	} else if err := s.prepareMessageView(r, &view); err != nil {
@@ -139,7 +143,7 @@ func (s *Server) prepareMessageView(r *http.Request, view *messageView) error {
 		view.SaveAllURL = signedRoute("/attachments.zip", token)
 	}
 	if detail.BodyKind == "html" {
-		srcdoc, err := sanitizeEmailHTMLWithResources(detail.HTMLBody, view.ImageMode, origin, cidURLs, nameURLs)
+		srcdoc, err := sanitizeEmailHTMLForDisplay(detail.HTMLBody, view.ImageMode, view.DisplayMode, origin, cidURLs, nameURLs)
 		if err != nil {
 			return fmt.Errorf("email HTML cannot be rendered safely: %w", err)
 		}

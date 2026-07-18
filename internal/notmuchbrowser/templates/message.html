@@ -19,7 +19,23 @@
           <h1>{{.Detail.Summary.Subject}}</h1>
           <button class="mini-copy-button" type="button" data-copy-text="{{.Detail.Summary.Subject}}" aria-label="Copy subject" title="Copy subject">{{icon "copy"}}</button>
         </div>
-        <div class="reader-tags tags">{{range .Detail.Summary.Tags}}<span>{{.}}</span>{{end}}</div>
+        <div class="reader-tools-row">
+          <div class="reader-tags tags">{{range .Detail.Summary.Tags}}<span>{{.}}</span>{{end}}</div>
+          {{if eq .Detail.BodyKind "html"}}
+          <div class="display-mode-switch" role="group" aria-label="Message display">
+            {{if isReadableDisplay .DisplayMode}}
+              <span class="is-active" aria-current="true">Readable</span>
+            {{else}}
+              <a href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "readable"}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "readable"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="Use normalized Outlook typography">Readable</a>
+            {{end}}
+            {{if isOriginalDisplay .DisplayMode}}
+              <span class="is-active" aria-current="true">Original</span>
+            {{else}}
+              <a href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "original"}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "original"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="Use sanitized sender formatting">Original</a>
+            {{end}}
+          </div>
+          {{end}}
+        </div>
       </div>
     </div>
     <dl class="message-fields">
@@ -37,7 +53,7 @@
           {{if selectedDup $.Detail.SelectedDup $i}}
             <strong title="{{$path}}">{{add $i 1}}</strong>
           {{else}}
-            <a href="{{messageURL $.Detail.Summary.ID $i}}" hx-get="{{messageURL $.Detail.Summary.ID $i}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="{{$path}}">{{add $i 1}}</a>
+            <a href="{{messageDuplicateURL $.Detail.Summary.ID $i $.DisplayMode}}" hx-get="{{messageDuplicateURL $.Detail.Summary.ID $i $.DisplayMode}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="{{$path}}">{{add $i 1}}</a>
           {{end}}
         {{end}}
       </div>
@@ -46,13 +62,13 @@
     <div class="image-permission-bar">
       {{if isBlocked .ImageMode}}
         <span class="permission-state">{{icon "shield-check"}} Images blocked</span>
-        <a class="icon-text-button" href="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "embedded"}}" hx-get="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "embedded"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Show images stored inside this selected email? No external server will be contacted.">{{icon "image"}} Show embedded images</a>
+        <a class="icon-text-button" href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup "embedded" .DisplayMode}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup "embedded" .DisplayMode}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Show images stored inside this selected email? No external server will be contacted.">{{icon "image"}} Show embedded images</a>
       {{else if isEmbedded .ImageMode}}
         <span class="permission-state allowed">{{icon "check"}} Embedded images shown</span>
-        <a class="icon-text-button warning-button" href="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "remote"}}" hx-get="{{messageImageURL .Detail.Summary.ID .Detail.SelectedDup "remote"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Load remote images? Remote servers may learn your IP address and that this message was viewed.">{{icon "image"}} Load remote images</a>
+        <a class="icon-text-button warning-button" href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup "remote" .DisplayMode}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup "remote" .DisplayMode}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Load remote images? Remote servers may learn your IP address and that this message was viewed.">{{icon "image"}} Load remote images</a>
       {{else}}
         <span class="permission-state warning">{{icon "image"}} Remote images allowed</span>
-        <a class="icon-text-button" href="{{messageURL .Detail.Summary.ID .Detail.SelectedDup}}" hx-get="{{messageURL .Detail.Summary.ID .Detail.SelectedDup}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false">{{icon "shield-check"}} Block images</a>
+        <a class="icon-text-button" href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup "blocked" .DisplayMode}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup "blocked" .DisplayMode}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false">{{icon "shield-check"}} Block images</a>
       {{end}}
     </div>
   </header>
