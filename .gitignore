@@ -43,6 +43,7 @@ build/
 notmuch-browser-chi-src-*.tar.gz
 notmuch-browser-attachment-src-*.tar.gz
 notmuch-browser-horizontal-src-*.tar.gz
+notmuch-browser-annotated-gui-src-*.tar.gz
 *.test
 coverage.out
 

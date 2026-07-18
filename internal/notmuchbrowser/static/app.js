@@ -27,7 +27,7 @@
     if (event.target.closest("[data-sidebar-open]")) root.classList.add("sidebar-open");
     if (event.target.closest("[data-sidebar-close]")) root.classList.remove("sidebar-open");
 
-    const copyButton = event.target.closest("[data-copy-target]");
+    const copyButton = event.target.closest("[data-copy-target], [data-copy-text]");
     if (copyButton) copyText(copyButton);
 
     const messageLink = event.target.closest("[data-message-row] .subject");
@@ -113,9 +113,12 @@
   }
 
   async function copyText(button) {
-    const target = document.querySelector(button.dataset.copyTarget);
-    if (!target) return;
-    const value = target.textContent.trim();
+    let value = button.dataset.copyText;
+    if (value === undefined) {
+      const target = document.querySelector(button.dataset.copyTarget);
+      if (!target) return;
+      value = target.textContent.trim();
+    }
     try {
       await navigator.clipboard.writeText(value);
     } catch (_) {

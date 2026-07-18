@@ -4,8 +4,11 @@ import (
 	"embed"
 	"html/template"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"strconv"
+	"strings"
+	"time"
 )
 
 //go:embed templates/*.html templates/partials/*.html
@@ -36,24 +39,26 @@ type statusView struct {
 }
 
 var templates = template.Must(template.New("notmuch-browser").Funcs(template.FuncMap{
-	"add":             func(a, b int) int { return a + b },
-	"displayLimit":    displayLimit,
-	"firstShown":      firstShown,
-	"hasNext":         hasNext,
-	"hasPrev":         hasPrev,
-	"nextOffset":      nextOffset,
-	"prevOffset":      prevOffset,
-	"searchURL":       searchURL,
-	"messageURL":      messageURL,
-	"messageImageURL": messageImageURL,
-	"selectedDup":     selectedDup,
-	"formatFileCount": formatFileCount,
-	"formatBytes":     formatBytes,
-	"icon":            icon,
-	"isBlocked":       func(mode imageMode) bool { return mode == imagesBlocked || mode == "" },
-	"isEmbedded":      func(mode imageMode) bool { return mode == imagesEmbedded },
-	"imagesAllowed":   func(mode imageMode) bool { return mode == imagesEmbedded || mode == imagesRemote },
-	"dictTitle":       func(title string) pageView { return pageView{Title: title} },
+	"add":              func(a, b int) int { return a + b },
+	"displayLimit":     displayLimit,
+	"firstShown":       firstShown,
+	"hasNext":          hasNext,
+	"hasPrev":          hasPrev,
+	"nextOffset":       nextOffset,
+	"prevOffset":       prevOffset,
+	"searchURL":        searchURL,
+	"messageURL":       messageURL,
+	"messageImageURL":  messageImageURL,
+	"selectedDup":      selectedDup,
+	"formatFileCount":  formatFileCount,
+	"formatBytes":      formatBytes,
+	"formatReaderDate": formatReaderDate,
+	"formatResultDate": formatResultDate,
+	"icon":             icon,
+	"isBlocked":        func(mode imageMode) bool { return mode == imagesBlocked || mode == "" },
+	"isEmbedded":       func(mode imageMode) bool { return mode == imagesEmbedded },
+	"imagesAllowed":    func(mode imageMode) bool { return mode == imagesEmbedded || mode == imagesRemote },
+	"dictTitle":        func(title string) pageView { return pageView{Title: title} },
 }).ParseFS(templateFiles, "templates/*.html", "templates/partials/*.html"))
 
 var lucideIconBodies = map[string]string{
@@ -193,4 +198,42 @@ func formatBytes(size int64) string {
 		return strconv.FormatInt((size+unit/2)/unit, 10) + " KiB"
 	}
 	return strconv.FormatInt((size+unit*unit/2)/(unit*unit), 10) + " MiB"
+}
+
+func formatReaderDate(raw string) string {
+	return formatDateInLocation(raw, "02 Jan 2006, 03:04:05 PM", time.Local)
+}
+
+func formatResultDate(relative string, raw string) string {
+	relative = strings.TrimSpace(relative)
+	if relative == "" {
+		return formatDateInLocation(raw, "02 Jan 2006, 03:04 PM", time.Local)
+	}
+
+	fields := strings.Fields(relative)
+	last := fields[len(fields)-1]
+	parsed, err := time.Parse("15:04", last)
+	if err != nil {
+		return relative
+	}
+	prefix := strings.TrimSpace(strings.TrimSuffix(relative, last))
+	if prefix == "" {
+		return parsed.Format("03:04 PM")
+	}
+	return prefix + " " + parsed.Format("03:04 PM")
+}
+
+func formatDateInLocation(raw string, layout string, location *time.Location) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	parsed, err := mail.ParseDate(raw)
+	if err != nil {
+		return raw
+	}
+	if location == nil {
+		location = time.Local
+	}
+	return parsed.In(location).Format(layout)
 }

@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-18: Supersede the Uninstalled Horizontal Artifact With the Annotated GUI Revision
+
+- Status: accepted
+- Context: Before the validated horizontal workspace reached Chunk 4A or production installation, the owner annotated the isolated UI and requested a denser desktop surface with corrected toolbar placement, copy controls, local date formatting, Cc metadata, and right-aligned labels.
+- Decision: Do not install the temporary binary with SHA256 `5d8ace286cd0027738e6310eb85057d42ee46eea575db0fdf67e5fdd5a134fdb`. Remove the shared desktop title/mode bar while retaining a compact mobile-only menu row; place query, counts/range, and fixed Previous/Next controls in the upper result toolbar; remove the lower pager; add separate subject and labeled Message-ID copy buttons; format reader dates as `02 Jan 2006, 03:04:05 PM` in antiX local time; retain relative result labels while converting their trailing time to 12-hour form; render non-empty Cc headers; and right-align metadata labels.
+- Consequence: The prior bundle and isolated build remain historical evidence only. The revised source must repeat local tests, responsive QA, exact bundle generation, antiX verification/build, and isolated port validation before a new Chunk 4A. No route, notmuch command, dependency, mail mutation, or security policy changes.
+
 ### 2026-07-15: Use a Horizontal Desktop Results and Message Workspace
 
 - Status: accepted

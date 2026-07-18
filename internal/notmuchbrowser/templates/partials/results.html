@@ -3,14 +3,28 @@
 <div class="notice bad">{{.Error}}</div>
 {{else}}
 <div class="result-toolbar">
-  <div class="result-counts">
-    <strong>{{.SearchPage.Counts.Messages}}</strong> messages
-    <span>{{.SearchPage.Counts.Files}} files</span>
-    {{if .SearchPage.Results}}
-      <span>{{firstShown .SearchPage}}-{{nextOffset .SearchPage}}</span>
-    {{end}}
+  <div class="result-toolbar-cluster">
+    <code class="result-query" title="{{.SearchPage.Query}}">{{.SearchPage.Query}}</code>
+    <div class="result-counts">
+      <span><strong>{{.SearchPage.Counts.Messages}}</strong> messages</span>
+      <span>{{.SearchPage.Counts.Files}} files</span>
+      {{if .SearchPage.Results}}
+        <span>{{firstShown .SearchPage}}-{{nextOffset .SearchPage}}</span>
+      {{end}}
+    </div>
+    <nav class="result-pagination" aria-label="Search result pages">
+      {{if hasPrev .SearchPage}}
+        <a class="icon-button pagination-button" href="{{searchURL .SearchPage.Query (prevOffset .SearchPage) (displayLimit .SearchPage)}}" hx-get="{{searchURL .SearchPage.Query (prevOffset .SearchPage) (displayLimit .SearchPage)}}" hx-target="#results" hx-push-url="true" aria-label="Previous results" title="Previous results">{{icon "chevron-left"}}</a>
+      {{else}}
+        <button class="icon-button pagination-button is-disabled" type="button" disabled aria-label="Previous results" title="No previous results">{{icon "chevron-left"}}</button>
+      {{end}}
+      {{if hasNext .SearchPage}}
+        <a class="icon-button pagination-button" href="{{searchURL .SearchPage.Query (nextOffset .SearchPage) (displayLimit .SearchPage)}}" hx-get="{{searchURL .SearchPage.Query (nextOffset .SearchPage) (displayLimit .SearchPage)}}" hx-target="#results" hx-push-url="true" aria-label="Next results" title="Next results">{{icon "chevron-right"}}</a>
+      {{else}}
+        <button class="icon-button pagination-button is-disabled" type="button" disabled aria-label="Next results" title="No next results">{{icon "chevron-right"}}</button>
+      {{end}}
+    </nav>
   </div>
-  <code>{{.SearchPage.Query}}</code>
 </div>
 {{if .SearchPage.Results}}
 <div class="result-table-wrap">
@@ -25,25 +39,23 @@
     <tbody>
     {{range .SearchPage.Results}}
       <tr data-message-row>
-        <td class="date">{{if .DateRelative}}{{.DateRelative}}{{else}}{{.Date}}{{end}}</td>
+        <td class="date">{{formatResultDate .DateRelative .Date}}</td>
         <td class="sender">{{.From}}</td>
         <td>
-          <a class="subject" href="{{messageURL .ID 0}}" hx-get="{{messageURL .ID 0}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true">{{.Subject}}</a>
-          <div class="path">{{.ID}}</div>
+          <div class="result-subject-line">
+            <a class="subject" href="{{messageURL .ID 0}}" hx-get="{{messageURL .ID 0}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true">{{.Subject}}</a>
+            <button class="mini-copy-button" type="button" data-copy-text="{{.Subject}}" aria-label="Copy subject" title="Copy subject">{{icon "copy"}}</button>
+          </div>
+          <div class="result-id-line">
+            <span class="path">{{.ID}}</span>
+            <button class="mini-copy-button" type="button" data-copy-text="Message-ID: {{.ID}}" aria-label="Copy Message-ID" title="Copy Message-ID">{{icon "copy"}}</button>
+          </div>
           <div class="result-inline-meta"><span class="tags">{{range .Tags}}<span>{{.}}</span>{{end}}</span><span class="file-count">{{formatFileCount .FileCount}} files</span></div>
         </td>
       </tr>
     {{end}}
     </tbody>
   </table>
-</div>
-<div class="pager">
-  {{if hasPrev .SearchPage}}
-    <a class="icon-text-button" href="{{searchURL .SearchPage.Query (prevOffset .SearchPage) (displayLimit .SearchPage)}}" hx-get="{{searchURL .SearchPage.Query (prevOffset .SearchPage) (displayLimit .SearchPage)}}" hx-target="#results" hx-push-url="true">{{icon "chevron-left"}} Previous</a>
-  {{end}}
-  {{if hasNext .SearchPage}}
-    <a class="icon-text-button" href="{{searchURL .SearchPage.Query (nextOffset .SearchPage) (displayLimit .SearchPage)}}" hx-get="{{searchURL .SearchPage.Query (nextOffset .SearchPage) (displayLimit .SearchPage)}}" hx-target="#results" hx-push-url="true">Next {{icon "chevron-right"}}</a>
-  {{end}}
 </div>
 {{else}}
 <div class="notice">No results.</div>

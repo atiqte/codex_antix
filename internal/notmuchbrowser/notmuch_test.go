@@ -88,7 +88,7 @@ func TestParseSummaries(t *testing.T) {
 	if got.ID != "abc@example.test" {
 		t.Fatalf("unexpected id: %q", got.ID)
 	}
-	if got.Subject != "Quarterly update" || got.From != "A User <a@example.test>" {
+	if got.Subject != "Quarterly update" || got.From != "A User <a@example.test>" || got.Cc != "C User <c@example.test>" {
 		t.Fatalf("unexpected headers: %#v", got)
 	}
 	if got.FileCount != 2 {
@@ -266,9 +266,14 @@ func TestStaticAssetServedLocally(t *testing.T) {
 	if !strings.Contains(css, "tailwindcss") || !strings.Contains(css, ".app-sidebar") {
 		t.Fatalf("static CSS did not look like compiled local Tailwind output")
 	}
-	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize"} {
+	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".message-fields dt{color:var(--muted);text-align:right"} {
 		if !strings.Contains(css, want) {
-			t.Fatalf("compiled CSS missing horizontal splitter rule %q", want)
+			t.Fatalf("compiled CSS missing GUI rule %q", want)
+		}
+	}
+	for _, unwanted := range []string{".app-topbar{", ".mode-indicator{", ".pager{"} {
+		if strings.Contains(css, unwanted) {
+			t.Fatalf("compiled CSS retained removed GUI rule %q", unwanted)
 		}
 	}
 }
@@ -281,7 +286,7 @@ func TestApplicationJavaScriptServedLocally(t *testing.T) {
 		t.Fatalf("local application JavaScript missing: status=%d body=%s", res.Code, res.Body.String())
 	}
 	js := res.Body.String()
-	for _, want := range []string{"data-pane-divider", "notmuch-browser.result-pane-height-percent", "event.clientY", "bounds.height", "ArrowUp", "ArrowDown"} {
+	for _, want := range []string{"data-pane-divider", "notmuch-browser.result-pane-height-percent", "event.clientY", "bounds.height", "ArrowUp", "ArrowDown", "[data-copy-target], [data-copy-text]", "button.dataset.copyText"} {
 		if !strings.Contains(js, want) {
 			t.Fatalf("local application JavaScript missing horizontal splitter behavior %q", want)
 		}
@@ -451,6 +456,7 @@ const sampleNotmuchJSON = `[
           "Subject": "Quarterly update",
           "From": "A User <a@example.test>",
           "To": "B User <b@example.test>",
+          "Cc": "C User <c@example.test>",
           "Date": "Mon, 06 Jul 2026 10:00:00 +0600"
         },
         "body": [

@@ -15,15 +15,19 @@
     <div class="reader-heading-row">
       <a class="icon-button" href="/" aria-label="Back to search" title="Back to search">{{icon "chevron-left"}}</a>
       <div class="reader-heading">
-        <h1>{{.Detail.Summary.Subject}}</h1>
+        <div class="reader-heading-title">
+          <h1>{{.Detail.Summary.Subject}}</h1>
+          <button class="mini-copy-button" type="button" data-copy-text="{{.Detail.Summary.Subject}}" aria-label="Copy subject" title="Copy subject">{{icon "copy"}}</button>
+        </div>
         <div class="reader-tags tags">{{range .Detail.Summary.Tags}}<span>{{.}}</span>{{end}}</div>
       </div>
     </div>
     <dl class="message-fields">
       <dt>From</dt><dd>{{.Detail.Summary.From}}</dd>
       <dt>To</dt><dd>{{.Detail.Summary.To}}</dd>
-      <dt>Date</dt><dd>{{.Detail.Summary.Date}}</dd>
-      <dt>Message-ID</dt><dd class="path">{{.Detail.Summary.ID}}</dd>
+      {{if .Detail.Summary.Cc}}<dt>Cc</dt><dd>{{.Detail.Summary.Cc}}</dd>{{end}}
+      <dt>Date</dt><dd>{{formatReaderDate .Detail.Summary.Date}}</dd>
+      <dt>Message-ID</dt><dd class="message-id-line"><span class="path">{{.Detail.Summary.ID}}</span><button class="mini-copy-button" type="button" data-copy-text="Message-ID: {{.Detail.Summary.ID}}" aria-label="Copy Message-ID" title="Copy Message-ID">{{icon "copy"}}</button></dd>
     </dl>
     {{if .Detail.DuplicateNote}}
     <div class="duplicate-bar">

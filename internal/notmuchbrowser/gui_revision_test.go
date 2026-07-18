@@ -1,0 +1,155 @@
+package notmuchbrowser
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestAnnotatedGUIResultToolbarAndCopyControls(t *testing.T) {
+	view := pageView{SearchPage: SearchPage{
+		Query:  "tag:inbox",
+		Limit:  50,
+		Counts: Counts{Messages: 101, Files: 151},
+		Results: []MessageSummary{{
+			ID:           "abc@example.test",
+			Subject:      `Quarterly "special" <plan>`,
+			From:         "A User <a@example.test>",
+			DateRelative: "Yest. 20:23",
+			FileCount:    2,
+		}},
+	}}
+	out := executeTemplateForTest(t, "results", view)
+
+	queryAt := strings.Index(out, `class="result-query"`)
+	countsAt := strings.Index(out, `class="result-counts"`)
+	pagerAt := strings.Index(out, `class="result-pagination"`)
+	if queryAt < 0 || countsAt <= queryAt || pagerAt <= countsAt {
+		t.Fatalf("result toolbar order is not query, counts, pager: %s", out)
+	}
+	if strings.Contains(out, `class="pager"`) || strings.Contains(out, ">Previous<") || strings.Contains(out, ">Next<") {
+		t.Fatalf("legacy bottom text pager remains: %s", out)
+	}
+	for _, want := range []string{
+		`data-copy-text="Quarterly &#34;special&#34; &lt;plan&gt;"`,
+		`data-copy-text="Message-ID: abc@example.test"`,
+		`Yest. 08:23 PM`,
+		`aria-label="Previous results"`,
+		`aria-label="Next results"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("annotated result output missing %q: %s", want, out)
+		}
+	}
+}
+
+func TestAnnotatedGUIPagerKeepsTwoStablePositions(t *testing.T) {
+	tests := []struct {
+		name         string
+		offset       int
+		resultCount  int
+		disabledWant int
+	}{
+		{name: "first", offset: 0, resultCount: 50, disabledWant: 1},
+		{name: "middle", offset: 50, resultCount: 50, disabledWant: 0},
+		{name: "last", offset: 100, resultCount: 1, disabledWant: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results := make([]MessageSummary, tt.resultCount)
+			for i := range results {
+				results[i] = MessageSummary{ID: "id@example.test", Subject: "Subject"}
+			}
+			out := executeTemplateForTest(t, "results", pageView{SearchPage: SearchPage{
+				Query: "*", Offset: tt.offset, Limit: 50,
+				Counts: Counts{Messages: 101, Files: 151}, Results: results,
+			}})
+			if got := strings.Count(out, `class="icon-button pagination-button`); got != 2 {
+				t.Fatalf("pager positions=%d, want 2: %s", got, out)
+			}
+			if got := strings.Count(out, `is-disabled`); got != tt.disabledWant {
+				t.Fatalf("disabled positions=%d, want %d: %s", got, tt.disabledWant, out)
+			}
+		})
+	}
+}
+
+func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
+	view := messageView{Detail: MessageDetail{
+		Summary: MessageSummary{
+			ID:      "abc@example.test",
+			Subject: "Quarterly & Special",
+			From:    "A User <a@example.test>",
+			To:      "B User <b@example.test>",
+			Cc:      "C User <c@example.test>, D User <d@example.test>",
+			Date:    "unparseable date preserved",
+		},
+		PlainBody: "body",
+		BodyKind:  "plain",
+	}}
+	out := executeTemplateForTest(t, "messageFragment", view)
+	for _, want := range []string{
+		`<dt>Cc</dt><dd>C User &lt;c@example.test&gt;, D User &lt;d@example.test&gt;</dd>`,
+		`data-copy-text="Quarterly &amp; Special"`,
+		`data-copy-text="Message-ID: abc@example.test"`,
+		`unparseable date preserved`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("annotated reader output missing %q: %s", want, out)
+		}
+	}
+
+	view.Detail.Summary.Cc = ""
+	out = executeTemplateForTest(t, "messageFragment", view)
+	if strings.Contains(out, "<dt>Cc</dt>") {
+		t.Fatalf("empty Cc row was rendered: %s", out)
+	}
+}
+
+func TestAnnotatedGUIDateFormatting(t *testing.T) {
+	dhaka := time.FixedZone("Asia/Dhaka", 6*60*60)
+	raw := "Tue, 14 Jul 2026 16:23:01 +0200"
+	if got := formatDateInLocation(raw, "02 Jan 2006, 03:04:05 PM", dhaka); got != "14 Jul 2026, 08:23:01 PM" {
+		t.Fatalf("reader date=%q", got)
+	}
+	if got := formatDateInLocation("not a date", "02 Jan 2006, 03:04:05 PM", dhaka); got != "not a date" {
+		t.Fatalf("invalid date fallback=%q", got)
+	}
+
+	for input, want := range map[string]string{
+		"Yest. 20:23": "Yest. 08:23 PM",
+		"Today 00:05": "Today 12:05 AM",
+		"July 14":     "July 14",
+	} {
+		if got := formatResultDate(input, raw); got != want {
+			t.Fatalf("formatResultDate(%q)=%q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestAnnotatedGUILayoutHeaderContract(t *testing.T) {
+	out := executeTemplateForTest(t, "page", pageView{
+		Query:      "tag:inbox",
+		SearchPage: SearchPage{Query: "tag:inbox", Limit: 50},
+	})
+	for _, unwanted := range []string{"Mail archive", "localhost only", `class="app-topbar"`} {
+		if strings.Contains(out, unwanted) {
+			t.Fatalf("removed desktop top-bar content %q remains: %s", unwanted, out)
+		}
+	}
+	for _, want := range []string{`class="app-mobilebar"`, `data-sidebar-open`, `aria-label="Open navigation"`} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("mobile navigation contract missing %q: %s", want, out)
+		}
+	}
+}
+
+func executeTemplateForTest(t *testing.T, name string, data any) string {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := templates.ExecuteTemplate(&buf, name, data); err != nil {
+		t.Fatalf("execute template %s: %v", name, err)
+	}
+	return buf.String()
+}

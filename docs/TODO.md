@@ -4,8 +4,8 @@
 
 - [ ] Review setup and memory files.
 - [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Roll out the horizontal desktop message workspace one reviewed antiX chunk at a time: preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof.
-- [ ] After every horizontal-layout rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact new bundle/artifact hashes, commands, rollback, expected output, copy controls, and troubleshooting.
+- [ ] Replace the superseded horizontal bundle with the approved annotated GUI revision, then repeat preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof one reviewed chunk at a time.
+- [ ] After every annotated-GUI rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, commands, rollback, expected output, copy controls, and troubleshooting.
 - [x] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
 - [x] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.
 - [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
@@ -161,3 +161,4 @@
 - [x] Regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with every successful attachment/image rollout command, exact hashes, rollback path, expected output, troubleshooting, and copy controls.
 - [x] Implement the desktop-only horizontal results-above-reader workspace with a saved 35% splitter, 25-70% bounds, pointer Y-axis logic, and up/down keyboard controls while preserving the existing mobile layout.
 - [x] Add horizontal-layout regression tests, regenerate deterministic Tailwind CSS, pass local Go tests/vet and responsive browser QA, and build the exact 30-member antiX source bundle.
+- [x] Implement and locally validate the annotated pre-Chunk-4A GUI revision: remove the desktop top bar, relocate toolbar counts/query/pagination, remove the bottom pager, add compact subject/Message-ID copy controls, render Cc, use antiX-local 12-hour dates, and right-align metadata labels.

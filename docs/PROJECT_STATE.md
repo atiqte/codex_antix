@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-07-15
+Last updated: 2026-07-18
 
 ## Project Identity
 
@@ -18,7 +18,7 @@ The owner approved Python standard-library utilities for transporting a full Bet
 
 ## Current Objective
 
-Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, maintain the approved mail migration utilities, and roll out the locally validated horizontal desktop message workspace to antiX without changing the browser's established read-only behavior.
+Create a professional, AI-readable memory and Git workflow system that supports future Codex sessions and cross-machine work, maintain the approved mail migration utilities, and replace the uninstalled horizontal-layout artifact with the approved annotated GUI revision before staged antiX rollout.
 
 ## What Exists Now
 
@@ -65,7 +65,7 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 - `scripts/notmuch_browser_index_control.sh`, a user-level helper intended to keep the notmuch index fresh by running the existing locked `notmuch-browser-control refresh-index` path in a small loop that skips while the provider-live mbsync lock or notmuch refresh lock is present.
 - `cmd/notmuch-browser/main.go`, the Go service entrypoint.
 - `internal/notmuchbrowser/`, the Go service package, including chi routing, notmuch command execution, MIME/JSON parsing, HMAC capabilities, bounded attachment/ZIP/inline-image handlers, structured email HTML sanitization, adaptive embedded server-rendered templates, compiled local Tailwind CSS, local application JavaScript, a pinned Lucide icon subset/license, vendored local HTMX 2.0.10, and focused tests.
-- The current Windows source revision changes only the desktop workspace orientation: full-width results above a full-width reader, a saved 35% horizontal splitter with a 25-70% range, and up/down keyboard controls. Local tests, vet, deterministic Tailwind regeneration, clean-bundle tests, and 1440/1024/390 browser layout checks pass; antiX installation and operator validation remain pending.
+- The current Windows source revision includes the approved annotated GUI changes: no desktop top bar, a mobile-only menu row, a compact right-aligned query/count/pager toolbar, subject and Message-ID copy controls, antiX-local 12-hour date formatting, Cc display, and right-aligned metadata labels. The backend routes, notmuch commands, downloads, image permissions, horizontal splitter, and read-only posture remain unchanged. Local tests, vet, deterministic CSS, clean-bundle validation, responsive browser QA, and clipboard checks pass; antiX installation remains pending.
 
 ## What Is Intentionally Undecided
 
@@ -152,7 +152,9 @@ Create a professional, AI-readable memory and Git workflow system that supports 
 
 ## Current Implementation Notes
 
-- Horizontal message-view rollout source bundle `notmuch-browser-horizontal-src-20260715-073049.tar.gz` contains the exact 30 required members, is 65,788 bytes, and has SHA256 `44398af72673cf2019822b74bd81e37d9f513d8fa4b713f671e3224e23fc930f`. Its clean extraction passes `go test -count=1 ./...` and `go vet ./...`. The compiled assets are 20,712-byte CSS, 5,380-byte app JavaScript, and 77,330 bytes total with HTMX. This bundle has not been installed on antiX.
+- Horizontal message-view rollout source bundle `notmuch-browser-horizontal-src-20260715-073049.tar.gz` and temporary Linux binary SHA256 `5d8ace286cd0027738e6310eb85057d42ee46eea575db0fdf67e5fdd5a134fdb` are superseded before installation by the approved annotated GUI revision. They remain historical validation artifacts only and must not be used for Chunk 4A or production installation. A replacement antiX build and port-8876 validation are required.
+- Replacement source bundle `notmuch-browser-annotated-gui-src-20260718-135325.tar.gz` contains 31 exact safe members, is 68,359 bytes, and has SHA256 `a371f5cbb76a173249eac0ad4ac94fff6af1d6c576d455aae7f297256425b8ff`. A clean Windows extraction passed `go mod verify`, `go test -count=1 ./...`, `go vet ./...`, Git Bash syntax checks for both control scripts, and a stripped build. Deterministic Tailwind CSS is 21,733 bytes with SHA256 `9717d8f5e1ba5dcc324d7f7b70162ab5dafd0247dd6bcca1cd76fcd9a5a0a532`; app JavaScript is 5,476 bytes and all local frontend assets total 78,447 bytes.
+- Local browser QA passed at 1440x900, 1024x768, and 390x844. Desktop had no title/mode bar, used the full recovered height, kept query/counts/pager in right-aligned order, removed the lower pager, retained the horizontal results/reader geometry, rendered Cc/local date/right-aligned labels, and kept all reader features. The 390px layout had no horizontal overflow, hid the divider, exposed the 44px mobile menu row, fit the compact toolbar, and retained two-column metadata. Clipboard checks returned exact `Quarterly update` and `Message-ID: abc@example.test` values. The disposable port-8876 preview was stopped afterward.
 - Horizontal-layout Chunk 1 passed on antiX at 2026-07-15 07:39 +0600. The installed attachment/image release retained its exact three artifact hashes; browser PID 2396, index PID 2301, and mbsync PID 2316 were healthy; only `127.0.0.1:8765` listened; health remained read-only with 828 messages and 1,508 files; safety config and four `new.ignore` entries were exact; locks and all Maildir/download temporary files were absent; both IceWM marker pairs occurred once; the verified rollback pointer remained usable; and `/mail` had 103 GB free. No source transfer, build, service stop, index refresh, or production change occurred.
 - Horizontal-layout Chunk 2A passed from Windows PowerShell 7.6.3. The local source bundle matched SHA256 `44398af72673cf2019822b74bd81e37d9f513d8fa4b713f671e3224e23fc930f`, all 30 ordered members matched, antiX SSH port 22 was reachable at `192.168.254.128`, and SCP exited 0 to `/home/atiq/notmuch-browser-horizontal-src-20260715-073049.tar.gz`. AntiX must still independently verify the transferred bytes and build in an isolated directory before any service change.
 - Horizontal-layout Chunk 2B passed on antiX from run `/home/atiq/codex-runs/notmuch-horizontal-chunk2b-20260715-074839`. The transferred 65,788-byte bundle independently matched its exact hash and safe 30-member inventory; Go 1.26.4 module verification, tests, vet, and a stripped temporary Linux build passed. The temporary binary is 9,724,169 bytes with SHA256 `5d8ace286cd0027738e6310eb85057d42ee46eea575db0fdf67e5fdd5a134fdb`; control hashes stayed exact. Asset sizes matched 20,712-byte CSS, 5,380-byte app JavaScript, 51,238-byte HTMX, and 77,330 bytes total. Production PID 2396 and index PID 2301, exact artifact hashes, 828/1,508 health counts, localhost binding, locks, and zero temporary files were unchanged; port 8876 remained free. Nothing was installed or started from the new build.

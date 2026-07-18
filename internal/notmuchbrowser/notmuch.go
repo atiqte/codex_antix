@@ -83,6 +83,7 @@ type MessageSummary struct {
 	Subject      string
 	From         string
 	To           string
+	Cc           string
 	Date         string
 	DateRelative string
 	Tags         []string
@@ -503,6 +504,7 @@ func summaryFromMap(m map[string]any) MessageSummary {
 		Subject:      headerValue(headers, "Subject"),
 		From:         headerValue(headers, "From"),
 		To:           headerValue(headers, "To"),
+		Cc:           headerValue(headers, "Cc"),
 		Date:         headerValue(headers, "Date"),
 		DateRelative: stringValue(m["date_relative"]),
 		Tags:         stringSlice(m["tags"]),
