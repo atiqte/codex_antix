@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-18
 
+- Replaced immediate 429 rejection of inline-image bursts with bounded queueing under the existing two-minute timeout while retaining exactly two concurrent notmuch decoders; added wait/resume and timeout regressions.
+- Added compact unstyled Aptos defaults and viewer-owned iframe page-margin normalization while preserving sender element styles; passed Go tests/vet at 76.9% coverage, clean-bundle/build/shell checks, all 46 Python tests, frontend budgets, and deterministic 31-member no-font packaging.
 - Classified selected-HTML CID and safe relative-filename resources before attachment construction so inline signature images render after confirmation without appearing in Attachments or Save All; explicit and unreferenced genuine attachments remain downloadable.
 - Added sandboxed HTML defaults for responsive images and local Aptos fallback typography, plus local Inter subjects and Aporetic Sans Mono Message-ID/plain-text stacks without embedding or serving any font file.
 - Added focused reference, traversal, ambiguity, attachment-precedence, signed-view, ZIP-exclusion, CSP, data-image, and font-policy tests; passed Go tests/vet at 76.6% coverage, deterministic Tailwind, shell/Python checks, frontend budgets, and a clean 31-member no-font bundle validation.

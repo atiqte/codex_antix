@@ -87,6 +87,70 @@ func TestInlineImageHeadersAndTamperedCapability(t *testing.T) {
 	}
 }
 
+func TestInlineImageWaitsForDecoderSlot(t *testing.T) {
+	server, runner := newDownloadTestServer(t)
+	server.Config.InlineImageTimeout = time.Second
+	server.inlineSlots <- struct{}{}
+	server.inlineSlots <- struct{}{}
+
+	payload := capabilityPayload{
+		Purpose: purposeInline, MessageID: "burst@example.test", Part: 7, FileName: "logo.png", MediaType: "image/png",
+	}
+	token, _ := server.Signer.Sign(payload)
+	runner.rawOutputs[rawPartKey(payload.MessageID, 0, payload.Part)] = []byte("png-bytes")
+	response := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() {
+		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, signedRoute("/inline-image", token), nil))
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		for len(server.inlineSlots) > 0 {
+			<-server.inlineSlots
+		}
+		t.Fatalf("inline request returned instead of waiting: status=%d body=%q", response.Code, response.Body.String())
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	<-server.inlineSlots
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("inline request did not resume after a decoder slot became available")
+	}
+	for len(server.inlineSlots) > 0 {
+		<-server.inlineSlots
+	}
+	if response.Code != http.StatusOK || response.Body.String() != "png-bytes" {
+		t.Fatalf("queued inline response: status=%d body=%q", response.Code, response.Body.String())
+	}
+	if response.Header().Get("Retry-After") != "" {
+		t.Fatalf("queued inline response unexpectedly has Retry-After: %v", response.Header())
+	}
+}
+
+func TestInlineImageSlotWaitUsesExistingTimeout(t *testing.T) {
+	server, _ := newDownloadTestServer(t)
+	server.Config.InlineImageTimeout = 20 * time.Millisecond
+	server.inlineSlots <- struct{}{}
+	server.inlineSlots <- struct{}{}
+
+	payload := capabilityPayload{
+		Purpose: purposeInline, MessageID: "timeout@example.test", Part: 7, FileName: "logo.png", MediaType: "image/png",
+	}
+	token, _ := server.Signer.Sign(payload)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, signedRoute("/inline-image", token), nil))
+	for len(server.inlineSlots) > 0 {
+		<-server.inlineSlots
+	}
+	if response.Code != http.StatusGatewayTimeout {
+		t.Fatalf("slot timeout status=%d want=%d body=%q", response.Code, http.StatusGatewayTimeout, response.Body.String())
+	}
+}
+
 func TestUnsupportedImageTypeRemainsDownloadOnly(t *testing.T) {
 	server, _ := newDownloadTestServer(t)
 	token, _ := server.Signer.Sign(capabilityPayload{Purpose: purposeInline, MessageID: "image@example.test", Part: 5, FileName: "scan.tiff", MediaType: "image/tiff"})

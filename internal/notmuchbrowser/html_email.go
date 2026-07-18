@@ -61,7 +61,7 @@ func sanitizeEmailHTMLWithResources(body string, mode imageMode, origin string, 
 	out.WriteString(`<meta http-equiv="Content-Security-Policy" content="`)
 	out.WriteString(stdhtml.EscapeString(emailFrameCSP(mode, origin)))
 	out.WriteString(`">`)
-	out.WriteString(`<style id="notmuch-browser-email-defaults">html,body{font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif}img{max-width:100%;height:auto}</style>`)
+	out.WriteString(`<style id="notmuch-browser-email-defaults">html,body{font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif;font-size:10pt;line-height:1.35}html{margin:0!important;padding:0!important}body{margin:0!important;padding:8px!important}p{margin-top:.55em;margin-bottom:.55em}img{max-width:100%;height:auto}</style>`)
 
 	dropDepth := 0
 	dropName := ""

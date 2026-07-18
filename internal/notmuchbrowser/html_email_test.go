@@ -72,6 +72,24 @@ func TestSanitizeEmailHTMLHandlesMalformedMarkup(t *testing.T) {
 	}
 }
 
+func TestEmailPageDefaultsPreserveSenderElementStyles(t *testing.T) {
+	body := `<html style="margin:70.85pt"><body style="margin:1in"><p style="font-family:Courier New;font-size:18px;line-height:2;margin:20px"><img src="data:image/png;base64,AA==" style="width:41px;height:25px">Sender text</p></body></html>`
+	got, err := sanitizeEmailHTML(body, imagesEmbedded, "http://127.0.0.1:8765", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`html{margin:0!important;padding:0!important}`,
+		`body{margin:0!important;padding:8px!important}`,
+		`font-family:Courier New;font-size:18px;line-height:2;margin:20px`,
+		`width:41px;height:25px`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("sanitized HTML missing %q: %s", want, got)
+		}
+	}
+}
+
 func TestNormalizeContentID(t *testing.T) {
 	for input, want := range map[string]string{
 		"<logo@example.test>":           "logo@example.test",
@@ -137,8 +155,16 @@ func TestSanitizeEmailHTMLRewritesRelativeResourcesByMode(t *testing.T) {
 			t.Fatalf("embedded output missing %q: %s", want, embedded)
 		}
 	}
-	if !strings.Contains(embedded, `font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif`) || !strings.Contains(embedded, `img{max-width:100%;height:auto}`) {
-		t.Fatalf("safe HTML defaults missing: %s", embedded)
+	for _, want := range []string{
+		`font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif;font-size:10pt;line-height:1.35`,
+		`html{margin:0!important;padding:0!important}`,
+		`body{margin:0!important;padding:8px!important}`,
+		`p{margin-top:.55em;margin-bottom:.55em}`,
+		`img{max-width:100%;height:auto}`,
+	} {
+		if !strings.Contains(embedded, want) {
+			t.Fatalf("safe HTML defaults missing %q: %s", want, embedded)
+		}
 	}
 	if !strings.Contains(embedded, "font-src &#39;none&#39;") && !strings.Contains(embedded, "font-src 'none'") {
 		t.Fatalf("iframe CSP no longer blocks downloaded fonts: %s", embedded)

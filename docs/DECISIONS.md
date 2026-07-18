@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-18: Queue Confirmed Inline-Image Bursts Without Raising Concurrency
+
+- Status: accepted
+- Context: Privacy-limited diagnostics proved each affected message contains ten valid CID references and ten exactly matching inline PNG parts, but the handler allowed two decoders and immediately returned HTTP 429 to the remaining browser requests. Office-generated page margins also produced excessive whitespace. `Content-Location` was absent and unrelated.
+- Decision: Retain the two-decoder resource cap and existing two-minute inline timeout, but let additional inline-image requests wait for a slot under that same request context instead of rejecting a normal browser burst. A slot wait that exhausts the existing deadline returns 504. Keep ordinary attachment/ZIP busy behavior unchanged. Inject compact 10pt/1.35 Aptos defaults, reset only iframe page-level margins/padding with viewer-owned important rules, and preserve sender-defined element typography and image dimensions.
+- Consequence: Multi-image signatures can render completely without increasing simultaneous notmuch commands or weakening limits. The iframe loses inappropriate print-page margins while normal sender element styling remains intact. The failed source bundle SHA256 `c57708a9...` and temporary binary SHA256 `47d76329...` are superseded and must not be installed.
+
 ### 2026-07-18: Separate Embedded Body Resources From Genuine Attachments and Use Local Fonts
 
 - Status: accepted

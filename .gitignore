@@ -46,6 +46,7 @@ notmuch-browser-horizontal-src-*.tar.gz
 notmuch-browser-annotated-gui-src-*.tar.gz
 notmuch-browser-gui2-src-*.tar.gz
 notmuch-browser-body-images-src-*.tar.gz
+notmuch-browser-body-images-*-src-*.tar.gz
 *.test
 coverage.out
 

@@ -150,15 +150,15 @@ func (s *Server) handleInlineImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "image type is download-only", http.StatusNotFound)
 		return
 	}
-	if !tryAcquire(s.inlineSlots) {
-		w.Header().Set("Retry-After", "1")
-		http.Error(w, "inline image decoder is busy", http.StatusTooManyRequests)
-		return
-	}
-	defer release(s.inlineSlots)
-
 	ctx, cancel := context.WithTimeout(r.Context(), s.Config.InlineImageTimeout)
 	defer cancel()
+	select {
+	case s.inlineSlots <- struct{}{}:
+		defer release(s.inlineSlots)
+	case <-ctx.Done():
+		writeDownloadError(w, ctx.Err())
+		return
+	}
 	path, size, err := s.preparePart(ctx, payload, s.Config.MaxInlineImageBytes, s.Config.InlineImageTimeout)
 	if err != nil {
 		writeDownloadError(w, err)
