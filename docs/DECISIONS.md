@@ -4,9 +4,23 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
-### 2026-07-18: Default Outlook HTML to Readable With an Original Toggle
+### 2026-07-19: Permit Sanitized Inline CSS for Sandboxed Email `srcdoc`
 
 - Status: accepted
+- Context: Local browser computed-style validation found that the injected Readable style marker existed but `document.styleSheets` was empty and a test paragraph still computed as Times New Roman 16px. A `srcdoc` document inherits the embedding page's response CSP; the parent `style-src 'self'` therefore blocked both viewer-owned Readable CSS and sanitized sender style elements/attributes before the iframe's stricter meta CSP could apply.
+- Decision: Add `'unsafe-inline'` only to the application response's `style-src`. Keep `script-src 'self'` without inline script permission, `object-src 'none'`, `frame-ancestors 'none'`, template escaping, the iframe `sandbox` without `allow-scripts` or `allow-same-origin`, the inner iframe `default-src 'none'` policy, HTML sanitization, URL rewriting, and image confirmation unchanged. No untrusted email markup is inserted into the parent DOM; it remains an escaped `srcdoc` value.
+- Consequence: Viewer and sanitized sender CSS can render inside the isolated iframe as designed. This is a deliberate, narrowly scoped CSP relaxation required by the current `srcdoc` architecture; executable content remains blocked. Security-header tests and browser computed-style tests must prove the exact policy before packaging.
+
+### 2026-07-19: Normalize All HTML in Readable Mode and Preserve Original Mode
+
+- Status: accepted
+- Context: A privacy-limited diagnostic of the exact ten-CID message proved that its source has no Office markers, seven paragraph declarations fixed at `16px`, and 18 spans requesting an unavailable sender font. The sanitizer preserved all 56 inline styles, all four flat signature tables, and all ten exact image dimensions; it injected only the weak page default, so Readable remained visually identical to oversized Original. Separate raster comparison of the requested five-line reference identified Inter Variable Regular at approximately 15px as the strongest available match.
+- Decision: Apply a viewer-owned Readable typography layer to every sanitized HTML message, not only Office-marked HTML. Use local Inter Variable at `15px`/`1.4` for ordinary prose, compact table-based signature text to `9pt`/`1.25`, preserve explicitly smaller sender spans such as `7pt`, `8pt`, `9pt`, and `10pt`, and cap tables at the iframe width. Keep image width/height, table structure, alignment, color, emphasis, links, MIME classification, and confirmation-gated image behavior unchanged. Original mode remains the existing sanitized sender formatting with no Readable override.
+- Consequence: Readable provides deterministic, compact typography for the real message without pretending that transport metadata proves Outlook generation. Original remains available for sender-layout comparison. No route, dependency, font payload, notmuch command, attachment behavior, privacy control, or Maildir/index state changes. The uninstalled Office-only bundle `533235a5...` and Linux binary `e80fb11d...` are superseded for installation, while their successful queue and diagnostic evidence remains valid.
+
+### 2026-07-18: Default Outlook HTML to Readable With an Original Toggle
+
+- Status: superseded by the universal Readable decision of 2026-07-19
 - Context: The queue-fix candidate proved all ten embedded signature images can be decoded through two queued slots with zero 429 responses, but its preserved Word/Outlook sender CSS rendered oversized serif typography in `gui4.png`. The `gui3.png` reference is more readable but cannot be treated as exact sender fidelity because it came from a different mail client and content width.
 - Decision: Add `display=readable|original` to the existing message route. Default missing or invalid values to Readable. Detect strong Microsoft Word/Outlook HTML markers with the bounded structured tokenizer and apply local Aptos at 10.5pt/1.35 only to Office-generated markup in Readable mode. Keep sanitized sender styling in Original mode. Preserve tables, positioning, image dimensions, colors, emphasis, iframe sandbox/CSP, confirmation-gated images, duplicate selection, and attachment behavior; add no dependency or font payload.
 - Consequence: Normal viewing favors compact, consistent readability while sanitized sender formatting remains available for comparison. Switching display mode preserves the selected duplicate and current image permission; switching duplicate preserves display mode but resets images to blocked. The uninstalled queue-fix bundle `d9943dfe...` and binary `f12882ab...` are superseded for installation, and production remains unchanged until the replacement passes all isolated and rollout gates.

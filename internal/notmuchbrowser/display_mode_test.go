@@ -70,7 +70,7 @@ func TestMessageDisplayControlAndLinksPreserveState(t *testing.T) {
 	for _, want := range []string{
 		`class="display-mode-switch" role="group" aria-label="Message display"`,
 		`<span class="is-active" aria-current="true">Original</span>`,
-		`title="Use normalized Outlook typography"`,
+		`title="Use compact readable typography"`,
 		`href="/message?dup=1&amp;id=abc%40example.test&amp;images=embedded"`,
 		`href="/message?display=original&amp;id=abc%40example.test"`,
 		`href="/message?display=original&amp;dup=1&amp;id=abc%40example.test&amp;images=remote"`,

@@ -26,7 +26,7 @@
             {{if isReadableDisplay .DisplayMode}}
               <span class="is-active" aria-current="true">Readable</span>
             {{else}}
-              <a href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "readable"}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "readable"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="Use normalized Outlook typography">Readable</a>
+              <a href="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "readable"}}" hx-get="{{messageViewURL .Detail.Summary.ID .Detail.SelectedDup .ImageMode "readable"}}" hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="Use compact readable typography">Readable</a>
             {{end}}
             {{if isOriginalDisplay .DisplayMode}}
               <span class="is-active" aria-current="true">Original</span>

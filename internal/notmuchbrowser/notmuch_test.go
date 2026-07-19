@@ -269,7 +269,7 @@ func TestSecurityHeadersAndHTMXFragment(t *testing.T) {
 	if got := res.Header().Get("Vary"); got != "HX-Request" {
 		t.Fatalf("expected HTMX vary header, got %q", got)
 	}
-	if csp := res.Header().Get("Content-Security-Policy"); strings.Contains(csp, "cid:") || !strings.Contains(csp, "frame-ancestors 'none'") {
+	if csp := res.Header().Get("Content-Security-Policy"); strings.Contains(csp, "cid:") || !strings.Contains(csp, "style-src 'self' 'unsafe-inline'") || !strings.Contains(csp, "script-src 'self'") || strings.Contains(csp, "script-src 'self' 'unsafe-inline'") || !strings.Contains(csp, "frame-ancestors 'none'") {
 		t.Fatalf("unexpected parent CSP: %q", csp)
 	}
 	out := res.Body.String()

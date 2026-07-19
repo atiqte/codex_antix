@@ -36,13 +36,15 @@
 - [x] Execute final validator `c660f120...`; automated identity/HTTP/policy/attachment/ten-CID/temp gates passed and exact PID 87785 is retained through pointer `84e47fda...`.
 - [x] At Firefox 100% and identical viewport, manually compare retained Readable and Original views; owner explicitly reported `antiX Outlook comparison: PASS`.
 - [x] Read-only audit retained PID 87785/pointer/report/temp and production after manual PASS; every identity and invariant matched with no state change.
-- [ ] Do not run the previously issued PID-87785 cleanup chunk: it is superseded while the retained candidate is used for one privacy-limited typography/structure diagnostic.
-- [ ] Collect exact source/sanitized style-property histograms and image/table nesting counts without printing body text, addresses, IDs, filenames, or HTML.
+- [x] Do not run the previously issued PID-87785 cleanup chunk: it was superseded; the VM reboot removed that process and exact stale runtime state was later guarded and cleaned.
+- [x] Collect exact source/sanitized style-property histograms and image/table nesting counts without printing body text, addresses, IDs, filenames, or HTML; the self-cleaning diagnostic passed and preserved only its privacy-limited report.
 - [x] Compare the new body-text reference against local font files; Inter Variable Regular near 15px is the high-confidence raster match, pending declaration/cascade evidence.
 - [x] Audit missing 8876 listener: antiX rebooted; PID 87785/candidate listener are gone, exact stale pointer/empty temp remain, evidence is intact, and production restarted normally.
 - [x] Remove only the exact reboot-stale pointer and empty isolated temp after fresh guards; evidence/build artifacts and production remained exact.
-- [ ] Start a self-cleaning diagnostic-only candidate on 8876, collect private-safe source/sanitized typography plus image/table structure, then identity-stop and clean it automatically.
-- [ ] Replace Office-only Readable behavior with deterministic all-HTML readable typography and compact image-signature handling while preserving Original, images, tables, attachments, privacy, and security; then repeat isolated validation.
+- [x] Start a self-cleaning diagnostic-only candidate on 8876, collect private-safe source/sanitized typography plus image/table structure, then identity-stop and clean it automatically; report SHA256 is `eb82bc35...`, 8876 is free, and production stayed exact at 1,199/2,146 with zero temp.
+- [x] Replace Office-only Readable behavior with deterministic all-HTML readable typography and compact image-signature handling while preserving Original, images, tables, attachments, privacy, and security; package exact bundle `50e368dc...` for isolated antiX validation.
+- [x] Correct the parent `srcdoc` CSP inheritance defect and prove in a real browser that Readable computes to Inter 15px/1.4 while Original retains sanitized sender formatting and scripts remain blocked.
+- [ ] Transfer only the exact 76,778-byte bundle `50e368dc...` to antiX through a guarded incoming path, then independently verify inventory, tests, vet, race, shell syntax, and a temporary Linux build without changing production.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.

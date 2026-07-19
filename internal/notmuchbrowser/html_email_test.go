@@ -101,37 +101,8 @@ func TestParseDisplayModeDefaultsToReadable(t *testing.T) {
 	}
 }
 
-func TestDetectOfficeHTMLUsesStrongStructuredMarkers(t *testing.T) {
-	tests := []struct {
-		name string
-		body string
-		want bool
-	}{
-		{name: "Mso class", body: `<p class="MsoNormal">Office</p>`, want: true},
-		{name: "Word section class", body: `<div class="WordSection1">Office</div>`, want: true},
-		{name: "mso style attribute", body: `<p style="mso-margin-top-alt:auto">Office</p>`, want: true},
-		{name: "mso style block", body: `<style>p{mso-fareast-font-family:Aptos}</style>`, want: true},
-		{name: "Office namespace", body: `<html xmlns:o="urn:schemas-microsoft-com:office:office"><body>Office</body></html>`, want: true},
-		{name: "Word generator", body: `<meta name="generator" content="Microsoft Word 16"><p>Office</p>`, want: true},
-		{name: "Outlook generator", body: `<meta content="Microsoft Outlook" name="generator"><p>Office</p>`, want: true},
-		{name: "conditional comment", body: `<!--[if mso]><xml>Office</xml><![endif]--><p>Office</p>`, want: true},
-		{name: "ordinary HTML", body: `<style>.note{font-family:Georgia}</style><p class="note">Microsoft Outlook migration notes</p>`, want: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := detectOfficeHTML(tt.body)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != tt.want {
-				t.Fatalf("detectOfficeHTML()=%v want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestOfficeReadableAndOriginalModesPreserveLayout(t *testing.T) {
-	body := `<html xmlns:o="urn:schemas-microsoft-com:office:office"><head><style>p.MsoNormal{font-family:"Times New Roman";font-size:12pt;color:#234}table.signature{width:900px;text-align:left}</style></head><body><p class="MsoNormal"><b>Signature</b><span style="font-size:8pt;color:#678">Legal line</span></p><table class="signature" width="900"><tr><td align="right"><img src="data:image/png;base64,AA==" width="130" height="40" style="width:130px;height:40px"></td></tr></table></body></html>`
+func TestReadableAndOriginalModesPreserveLayout(t *testing.T) {
+	body := `<html><head><style>p.letter{font-family:"Times New Roman";font-size:16px;color:#234}table.signature{width:1187px;text-align:left}</style></head><body><p class="letter"><b>Message prose</b></p><table class="signature" width="1187"><tr><td align="right"><p style="font-size:16px"><strong>Signature</strong><span style="font-family:Unavailable Sender Font;font-size:7pt;color:#678">Legal line</span></p><img src="data:image/png;base64,AA==" width="129" height="45" style="width:129px;height:45px"></td></tr></table></body></html>`
 	readable, err := sanitizeEmailHTMLForDisplay(body, imagesEmbedded, displayReadable, "http://127.0.0.1:8765", nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -141,28 +112,29 @@ func TestOfficeReadableAndOriginalModesPreserveLayout(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`id="notmuch-browser-office-readable"`,
-		`font-size:10.5pt!important`,
-		`line-height:1.35!important`,
-		`font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif!important`,
-		`font-size:8pt;color:#678`,
-		`table.signature{width:900px;text-align:left}`,
-		`width="900"`,
+		`id="notmuch-browser-readable"`,
+		`font-family:"Inter Variable",Inter,Aptos,"Segoe UI",Carlito,Arial,sans-serif!important`,
+		`font-size:15px!important;line-height:1.4!important`,
+		`body table{max-width:100%!important;font-size:9pt!important;line-height:1.25!important}`,
+		`body table :where(p,div,td,th,strong,b){font-size:9pt!important;line-height:1.25!important}`,
+		`font-size:7pt;color:#678`,
+		`table.signature{width:1187px;text-align:left}`,
+		`width="1187"`,
 		`align="right"`,
-		`width:130px;height:40px`,
+		`width:129px;height:45px`,
 	} {
 		if !strings.Contains(readable, want) {
-			t.Fatalf("readable Office HTML missing %q: %s", want, readable)
+			t.Fatalf("readable HTML missing %q: %s", want, readable)
 		}
 	}
-	if strings.Contains(original, `notmuch-browser-office-readable`) {
+	if strings.Contains(original, `notmuch-browser-readable`) {
 		t.Fatalf("Original mode contains readable override: %s", original)
 	}
 	for _, want := range []string{
-		`p.MsoNormal{font-family:&#34;Times New Roman&#34;;font-size:12pt;color:#234}`,
-		`font-size:8pt;color:#678`,
-		`width="900"`,
-		`width:130px;height:40px`,
+		`p.letter{font-family:&#34;Times New Roman&#34;;font-size:16px;color:#234}`,
+		`font-size:7pt;color:#678`,
+		`width="1187"`,
+		`width:129px;height:45px`,
 	} {
 		if !strings.Contains(original, want) {
 			t.Fatalf("Original mode lost sender layout %q: %s", want, original)
@@ -170,17 +142,17 @@ func TestOfficeReadableAndOriginalModesPreserveLayout(t *testing.T) {
 	}
 }
 
-func TestReadableModeDoesNotNormalizeNonOfficeHTML(t *testing.T) {
+func TestReadableModeNormalizesOrdinaryHTML(t *testing.T) {
 	body := `<style>.letter{font-family:Georgia;font-size:17px;line-height:1.8}</style><p class="letter">Ordinary sender HTML</p>`
 	got, err := sanitizeEmailHTMLForDisplay(body, imagesBlocked, displayReadable, "http://127.0.0.1:8765", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(got, `notmuch-browser-office-readable`) {
-		t.Fatalf("non-Office HTML received the Office override: %s", got)
+	if !strings.Contains(got, `id="notmuch-browser-readable"`) {
+		t.Fatalf("ordinary HTML did not receive the Readable override: %s", got)
 	}
 	if !strings.Contains(got, `.letter{font-family:Georgia;font-size:17px;line-height:1.8}`) {
-		t.Fatalf("non-Office sender style was not preserved: %s", got)
+		t.Fatalf("ordinary sender style was not preserved for Original comparison: %s", got)
 	}
 }
 

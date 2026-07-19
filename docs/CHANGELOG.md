@@ -2,6 +2,12 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-19
+
+- Replaced Office-marker-only HTML normalization with universal Readable typography: local Inter Variable at 15px/1.4 for prose, 9pt/1.25 for table-contained signature text, preserved explicit smaller spans, constrained tables, and unchanged sanitized Original mode.
+- Corrected inherited `srcdoc` CSP so sanitized email and viewer CSS can render inside the scriptless sandbox; inline scripts remain prohibited and the iframe retains its strict inner CSP, sanitization, image confirmations, and non-mutation guarantees.
+- Passed module, Go test/vet, 77.1% coverage, 46 Python tests, shell syntax, browser computed-style/overflow/error checks, frontend budgets, reproducible packaging, clean extraction, and VCS-neutral build parity. Prepared exact 32-member no-font bundle `notmuch-browser-readable-typography-src-20260719-071305.tar.gz`, 76,778 bytes, SHA256 `50e368dcabcf453c471c2b2d774200f9d80fb2fd366952efe12ea99fd83574f1` for staged antiX validation.
+
 ## 2026-07-18
 
 - Added Readable-default and sanitized Original display modes for HTML messages, including privacy-safe URL state propagation and a compact local segmented control.

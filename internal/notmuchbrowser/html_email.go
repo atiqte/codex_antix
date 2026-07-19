@@ -35,7 +35,7 @@ const (
 
 const emailPageDefaults = `<style id="notmuch-browser-email-defaults">html,body{font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif;font-size:10pt;line-height:1.35}html{margin:0!important;padding:0!important}body{margin:0!important;padding:8px!important}p{margin-top:.55em;margin-bottom:.55em}img{max-width:100%;height:auto}</style>`
 
-const officeReadableDefaults = `<style id="notmuch-browser-office-readable">html,body{font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif!important;font-size:10.5pt!important;line-height:1.35!important}body :where(p,div,span,td,th,li,a){font-family:Aptos,"Segoe UI",Carlito,Arial,sans-serif!important}body :where([class^="Mso"],[class*=" Mso"],[class^="WordSection"],[class*=" WordSection"]){font-size:10.5pt!important;line-height:1.35!important}body :where(code,pre,kbd,samp){font-family:"AporeticSansMonoNerdFont","Aporetic Sans Mono Nerd Font","Cascadia Mono","Liberation Mono",monospace!important}</style>`
+const readableTypographyDefaults = `<style id="notmuch-browser-readable">html,body{font-family:"Inter Variable",Inter,Aptos,"Segoe UI",Carlito,Arial,sans-serif!important;font-size:15px!important;line-height:1.4!important}body :where(p,div,span,td,th,li,a,strong,b){font-family:"Inter Variable",Inter,Aptos,"Segoe UI",Carlito,Arial,sans-serif!important}body p{font-size:15px!important;line-height:1.4!important}body table{max-width:100%!important;font-size:9pt!important;line-height:1.25!important}body table :where(p,div,td,th,strong,b){font-size:9pt!important;line-height:1.25!important}body table :where(span,small){line-height:1.25!important}body :where(code,pre,kbd,samp){font-family:"AporeticSansMonoNerdFont","Aporetic Sans Mono Nerd Font","Cascadia Mono","Liberation Mono",monospace!important}</style>`
 
 var cidReferencePattern = regexp.MustCompile(`(?i)cid:[^\s"'<>(),]+`)
 var cssURLPattern = regexp.MustCompile(`(?i)url\(\s*['"]?([^'")]+)['"]?\s*\)`)
@@ -77,15 +77,6 @@ func sanitizeEmailHTMLForDisplay(body string, mode imageMode, display displayMod
 	if len(body) > maxEmailHTMLBytes {
 		return "", fmt.Errorf("email HTML exceeds %d bytes", maxEmailHTMLBytes)
 	}
-	officeHTML := false
-	if parseDisplayMode(string(display)) == displayReadable {
-		var err error
-		officeHTML, err = detectOfficeHTML(body)
-		if err != nil {
-			return "", err
-		}
-	}
-
 	tokenizer := xhtml.NewTokenizer(strings.NewReader(body))
 	tokenizer.SetMaxBuf(maxHTMLTokenBytes)
 	var out strings.Builder
@@ -94,8 +85,8 @@ func sanitizeEmailHTMLForDisplay(body string, mode imageMode, display displayMod
 	out.WriteString(stdhtml.EscapeString(emailFrameCSP(mode, origin)))
 	out.WriteString(`">`)
 	out.WriteString(emailPageDefaults)
-	if officeHTML {
-		out.WriteString(officeReadableDefaults)
+	if parseDisplayMode(string(display)) == displayReadable {
+		out.WriteString(readableTypographyDefaults)
 	}
 
 	dropDepth := 0
@@ -161,79 +152,6 @@ func sanitizeEmailHTMLForDisplay(body string, mode imageMode, display displayMod
 		}
 	}
 	return out.String(), nil
-}
-
-func detectOfficeHTML(body string) (bool, error) {
-	tokenizer := xhtml.NewTokenizer(strings.NewReader(body))
-	tokenizer.SetMaxBuf(maxHTMLTokenBytes)
-	styleDepth := 0
-	for {
-		tokenType := tokenizer.Next()
-		if tokenType == xhtml.ErrorToken {
-			if err := tokenizer.Err(); err != nil && err != io.EOF {
-				return false, fmt.Errorf("detect Office HTML: %w", err)
-			}
-			return false, nil
-		}
-		token := tokenizer.Token()
-		name := strings.ToLower(token.Data)
-		switch tokenType {
-		case xhtml.StartTagToken, xhtml.SelfClosingTagToken:
-			if name == "o:p" {
-				return true, nil
-			}
-			metaGenerator := false
-			metaContent := ""
-			for _, attr := range token.Attr {
-				key := strings.ToLower(attr.Key)
-				value := strings.ToLower(attr.Val)
-				if key == "class" && hasOfficeClass(attr.Val) {
-					return true, nil
-				}
-				if key == "style" && strings.Contains(value, "mso-") {
-					return true, nil
-				}
-				if strings.Contains(strings.ToLower(attr.Namespace), "office") || strings.Contains(value, "schemas-microsoft-com:office") {
-					return true, nil
-				}
-				if name == "meta" && key == "name" && value == "generator" {
-					metaGenerator = true
-				}
-				if name == "meta" && key == "content" {
-					metaContent = value
-				}
-			}
-			if metaGenerator && (strings.Contains(metaContent, "microsoft word") || strings.Contains(metaContent, "microsoft outlook")) {
-				return true, nil
-			}
-			if name == "style" && tokenType == xhtml.StartTagToken {
-				styleDepth++
-			}
-		case xhtml.EndTagToken:
-			if name == "style" && styleDepth > 0 {
-				styleDepth--
-			}
-		case xhtml.TextToken:
-			if styleDepth > 0 && strings.Contains(strings.ToLower(token.Data), "mso-") {
-				return true, nil
-			}
-		case xhtml.CommentToken:
-			comment := strings.ToLower(token.Data)
-			if strings.Contains(comment, "[if mso") || strings.Contains(comment, "microsoft office") {
-				return true, nil
-			}
-		}
-	}
-}
-
-func hasOfficeClass(value string) bool {
-	for _, className := range strings.Fields(value) {
-		lower := strings.ToLower(className)
-		if strings.HasPrefix(lower, "mso") || strings.HasPrefix(lower, "wordsection") {
-			return true
-		}
-	}
-	return false
 }
 
 func droppedElementHasBody(name string) bool {
