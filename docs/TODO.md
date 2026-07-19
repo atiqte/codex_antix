@@ -38,6 +38,7 @@
 - [x] Read-only audit retained PID 87785/pointer/report/temp and production after manual PASS; every identity and invariant matched with no state change.
 - [ ] Do not run the previously issued PID-87785 cleanup chunk: it is superseded while the retained candidate is used for one privacy-limited typography/structure diagnostic.
 - [ ] Collect exact source/sanitized style-property histograms and image/table nesting counts without printing body text, addresses, IDs, filenames, or HTML.
+- [x] Compare the new body-text reference against local font files; Inter Variable Regular near 15px is the high-confidence raster match, pending declaration/cascade evidence.
 - [ ] Replace Office-only Readable behavior with deterministic all-HTML readable typography and compact image-signature handling while preserving Original, images, tables, attachments, privacy, and security; then repeat isolated validation.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
