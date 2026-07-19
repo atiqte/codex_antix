@@ -40,7 +40,8 @@
 - [ ] Collect exact source/sanitized style-property histograms and image/table nesting counts without printing body text, addresses, IDs, filenames, or HTML.
 - [x] Compare the new body-text reference against local font files; Inter Variable Regular near 15px is the high-confidence raster match, pending declaration/cascade evidence.
 - [x] Audit missing 8876 listener: antiX rebooted; PID 87785/candidate listener are gone, exact stale pointer/empty temp remain, evidence is intact, and production restarted normally.
-- [ ] Remove only the exact reboot-stale pointer and empty isolated temp after fresh guards, preserving report/log/build evidence and production.
+- [x] Remove only the exact reboot-stale pointer and empty isolated temp after fresh guards; evidence/build artifacts and production remained exact.
+- [ ] Start a self-cleaning diagnostic-only candidate on 8876, collect private-safe source/sanitized typography plus image/table structure, then identity-stop and clean it automatically.
 - [ ] Replace Office-only Readable behavior with deterministic all-HTML readable typography and compact image-signature handling while preserving Original, images, tables, attachments, privacy, and security; then repeat isolated validation.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
