@@ -45,6 +45,7 @@
 - [x] Replace Office-only Readable behavior with deterministic all-HTML readable typography and compact image-signature handling while preserving Original, images, tables, attachments, privacy, and security; package exact bundle `50e368dc...` for isolated antiX validation.
 - [x] Correct the parent `srcdoc` CSP inheritance defect and prove in a real browser that Readable computes to Inter 15px/1.4 while Original retains sanitized sender formatting and scripts remain blocked.
 - [ ] Transfer only the exact 76,778-byte bundle `50e368dc...` to antiX through a guarded incoming path, then independently verify inventory, tests, vet, race, shell syntax, and a temporary Linux build without changing production.
+- [x] Pass the universal-Readable Windows/antiX read-only transfer preflight with exact local bundle identity, reachable SSH, absent remote destination/incoming residue, free 8876, exact production artifacts, read-only 1,199/2,146 health, and zero temp.
 - [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
