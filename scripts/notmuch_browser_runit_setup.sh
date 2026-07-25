@@ -282,11 +282,11 @@ link_service() {
 wait_for_supervisor() {
   active=$1
   waited=0
-  while [ ! -p "$active/supervise/ok" ] && [ "$waited" -lt 20 ]; do
+  while ! sv status "$active" >/dev/null 2>&1 && [ "$waited" -lt 20 ]; do
     sleep 1
     waited=$((waited + 1))
   done
-  [ -p "$active/supervise/ok" ]
+  sv status "$active" >/dev/null 2>&1
 }
 
 validate_runtime() {
