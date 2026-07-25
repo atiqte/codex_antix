@@ -30,7 +30,8 @@
 - [x] Review strict attempt 2: genuine attachment downloads and rejection controls advanced, then the validator stopped because it did not inspect the signed inline-image URL inside decoded iframe `srcdoc`; background services recovered and download temp returned to zero.
 - [x] Extend the strict validator’s page parser to collect URLs from decoded sandboxed iframe content and prove exactly one part-6 inline capability is now selected.
 - [x] Rerun the complete strict browser non-mutation proof with the corrected validator; exact attachment/image/ZIP checks, identical before/after snapshots, zero temporary residue, and clean background restoration passed.
-- [ ] Run resource observation, controlled service restart, and reboot/login-independent supervision gates before regenerating the final guides.
+- [x] Run bounded resource observation against the retained user-runit identities: all 90 local requests returned 200 with zero errors, resource peaks stayed below limits, descriptors settled to baseline, and services/temp state remained healthy.
+- [ ] Run controlled service restart and reboot/login-independent supervision gates before regenerating the final guides.
 - [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
