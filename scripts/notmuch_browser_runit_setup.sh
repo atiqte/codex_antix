@@ -23,7 +23,12 @@ BROWSER_BEGIN="# BEGIN NOTMUCH BROWSER SERVICE"
 BROWSER_END="# END NOTMUCH BROWSER SERVICE"
 INDEX_BEGIN="# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE"
 INDEX_END="# END NOTMUCH BROWSER INDEX REFRESH SERVICE"
+SESSION_RECONCILE_BEGIN="# BEGIN NOTMUCH BROWSER USER RUNIT SESSION RECONCILE"
+SESSION_RECONCILE_END="# END NOTMUCH BROWSER USER RUNIT SESSION RECONCILE"
 MANAGED_MARKER=".notmuch-browser-user-runit-managed"
+SESSION_RECONCILE_INTERVAL_SECONDS=${NOTMUCH_BROWSER_SESSION_RECONCILE_INTERVAL_SECONDS:-5}
+SESSION_RECONCILE_STABLE_SECONDS=${NOTMUCH_BROWSER_SESSION_RECONCILE_STABLE_SECONDS:-60}
+SESSION_RECONCILE_MAX_SECONDS=${NOTMUCH_BROWSER_SESSION_RECONCILE_MAX_SECONDS:-180}
 
 log() {
   printf '%s\n' "$*"
@@ -214,6 +219,8 @@ inspect_state() {
   if [ -f "$ICEWM_STARTUP" ]; then
     log "icewm_browser_begin_count=$(grep -Fxc "$BROWSER_BEGIN" "$ICEWM_STARTUP" || true)"
     log "icewm_index_begin_count=$(grep -Fxc "$INDEX_BEGIN" "$ICEWM_STARTUP" || true)"
+    log "icewm_session_reconcile_begin_count=$(grep -Fxc "$SESSION_RECONCILE_BEGIN" "$ICEWM_STARTUP" || true)"
+    log "icewm_session_reconcile_end_count=$(grep -Fxc "$SESSION_RECONCILE_END" "$ICEWM_STARTUP" || true)"
   else
     log "icewm_startup=absent"
   fi
@@ -271,6 +278,37 @@ remove_icewm_blocks() {
   mv "$tmp" "$ICEWM_STARTUP"
 }
 
+install_session_reconcile_block() {
+  [ -f "$ICEWM_STARTUP" ] || die "missing IceWM startup: $ICEWM_STARTUP"
+  begin_count=$(grep -Fxc "$SESSION_RECONCILE_BEGIN" "$ICEWM_STARTUP" || true)
+  end_count=$(grep -Fxc "$SESSION_RECONCILE_END" "$ICEWM_STARTUP" || true)
+  [ "$begin_count" -eq "$end_count" ] ||
+    die "unbalanced user-runit session reconcile markers"
+  [ "$begin_count" -le 1 ] ||
+    die "duplicate user-runit session reconcile blocks"
+
+  tmp=$(mktemp "$(dirname "$ICEWM_STARTUP")/.notmuch-browser-startup.XXXXXX")
+  awk \
+    -v begin="$SESSION_RECONCILE_BEGIN" \
+    -v end="$SESSION_RECONCILE_END" '
+      $0 == begin { skip=1; next }
+      $0 == end { skip=0; next }
+      skip != 1 { print }
+    ' "$ICEWM_STARTUP" > "$tmp"
+  cat >> "$tmp" <<'BLOCK'
+
+# BEGIN NOTMUCH BROWSER USER RUNIT SESSION RECONCILE
+# Reassert the two managed services after antiX user-session hooks settle.
+if [ -x "$HOME/.local/bin/notmuch-browser-runit-setup" ]; then
+  "$HOME/.local/bin/notmuch-browser-runit-setup" session-reconcile \
+    >/tmp/notmuch-browser-user-runit-session-reconcile.log 2>&1 &
+fi
+# END NOTMUCH BROWSER USER RUNIT SESSION RECONCILE
+BLOCK
+  chmod "$(stat -c '%a' "$ICEWM_STARTUP")" "$tmp"
+  mv "$tmp" "$ICEWM_STARTUP"
+}
+
 link_service() {
   definition=$1
   active=$2
@@ -306,6 +344,109 @@ validate_runtime() {
     *) return 1 ;;
   esac
   return 0
+}
+
+runtime_ready_quick() {
+  browser_status=$(sv status "$BROWSER_ACTIVE" 2>/dev/null) || return 1
+  index_status=$(sv status "$INDEX_ACTIVE" 2>/dev/null) || return 1
+  case "$browser_status" in run:*) ;; *) return 1 ;; esac
+  case "$index_status" in run:*) ;; *) return 1 ;; esac
+  health=$(curl -fsS --max-time 5 "http://$ADDR/healthz" 2>/dev/null) || return 1
+  case "$health" in *'"ok":true'*) ;; *) return 1 ;; esac
+  case "$health" in *'"read_only":true'*) ;; *) return 1 ;; esac
+  case "$health" in *'"mail_mutation":false'*) ;; *) return 1 ;; esac
+  return 0
+}
+
+validate_reconcile_settings() {
+  for value in \
+    "$SESSION_RECONCILE_INTERVAL_SECONDS" \
+    "$SESSION_RECONCILE_STABLE_SECONDS" \
+    "$SESSION_RECONCILE_MAX_SECONDS"; do
+    case "$value" in
+      ''|*[!0-9]*) die "session reconcile timing must be positive integers" ;;
+      0) die "session reconcile timing must be greater than zero" ;;
+    esac
+  done
+  [ "$SESSION_RECONCILE_STABLE_SECONDS" -le "$SESSION_RECONCILE_MAX_SECONDS" ] ||
+    die "session reconcile stable window exceeds maximum duration"
+}
+
+wait_session_prerequisites() {
+  validate_reconcile_settings
+  waited=0
+  while [ "$waited" -lt "$SESSION_RECONCILE_MAX_SECONDS" ]; do
+    if mail_ready &&
+       [ -x "$APP" ] &&
+       [ -x "$BROWSER_CONTROL" ] &&
+       [ -x "$INDEX_CONTROL" ] &&
+       [ -r "$CONFIG" ] &&
+       [ -d "$USER_SERVICE_ROOT" ] &&
+       [ -d "$ACTIVE_SERVICE_ROOT" ] &&
+       pgrep -u "$(id -u)" -f "runsvdir -P $ACTIVE_SERVICE_ROOT" >/dev/null 2>&1; then
+      return 0
+    fi
+    log "session_reconcile=waiting_for_prerequisites elapsed_seconds=$waited"
+    sleep "$SESSION_RECONCILE_INTERVAL_SECONDS"
+    waited=$((waited + SESSION_RECONCILE_INTERVAL_SECONDS))
+  done
+  die "session reconcile prerequisites did not become ready"
+}
+
+require_active_managed_services() {
+  [ -f "$BROWSER_DEF/$MANAGED_MARKER" ] ||
+    die "browser managed marker is absent"
+  [ -f "$INDEX_DEF/$MANAGED_MARKER" ] ||
+    die "index managed marker is absent"
+  [ -L "$BROWSER_ACTIVE" ] ||
+    die "browser service link is absent"
+  [ -L "$INDEX_ACTIVE" ] ||
+    die "index service link is absent"
+  [ "$(readlink "$BROWSER_ACTIVE")" = "../usersv/notmuch-browser" ] ||
+    die "unexpected browser service target"
+  [ "$(readlink "$INDEX_ACTIVE")" = "../usersv/notmuch-browser-index" ] ||
+    die "unexpected index service target"
+}
+
+session_reconcile() {
+  wait_session_prerequisites
+  require_prerequisites
+  require_active_managed_services
+
+  elapsed=0
+  stable=0
+  repairs=0
+  while [ "$elapsed" -lt "$SESSION_RECONCILE_MAX_SECONDS" ]; do
+    if runtime_ready_quick; then
+      stable=$((stable + SESSION_RECONCILE_INTERVAL_SECONDS))
+      log "session_reconcile=healthy elapsed_seconds=$elapsed stable_seconds=$stable repairs=$repairs"
+      if [ "$stable" -ge "$SESSION_RECONCILE_STABLE_SECONDS" ]; then
+        validate_runtime || die "session reconcile final runtime validation failed"
+        log "status=user_runit_session_reconciled"
+        log "session_reconcile_repairs=$repairs"
+        return 0
+      fi
+    else
+      stable=0
+      repairs=$((repairs + 1))
+      log "session_reconcile=repair elapsed_seconds=$elapsed repairs=$repairs"
+      sv -w 20 up "$BROWSER_ACTIVE" >/dev/null 2>&1 || true
+      sv -w 20 up "$INDEX_ACTIVE" >/dev/null 2>&1 || true
+    fi
+    sleep "$SESSION_RECONCILE_INTERVAL_SECONDS"
+    elapsed=$((elapsed + SESSION_RECONCILE_INTERVAL_SECONDS))
+  done
+  die "user-runit services did not remain healthy for the required stable window"
+}
+
+repair_session_startup() {
+  wait_session_prerequisites
+  require_prerequisites
+  require_active_managed_services
+  install_session_reconcile_block
+  session_reconcile
+  validate_services
+  log "status=user_runit_session_startup_repaired"
 }
 
 rollback_activation() {
@@ -369,20 +510,22 @@ activate_services() {
   sv -w 20 up "$INDEX_ACTIVE" || fail_activation "index runit activation failed"
   validate_runtime || fail_activation "runit runtime validation failed"
   remove_icewm_blocks
+  install_session_reconcile_block
   log "status=user_runit_services_activated"
   validate_services
 }
 
 validate_services() {
   require_prerequisites
-  [ -L "$BROWSER_ACTIVE" ] || die "browser service link is absent"
-  [ -L "$INDEX_ACTIVE" ] || die "index service link is absent"
-  [ "$(readlink "$BROWSER_ACTIVE")" = "../usersv/notmuch-browser" ] || die "unexpected browser service target"
-  [ "$(readlink "$INDEX_ACTIVE")" = "../usersv/notmuch-browser-index" ] || die "unexpected index service target"
+  require_active_managed_services
   validate_runtime || die "service health check failed"
   if [ -f "$ICEWM_STARTUP" ]; then
     [ "$(grep -Fxc "$BROWSER_BEGIN" "$ICEWM_STARTUP" || true)" -eq 0 ] || die "legacy browser IceWM block remains"
     [ "$(grep -Fxc "$INDEX_BEGIN" "$ICEWM_STARTUP" || true)" -eq 0 ] || die "legacy index IceWM block remains"
+    [ "$(grep -Fxc "$SESSION_RECONCILE_BEGIN" "$ICEWM_STARTUP" || true)" -eq 1 ] ||
+      die "user-runit session reconcile begin marker is not singular"
+    [ "$(grep -Fxc "$SESSION_RECONCILE_END" "$ICEWM_STARTUP" || true)" -eq 1 ] ||
+      die "user-runit session reconcile end marker is not singular"
   fi
   log "status=user_runit_validation_passed"
   sv status "$BROWSER_ACTIVE"
@@ -410,7 +553,7 @@ rollback_services() {
 
 usage() {
   cat <<EOF
-Usage: notmuch-browser-runit-setup {inspect|stage|activate|validate|rollback}
+Usage: notmuch-browser-runit-setup {inspect|stage|activate|validate|session-reconcile|repair-session-startup|rollback}
 
 The helper manages only the approved per-user services:
   $BROWSER_ACTIVE
@@ -426,6 +569,8 @@ case "$cmd" in
   stage) stage_services ;;
   activate) activate_services ;;
   validate) validate_services ;;
+  session-reconcile) session_reconcile ;;
+  repair-session-startup) repair_session_startup ;;
   rollback) rollback_services ;;
   *) usage; exit 2 ;;
 esac
