@@ -18,7 +18,8 @@
 - [x] Manually validate the retained combined-migration candidate on antiX at `http://127.0.0.1:8876/`; the owner reported `antiX candidate GUI: PASS`.
 - [x] Run an identity-bound post-review gate for the GUI-accepted candidate; exact process/listener/log/temp/health/lock identities passed with production unchanged and the candidate retained.
 - [x] Manually validate the retained candidate through a Windows SSH tunnel to antiX `192.168.254.128`; the owner reported `Windows candidate GUI: PASS`, and antiX observed the established connection from `192.168.254.1`.
-- [ ] Run a separate identity-bound post-Windows gate before any stop, cleanup, backup, install, or runit action.
+- [x] Run a separate identity-bound post-Windows gate; the established Windows SSH connection, retained candidate, production, routes, locks, log, evidence, and empty temp all passed with no production change.
+- [ ] Gracefully stop only the exact retained candidate after final identity checks, preserve all runtime/build evidence without deleting anything, and reprove unchanged production plus free port 8876.
 - [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
