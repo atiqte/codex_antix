@@ -2,6 +2,13 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-25
+
+- Migrated the notmuch browser from runtime-parsed `html/template` files to templ v0.3.1020 source components with committed deterministic generated Go, retaining chi v5.3.1, vendored HTMX 2.0.10, the universal Readable/Original renderer, signed exports, image privacy gates, and non-mutating browser routes.
+- Added Bun 1.3.14 build metadata with exact Tailwind CSS/CLI 4.3.3 pins, a frozen/reproducible build helper, HTMX eval/script/history hardening, targeted Frost/Sapphire accessibility/error-state polish, and graceful SIGINT/SIGTERM HTTP shutdown.
+- Added runit-aware browser/index controls and a fail-closed per-user runit stage/activate/validate/rollback helper for the existing `~/.runit/service` supervisor, including `/mail` readiness, bounded `svlogd`, health checks, checksummed rollback evidence, and automatic legacy restoration on failed activation.
+- Passed frozen dependency/module verification, deterministic templ/Tailwind generation, Go unit/vet/race/coverage, 46 Python tests, all shell syntax checks, an 86,332-byte static-asset budget, and a stripped 8,093,961-byte Linux build. Production and final HTML/TXT guides remain unchanged pending reviewed antiX/Windows/read-only/runit/reboot gates.
+
 ## 2026-07-19
 
 - Replaced Office-marker-only HTML normalization with universal Readable typography: local Inter Variable at 15px/1.4 for prose, 9pt/1.25 for table-contained signature text, preserved explicit smaller spans, constrained tables, and unchanged sanitized Original mode.

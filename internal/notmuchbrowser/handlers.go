@@ -18,13 +18,13 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 	query := normalizeQuery(r.URL.Query().Get("q"))
 	page, err := s.Client.Search(r.Context(), query, 0, defaultLimit(s.Config))
 	if err != nil {
-		s.renderPage(w, http.StatusOK, "Search", pageView{
+		s.renderPage(r.Context(), w, http.StatusOK, "Search", pageView{
 			Query: query,
 			Error: err.Error(),
 		})
 		return
 	}
-	s.renderPage(w, http.StatusOK, "Search", pageView{
+	s.renderPage(r.Context(), w, http.StatusOK, "Search", pageView{
 		Query:      query,
 		SearchPage: page,
 	})
@@ -44,10 +44,10 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	if isHTMX(r) {
 		w.Header().Set("Vary", "HX-Request")
-		s.renderResults(w, http.StatusOK, view)
+		s.renderResults(r.Context(), w, http.StatusOK, view)
 		return
 	}
-	s.renderPage(w, http.StatusOK, "Search", view)
+	s.renderPage(r.Context(), w, http.StatusOK, "Search", view)
 }
 
 func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
@@ -73,10 +73,10 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	if isHTMX(r) {
 		w.Header().Set("Vary", "HX-Request")
-		s.renderMessageFragment(w, http.StatusOK, view)
+		s.renderMessageFragment(r.Context(), w, http.StatusOK, view)
 		return
 	}
-	s.renderMessage(w, http.StatusOK, view)
+	s.renderMessage(r.Context(), w, http.StatusOK, view)
 }
 
 func (s *Server) prepareMessageView(r *http.Request, view *messageView) error {
@@ -165,7 +165,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		view.Error = err.Error()
 	}
-	s.renderStatus(w, http.StatusOK, view)
+	s.renderStatus(r.Context(), w, http.StatusOK, view)
 }
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {

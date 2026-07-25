@@ -1,7 +1,7 @@
 # Documentation Index
 
 This folder contains project memory and operational guides for the approved
-Betterbird mail migration utilities.
+mail migration utilities and read-only Go notmuch browser.
 
 ## Start Here
 
@@ -21,11 +21,14 @@ Betterbird mail migration utilities.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the Evolution Flatpak guide.
 - `MBSYNC_ANTIX_GUIDE.html`: offline browser guide with copy buttons for the first deletion-safe mbsync INBOX test on antiX.
 - `MBSYNC_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the mbsync antiX guide.
+- `NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt`: the currently validated production reconstruction guide. Its templ/Bun/per-user-runit replacement is intentionally deferred until the combined migration passes antiX, Windows, read-only, rollback, resource, and reboot gates.
 
 ## antiX Desktop Helpers
 
 - `../scripts/evolution_flatpak_icewm_launcher_setup.sh`: user-level helper for adding Evolution Flatpak to the IceWM Personal menu and taskbar toolbar while starting `gnome-keyring-daemon` at login.
 - `../scripts/mbsync_provider_inbox_setup.sh`: antiX helper for installing isync/mbsync, creating the isolated `/mail` test layout, writing a pull-only INBOX config, dry-running, and pulling once.
+- `../scripts/notmuch_browser_build.sh`: pinned Bun/Go preparation, templ/Tailwind generation, verification, tests, and stripped browser build.
+- `../scripts/notmuch_browser_runit_setup.sh`: fail-closed staging, activation, validation, and rollback for only the existing per-user runit tree.
 
 For transport commands, `--manifest` always points to `manifest.json`.
 `inventory.jsonl` must stay beside it and is read automatically by the

@@ -2,9 +2,12 @@
 
 ## Active
 
-- [ ] Review setup and memory files.
-- [ ] Push setup/memory/workflow files using the approved end-of-session workflow.
-- [ ] Replace the superseded uninstalled GUI2 bundle with reference-aware embedded-image rendering and local-font typography, then repeat preflight, source verification/build, isolated port validation, atomic install/rollback, antiX/Windows UI checks, read-only proof, and reboot proof one reviewed chunk at a time.
+- [x] Review setup and memory files.
+- [x] Commit and push the combined migration plus updated project memory using the approved end-of-session workflow.
+- [x] Fold the unfinished standalone universal-Readable rollout into the owner-approved templ/HTMX/Tailwind/chi and per-user runit migration; do not install the old staged binary or continue its standalone harness-transfer path.
+- [x] Replace `html/template` files with templ v0.3.1020 components, pin Tailwind CSS/CLI 4.3.3 with Bun 1.3.14, retain vendored HTMX 2.0.10 and chi v5.3.1, add HTMX hardening and focused Frost/Sapphire UX improvements, and delete the superseded HTML templates after parity tests passed.
+- [x] Add reproducible build/generation validation, graceful SIGINT/SIGTERM shutdown, runit-aware browser/index controls, and a fail-closed per-user runit stage/activate/validate/rollback helper without touching `/etc/service`.
+- [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
 - [x] Implement and locally validate body-resource classification, confirmed CID/data/SVG/relative image rendering, genuine-attachment-only Save All, and local Inter/Aporetic/Aptos font stacks without bundling fonts; package exact no-font bundle `notmuch-browser-body-images-src-20260718-183128.tar.gz`.
@@ -48,9 +51,9 @@
 - [x] Pass the universal-Readable Windows/antiX read-only transfer preflight with exact local bundle identity, reachable SSH, absent remote destination/incoming residue, free 8876, exact production artifacts, read-only 1,199/2,146 health, and zero temp.
 - [x] Transfer only bundle `50e368dc...` to the guarded antiX incoming path; remote bytes matched exactly, production remained unchanged, and no finalization/extraction/build occurred.
 - [x] Rerun archive finalization with corrected Python-sorted inventory SHA256 `b505b3e1...`; all 32 members passed and the exact archive was atomically finalized mode 600 with production unchanged.
-- [ ] Run corrected local transfer helper `09103ad2...` to transfer and independently verify standalone harness `6aa02ac...`, then start only Linux binary `e68c33d1...` on isolated `127.0.0.1:8876`, retain it through an identity-bound private pointer, and validate health, security headers, Readable/Original rendering, ten embedded images, genuine attachments, temp cleanup, and production invariants before manual review.
+- [x] Supersede the unrun `09103ad2...` standalone harness transfer and `e68c33d1...` isolated start; their validated Readable behavior is retained in the combined migration source, and neither artifact is approved for production installation.
 - [x] Diagnose the first harness-transfer preflight failure: its order-sensitive shell JSON match rejected healthy production after all printed hashes passed; execution stopped before SCP and no antiX state changed. Replace it with structured JSON parsing before retrying.
-- [ ] After isolated acceptance, complete Windows tunnel, production backup/install/rollback, read-only, and reboot gates one reviewed chunk at a time.
+- [ ] After combined-migration isolated acceptance, complete Windows tunnel, production backup/install/rollback, per-user runit, read-only, resource, and reboot gates one reviewed chunk at a time.
 - [x] Audit the owner-provided Aptos and Iosevka SS14 ZIP archives for safe paths, licenses, valid font metadata, and available styles; both archives passed and no font was installed during audit.
 - [x] Atomically install and verify the four core Aptos and Iosevka SS14 styles user-locally on antiX, preserving the Aptos EULA and excluding all font payloads from Git, bundles, and served assets.
 - [ ] After every replacement rollout gate passes, update and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with the exact replacement bundle/artifact hashes, font preflight, commands, rollback, expected output, copy controls, and troubleshooting.
@@ -73,7 +76,7 @@
 
 - [ ] Consider moving the mbsync `PassCmd` from the current chmod `600` password file to GPG after unattended polling remains stable.
 - [ ] Consider `PullFlags` or broader IMAP two-way behavior only as separate controlled changes.
-- [ ] Decide whether the Go notmuch browser should start through IceWM startup or reviewed root-level runit service after antiX validation.
+- [x] Select the existing per-user runit supervisor under `~/.runit/service`; root-level runit is not required, and the browser/index IceWM blocks are removed only after a healthy runit cutover.
 - [ ] Add project-specific setup instructions after tooling is selected.
 - [ ] Create issue tracker labels or project board after a remote is connected, if useful.
 

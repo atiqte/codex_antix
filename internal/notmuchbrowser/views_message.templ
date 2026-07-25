@@ -1,0 +1,146 @@
+package notmuchbrowser
+
+templ messagePageComponent(view messageView) {
+	@layoutComponent("Message", messagePageBodyComponent(view))
+}
+
+templ messagePageBodyComponent(view messageView) {
+	<div id="reading-pane-content" class="full-reader-shell">
+		@messageFragmentComponent(view)
+	</div>
+}
+
+templ messageFragmentComponent(view messageView) {
+	if view.Error != "" {
+		<div class="notice bad" role="alert">{ view.Error }</div>
+	} else {
+		<article class="message-reader">
+			<header class="reader-header">
+				<div class="reader-heading-row">
+					<a class="icon-button" href="/" aria-label="Back to search" title="Back to search">@iconComponent("chevron-left")</a>
+					<div class="reader-heading">
+						<div class="reader-heading-title">
+							<h1>{ view.Detail.Summary.Subject }</h1>
+							<button class="mini-copy-button" type="button" data-copy-text={ view.Detail.Summary.Subject } aria-label="Copy subject" title="Copy subject">@iconComponent("copy")</button>
+						</div>
+						<div class="reader-tools-row">
+							<div class="reader-tags tags">
+								for _, tag := range view.Detail.Summary.Tags {
+									<span>{ tag }</span>
+								}
+							</div>
+							if view.Detail.BodyKind == "html" {
+								<div class="display-mode-switch" role="group" aria-label="Message display">
+									if isReadableDisplay(view.DisplayMode) {
+										<span class="is-active" aria-current="true">Readable</span>
+									} else {
+										<a href={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, view.ImageMode, displayReadable)) } hx-get={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, view.ImageMode, displayReadable)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="Use compact readable typography">Readable</a>
+									}
+									if isOriginalDisplay(view.DisplayMode) {
+										<span class="is-active" aria-current="true">Original</span>
+									} else {
+										<a href={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, view.ImageMode, displayOriginal)) } hx-get={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, view.ImageMode, displayOriginal)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title="Use sanitized sender formatting">Original</a>
+									}
+								</div>
+							}
+						</div>
+					</div>
+				</div>
+				<dl class="message-fields">
+					<dt>From</dt><dd>{ view.Detail.Summary.From }</dd>
+					<dt>To</dt><dd>{ view.Detail.Summary.To }</dd>
+					if view.Detail.Summary.Cc != "" {
+						<dt>Cc</dt><dd>{ view.Detail.Summary.Cc }</dd>
+					}
+					<dt>Date</dt><dd>{ formatReaderDate(view.Detail.Summary.Date) }</dd>
+					<dt>Message-ID</dt><dd class="message-id-line"><span class="path">{ view.Detail.Summary.ID }</span><button class="mini-copy-button" type="button" data-copy-text={ "Message-ID: " + view.Detail.Summary.ID } aria-label="Copy Message-ID" title="Copy Message-ID">@iconComponent("copy")</button></dd>
+				</dl>
+				if view.Detail.DuplicateNote != "" {
+					<div class="duplicate-bar">
+						<span>{ view.Detail.DuplicateNote }</span>
+						<div class="duplicates" aria-label="Duplicate file selection">
+							for i, path := range view.Detail.Files {
+								if selectedDup(view.Detail.SelectedDup, i) {
+									<strong title={ path }>{ i + 1 }</strong>
+								} else {
+									<a href={ templ.URL(messageDuplicateURL(view.Detail.Summary.ID, i, view.DisplayMode)) } hx-get={ templ.URL(messageDuplicateURL(view.Detail.Summary.ID, i, view.DisplayMode)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true" title={ path }>{ i + 1 }</a>
+								}
+							}
+						</div>
+					</div>
+				}
+				<div class="image-permission-bar">
+					if isBlocked(view.ImageMode) {
+						<span class="permission-state">@iconComponent("shield-check") Images blocked</span>
+						<a class="icon-text-button" href={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, imagesEmbedded, view.DisplayMode)) } hx-get={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, imagesEmbedded, view.DisplayMode)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Show images stored inside this selected email? No external server will be contacted.">@iconComponent("image") Show embedded images</a>
+					} else if isEmbedded(view.ImageMode) {
+						<span class="permission-state allowed">@iconComponent("check") Embedded images shown</span>
+						<a class="icon-text-button warning-button" href={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, imagesRemote, view.DisplayMode)) } hx-get={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, imagesRemote, view.DisplayMode)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Load remote images? Remote servers may learn your IP address and that this message was viewed.">@iconComponent("image") Load remote images</a>
+					} else {
+						<span class="permission-state warning">@iconComponent("image") Remote images allowed</span>
+						<a class="icon-text-button" href={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, imagesBlocked, view.DisplayMode)) } hx-get={ templ.URL(messageViewURL(view.Detail.Summary.ID, view.Detail.SelectedDup, imagesBlocked, view.DisplayMode)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="false">@iconComponent("shield-check") Block images</a>
+					}
+				</div>
+			</header>
+			if len(view.Detail.Attachments) > 0 {
+				<section class="attachment-section" aria-labelledby="attachments-title">
+					<div class="section-heading">
+						<div>
+							<h2 id="attachments-title">Attachments</h2>
+							<span>{ len(view.Detail.Attachments) } from duplicate { view.Detail.SelectedDup + 1 }</span>
+						</div>
+						if view.SaveAllURL != "" {
+							<a class="icon-text-button primary-button" href={ templ.URL(view.SaveAllURL) }>@iconComponent("archive") Save All</a>
+						}
+					</div>
+					<div class="attachment-list">
+						for _, attachment := range view.Detail.Attachments {
+							<div class="attachment-row">
+								<span class="attachment-icon">
+									if attachment.Previewable {
+										@iconComponent("image")
+									} else {
+										@iconComponent("paperclip")
+									}
+								</span>
+								<div class="attachment-copy">
+									<strong>{ attachment.FileName }</strong>
+									<span>
+										if attachment.MediaType != "" {
+											{ attachment.MediaType }
+										} else {
+											application/octet-stream
+										}
+										if attachment.Previewable {
+											&nbsp;| preview available
+										}
+									</span>
+								</div>
+								<a class="icon-button" href={ templ.URL(attachment.DownloadURL) } aria-label={ "Download " + attachment.FileName } title={ "Download " + attachment.FileName }>@iconComponent("download")</a>
+							</div>
+							if imagesAllowed(view.ImageMode) && attachment.Previewable && attachment.InlineURL != "" {
+								<figure class="attachment-preview">
+									<img src={ templ.URL(attachment.InlineURL) } alt={ attachment.FileName } loading="lazy" referrerpolicy="no-referrer"/>
+								</figure>
+							}
+						}
+					</div>
+				</section>
+			}
+			<section class="message-body" aria-label="Message body">
+				if view.BodyError != "" {
+					<div class="notice bad" role="alert">{ view.BodyError }</div>
+				} else if view.Detail.BodyKind == "html" {
+					<iframe sandbox referrerpolicy="no-referrer" title="Email HTML body" srcdoc={ view.HTMLSrcdoc }></iframe>
+				} else if view.Detail.BodyKind == "plain" {
+					<pre>{ view.Detail.PlainBody }</pre>
+				} else {
+					<div class="notice">No text body is available.</div>
+				}
+			</section>
+			if view.Detail.SelectedFile != "" {
+				<footer class="reader-footer"><span>Selected file</span><code>{ view.Detail.SelectedFile }</code></footer>
+			}
+		</article>
+	}
+}

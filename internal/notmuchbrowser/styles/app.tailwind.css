@@ -1,6 +1,6 @@
 @import "tailwindcss" source(none);
 
-@source "../templates/**/*.html";
+@source "../*.templ";
 @source "../static/app.js";
 
 @theme {
@@ -663,6 +663,10 @@
     box-shadow: inset 3px 0 var(--sapphire);
   }
 
+  .result-table tbody tr.selected .subject {
+    color: var(--sapphire);
+  }
+
   .subject {
     display: block;
     min-width: 0;
@@ -1156,6 +1160,52 @@
     border-color: #dcaaaa;
     background: var(--red-bg);
     color: var(--red);
+  }
+
+  .notice.empty-state {
+    display: flex;
+    min-height: 180px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-style: dashed;
+    text-align: center;
+  }
+
+  .notice.empty-state strong {
+    color: var(--ink);
+    font-size: 14px;
+  }
+
+  .app-notice {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 120;
+    max-width: min(420px, calc(100vw - 24px));
+    padding: 10px 13px;
+    border: 1px solid #dcaaaa;
+    border-radius: 7px;
+    background: var(--red-bg);
+    color: var(--red);
+    box-shadow: var(--shadow-raised);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .app-notice[hidden] {
+    display: none;
+  }
+
+  [aria-busy="true"] {
+    cursor: progress;
+  }
+
+  #results[aria-busy="true"],
+  #reading-pane-content[aria-busy="true"] {
+    opacity: 0.72;
+    transition: opacity 120ms ease;
   }
 
   .status-page {

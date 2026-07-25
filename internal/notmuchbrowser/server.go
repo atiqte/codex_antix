@@ -3,12 +3,16 @@ package notmuchbrowser
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -28,14 +32,20 @@ type Server struct {
 }
 
 func Main(args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return MainContext(ctx, args)
+}
+
+func MainContext(ctx context.Context, args []string) error {
 	cfg, err := ParseConfig(args)
 	if err != nil {
 		return err
 	}
 	client := NewNotmuchClient(cfg)
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.CommandTimeout)
+	startupCtx, cancel := context.WithTimeout(ctx, cfg.CommandTimeout)
 	defer cancel()
-	if err := client.CheckStartupSafety(ctx); err != nil {
+	if err := client.CheckStartupSafety(startupCtx); err != nil {
 		return err
 	}
 	server, err := NewServer(cfg, client)
@@ -53,7 +63,32 @@ func Main(args []string) error {
 	fmt.Printf("notmuch_browser_url=http://%s/\n", cfg.Addr)
 	fmt.Println("viewer_mode=single_email_go")
 	fmt.Println("read_only=yes")
-	return httpServer.ListenAndServe()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	case <-ctx.Done():
+		fmt.Println("shutdown=begin")
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("graceful shutdown: %w", err)
+		}
+		err := <-errCh
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		fmt.Println("shutdown=complete")
+		return nil
+	}
 }
 
 func NewServer(cfg Config, client NotmuchClient) (*Server, error) {

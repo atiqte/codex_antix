@@ -1,0 +1,52 @@
+package notmuchbrowser
+
+templ layoutComponent(title string, content templ.Component) {
+	<!doctype html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="htmx-config" content={ htmxConfigJSON }/>
+			<title>{ title } - notmuch browser</title>
+			<link rel="stylesheet" href="/static/app.css"/>
+			<script src="/static/htmx.min.js" defer></script>
+			<script src="/static/app.js" defer></script>
+		</head>
+		<body hx-history="false">
+			<a class="skip-link" href="#content">Skip to content</a>
+			<div id="app-notice" class="app-notice" role="status" aria-live="polite" hidden></div>
+			<div class="app-frame">
+				<aside id="app-sidebar" class="app-sidebar" data-sidebar>
+					<div class="brand-row">
+						<a class="brand" href="/" aria-label="notmuch browser home">
+							<span class="brand-mark">@iconComponent("mail-open")</span>
+							<span class="sidebar-label"><strong>notmuch</strong><small>browser</small></span>
+						</a>
+						<button class="icon-button desktop-only sidebar-toggle" type="button" data-sidebar-toggle aria-label="Collapse sidebar" title="Collapse sidebar"><span class="collapse-icon">@iconComponent("panel-left-close")</span><span class="expand-icon">@iconComponent("panel-left-open")</span></button>
+						<button class="icon-button mobile-only" type="button" data-sidebar-close aria-label="Close navigation" title="Close navigation">@iconComponent("x")</button>
+					</div>
+					<nav class="mail-nav" aria-label="Mail views">
+						<a href="/search?q=tag%3Ainbox" aria-label="Inbox">@iconComponent("inbox")<span class="sidebar-label">Inbox</span></a>
+						<a href="/search?q=tag%3Aunread" aria-label="Unread">@iconComponent("mail")<span class="sidebar-label">Unread</span></a>
+						<a href="/search?q=tag%3Aattachment" aria-label="Attachments">@iconComponent("paperclip")<span class="sidebar-label">Attachments</span></a>
+						<a href="/search?q=%2A" aria-label="All indexed mail">@iconComponent("archive")<span class="sidebar-label">All indexed mail</span></a>
+						<a href="/status" aria-label="Status">@iconComponent("activity")<span class="sidebar-label">Status</span></a>
+					</nav>
+					<div class="privacy-note sidebar-label">
+						@iconComponent("shield-check")
+						<span><strong>Read only</strong><small>Local index via SSH tunnel</small></span>
+					</div>
+				</aside>
+				<button class="sidebar-scrim" type="button" data-sidebar-close aria-label="Close navigation"></button>
+				<div class="app-workspace">
+					<header class="app-mobilebar">
+						<button class="icon-button" type="button" data-sidebar-open aria-label="Open navigation" title="Open navigation">@iconComponent("menu")</button>
+					</header>
+					<main id="content" class="app-content">
+						@content
+					</main>
+				</div>
+			</div>
+		</body>
+	</html>
+}

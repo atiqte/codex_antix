@@ -228,11 +228,7 @@ func TestTemplateEscapesSearchResults(t *testing.T) {
 			}},
 		},
 	}
-	var buf bytes.Buffer
-	if err := templates.ExecuteTemplate(&buf, "results", view); err != nil {
-		t.Fatalf("template render failed: %v", err)
-	}
-	out := buf.String()
+	out := executeTemplateForTest(t, "results", view)
 	if strings.Contains(out, `<script>alert("x")</script>`) {
 		t.Fatalf("raw script was not escaped: %s", out)
 	}
@@ -433,11 +429,7 @@ func TestTemplateRendersDuplicateSelector(t *testing.T) {
 			DuplicateNote: "2 duplicate/copy files share this Message-ID",
 		},
 	}
-	var buf bytes.Buffer
-	if err := templates.ExecuteTemplate(&buf, "messagePage", view); err != nil {
-		t.Fatalf("template render failed: %v", err)
-	}
-	out := buf.String()
+	out := executeTemplateForTest(t, "messagePage", view)
 	if !strings.Contains(out, "2 duplicate/copy files") {
 		t.Fatalf("duplicate note missing: %s", out)
 	}

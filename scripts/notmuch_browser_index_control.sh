@@ -6,6 +6,8 @@ STATE_DIR=${NOTMUCH_BROWSER_STATE_DIR:-"/mail/AppData/notmuch-browser"}
 LOG_DIR=${NOTMUCH_BROWSER_LOG_DIR:-"/mail/Logs/notmuch-browser"}
 PID_FILE="$STATE_DIR/notmuch-browser-index-loop.pid"
 LOOP_LOG="$LOG_DIR/notmuch-browser-index-loop.log"
+RUNIT_SERVICE=${NOTMUCH_BROWSER_INDEX_RUNIT_SERVICE:-"$HOME/.runit/service/notmuch-browser-index"}
+RUNIT_LOG_DIR=${NOTMUCH_BROWSER_INDEX_RUNIT_LOG_DIR:-"$LOG_DIR/runit-index"}
 MBSYNC_LOCK_DIR=${NOTMUCH_BROWSER_MBSYNC_LOCK:-"/mail/AppData/isync/provider-live-loop/lock"}
 REFRESH_LOCK_DIR="$STATE_DIR/index-refresh.lock"
 INTERVAL_SECONDS=${NOTMUCH_BROWSER_INDEX_REFRESH_INTERVAL_SECONDS:-60}
@@ -86,6 +88,15 @@ current_pid_alive() {
   pid_alive "$pid"
 }
 
+runit_supervised() {
+  command -v sv >/dev/null 2>&1 &&
+    [ -L "$RUNIT_SERVICE" ]
+}
+
+runit_status_line() {
+  sv status "$RUNIT_SERVICE" 2>&1
+}
+
 loop_forever() {
   ensure_dirs
   loop_log "loop_start interval_seconds=$INTERVAL_SECONDS lock_recheck_seconds=$LOCK_RECHECK_SECONDS"
@@ -116,6 +127,19 @@ loop_forever() {
 
 start_loop() {
   ensure_dirs
+  if runit_supervised; then
+    if sv -w 20 up "$RUNIT_SERVICE"; then
+      log "loop=running"
+      log "supervisor=user-runit"
+      runit_status_line
+      log "interval_seconds=$INTERVAL_SECONDS"
+      log "log=$LOOP_LOG"
+      return 0
+    fi
+    log "status=failed_to_start_runit_index_loop"
+    runit_status_line
+    return 1
+  fi
   if current_pid_alive; then
     log "loop=running"
     log "pid=$(read_pid)"
@@ -141,6 +165,17 @@ start_loop() {
 }
 
 stop_loop() {
+  if runit_supervised; then
+    if sv -w 20 down "$RUNIT_SERVICE"; then
+      log "loop=stopped"
+      log "supervisor=user-runit"
+      runit_status_line
+      return 0
+    fi
+    log "status=failed_to_stop_runit_index_loop"
+    runit_status_line
+    return 1
+  fi
   pid=$(read_pid 2>/dev/null || true)
   if ! pid_alive "$pid"; then
     rm -f "$PID_FILE"
@@ -163,15 +198,27 @@ stop_loop() {
 
 status_loop() {
   ensure_dirs
-  pid=$(read_pid 2>/dev/null || true)
-  if pid_alive "$pid"; then
-    log "loop=running"
-    log "pid=$pid"
-  elif [ -s "$PID_FILE" ]; then
-    log "loop=stale_pid"
-    log "pid=$pid"
+  if runit_supervised; then
+    status=$(runit_status_line)
+    case "$status" in
+      run:*) log "loop=running" ;;
+      down:*) log "loop=stopped" ;;
+      *) log "loop=unknown" ;;
+    esac
+    log "supervisor=user-runit"
+    log "$status"
   else
-    log "loop=stopped"
+    pid=$(read_pid 2>/dev/null || true)
+    if pid_alive "$pid"; then
+      log "loop=running"
+      log "pid=$pid"
+    elif [ -s "$PID_FILE" ]; then
+      log "loop=stale_pid"
+      log "pid=$pid"
+    else
+      log "loop=stopped"
+    fi
+    log "supervisor=direct"
   fi
   log "control=$CONTROL"
   log "state_dir=$STATE_DIR"
@@ -201,7 +248,9 @@ status_loop() {
 logs_loop() {
   ensure_dirs
   log "log=$LOOP_LOG"
+  log "runit_log=$RUNIT_LOG_DIR/current"
   ls -lh "$LOG_DIR" 2>/dev/null || true
+  tail -120 "$RUNIT_LOG_DIR/current" 2>/dev/null || true
   tail -160 "$LOOP_LOG" 2>/dev/null || true
 }
 
@@ -258,6 +307,8 @@ Environment overrides:
   NOTMUCH_BROWSER_INDEX_REFRESH_INTERVAL_SECONDS
   NOTMUCH_BROWSER_INDEX_LOCK_RECHECK_SECONDS
   NOTMUCH_BROWSER_INDEX_LOOP_MAX_LOG_BYTES
+  NOTMUCH_BROWSER_INDEX_RUNIT_SERVICE
+  NOTMUCH_BROWSER_INDEX_RUNIT_LOG_DIR
   NOTMUCH_BROWSER_ICEWM_STARTUP
 EOF
 }

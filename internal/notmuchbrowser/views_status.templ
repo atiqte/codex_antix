@@ -1,0 +1,53 @@
+package notmuchbrowser
+
+templ statusPageComponent(view statusView) {
+	@layoutComponent("Status", statusBodyComponent(view))
+}
+
+templ statusBodyComponent(view statusView) {
+	<section class="status-page">
+		<div class="page-heading">
+			<div>
+				<span class="eyebrow">NOTMUCH BROWSER SERVICE</span>
+				<h1>Service status</h1>
+			</div>
+			<span class="health-badge">@iconComponent("shield-check") Read only</span>
+		</div>
+		if view.Error != "" {
+			<div class="notice bad" role="alert">{ view.Error }</div>
+		} else {
+			<div class="status-grid">
+				<div class="metric"><span>Messages</span><strong>{ view.Status.Counts.Messages }</strong></div>
+				<div class="metric"><span>Indexed files</span><strong>{ view.Status.Counts.Files }</strong></div>
+				<div class="metric"><span>mbsync lock</span><strong class="metric-word">
+					if view.Status.MbsyncLockPresent {
+						present
+					} else {
+						absent
+					}
+				</strong></div>
+				<div class="metric"><span>Download temp</span><strong class="metric-word">{ view.TempFileCount } / { formatBytes(view.TempFileBytes) }</strong></div>
+			</div>
+			<div class="status-band">
+				<table class="status-table">
+					<tbody>
+						<tr><th>notmuch</th><td>{ view.Status.NotmuchVersion }</td></tr>
+						<tr><th>Config</th><td class="path">{ view.Status.ConfigPath }</td></tr>
+						<tr><th>database.path</th><td class="path">{ view.Status.DatabasePath }</td></tr>
+						<tr><th>database.mail_root</th><td class="path">{ view.Status.MailRoot }</td></tr>
+						<tr><th>maildir.synchronize_flags</th><td>{ view.Status.MaildirSyncFlags }</td></tr>
+						<tr><th>index.decrypt</th><td>{ view.Status.IndexDecrypt }</td></tr>
+						<tr><th>new.ignore</th><td class="path">{ view.Status.NewIgnore }</td></tr>
+					</tbody>
+				</table>
+			</div>
+			<section class="tunnel-band" aria-labelledby="tunnel-title">
+				<div class="section-heading">
+					<div><h2 id="tunnel-title">Windows SSH tunnel</h2></div>
+					<button class="icon-button" type="button" data-copy-target="#tunnel-command" aria-label="Copy tunnel command" title="Copy tunnel command">@iconComponent("copy")</button>
+				</div>
+				<pre id="tunnel-command" class="code-block">{ view.TunnelHint }</pre>
+			</section>
+		}
+	</section>
+}

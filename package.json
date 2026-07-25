@@ -1,0 +1,12 @@
+{
+  "name": "notmuch-browser-assets",
+  "private": true,
+  "scripts": {
+    "css:build": "tailwindcss -i ./internal/notmuchbrowser/styles/app.tailwind.css -o ./internal/notmuchbrowser/static/app.css --minify",
+    "css:watch": "tailwindcss -i ./internal/notmuchbrowser/styles/app.tailwind.css -o ./internal/notmuchbrowser/static/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}

@@ -9,6 +9,8 @@ DOWNLOAD_TMP=${NOTMUCH_BROWSER_DOWNLOAD_TMP:-"$STATE_DIR/download-tmp"}
 LOG_DIR=${NOTMUCH_BROWSER_LOG_DIR:-"/mail/Logs/notmuch-browser"}
 PID_FILE="$STATE_DIR/notmuch-browser.pid"
 SERVER_LOG="$LOG_DIR/notmuch-browser.log"
+RUNIT_SERVICE=${NOTMUCH_BROWSER_RUNIT_SERVICE:-"$HOME/.runit/service/notmuch-browser"}
+RUNIT_LOG_DIR=${NOTMUCH_BROWSER_RUNIT_LOG_DIR:-"$LOG_DIR/runit-browser"}
 REFRESH_LOCK_DIR="$STATE_DIR/index-refresh.lock"
 MBSYNC_LOCK_DIR=${NOTMUCH_BROWSER_MBSYNC_LOCK:-"/mail/AppData/isync/provider-live-loop/lock"}
 REFRESH_TIMEOUT_SECONDS=${NOTMUCH_BROWSER_REFRESH_TIMEOUT_SECONDS:-600}
@@ -49,6 +51,15 @@ pid_alive() {
 current_pid_alive() {
   pid=$(read_pid 2>/dev/null || true)
   pid_alive "$pid"
+}
+
+runit_supervised() {
+  command -v sv >/dev/null 2>&1 &&
+    [ -L "$RUNIT_SERVICE" ]
+}
+
+runit_status_line() {
+  sv status "$RUNIT_SERVICE" 2>&1
 }
 
 notmuch_config_get() {
@@ -93,6 +104,18 @@ start_service() {
     return 1
   }
   check_notmuch_safety || return 1
+  if runit_supervised; then
+    if sv -w 20 up "$RUNIT_SERVICE"; then
+      log "server=running"
+      log "supervisor=user-runit"
+      runit_status_line
+      log "url=http://$ADDR/"
+      return 0
+    fi
+    log "status=failed_to_start_runit_service"
+    runit_status_line
+    return 1
+  fi
   if current_pid_alive; then
     log "server=running"
     log "pid=$(read_pid)"
@@ -118,6 +141,17 @@ start_service() {
 }
 
 stop_service() {
+  if runit_supervised; then
+    if sv -w 20 down "$RUNIT_SERVICE"; then
+      log "server=stopped"
+      log "supervisor=user-runit"
+      runit_status_line
+      return 0
+    fi
+    log "status=failed_to_stop_runit_service"
+    runit_status_line
+    return 1
+  fi
   pid=$(read_pid 2>/dev/null || true)
   if ! pid_alive "$pid"; then
     rm -f "$PID_FILE"
@@ -140,15 +174,27 @@ stop_service() {
 
 status_service() {
   ensure_dirs
-  pid=$(read_pid 2>/dev/null || true)
-  if pid_alive "$pid"; then
-    log "server=running"
-    log "pid=$pid"
-  elif [ -s "$PID_FILE" ]; then
-    log "server=stale_pid"
-    log "pid=$pid"
+  if runit_supervised; then
+    status=$(runit_status_line)
+    case "$status" in
+      run:*) log "server=running" ;;
+      down:*) log "server=stopped" ;;
+      *) log "server=unknown" ;;
+    esac
+    log "supervisor=user-runit"
+    log "$status"
   else
-    log "server=stopped"
+    pid=$(read_pid 2>/dev/null || true)
+    if pid_alive "$pid"; then
+      log "server=running"
+      log "pid=$pid"
+    elif [ -s "$PID_FILE" ]; then
+      log "server=stale_pid"
+      log "pid=$pid"
+    else
+      log "server=stopped"
+    fi
+    log "supervisor=direct"
   fi
   log "url=http://$ADDR/"
   log "binary=$APP"
@@ -185,7 +231,9 @@ status_service() {
 logs_service() {
   ensure_dirs
   log "log=$SERVER_LOG"
+  log "runit_log=$RUNIT_LOG_DIR/current"
   ls -lh "$LOG_DIR" 2>/dev/null || true
+  tail -120 "$RUNIT_LOG_DIR/current" 2>/dev/null || true
   tail -120 "$SERVER_LOG" 2>/dev/null || true
 }
 
@@ -277,25 +325,12 @@ install_icewm_startup() {
 
 print_runit_service() {
   cat <<EOF
-# Root-level template for later manual review. Do not run blindly.
-# It keeps the service bound to $ADDR and runs it as user atiq.
-
-sudo mkdir -p /etc/sv/notmuch-browser/log /mail/Logs/notmuch-browser
-
-sudo tee /etc/sv/notmuch-browser/run >/dev/null <<'RUN'
-#!/bin/sh
-exec 2>&1
-exec chpst -u atiq:atiq /home/atiq/.local/bin/notmuch-browser --addr 127.0.0.1:8765 --config /home/atiq/.config/notmuch/default/config
-RUN
-
-sudo tee /etc/sv/notmuch-browser/log/run >/dev/null <<'LOG'
-#!/bin/sh
-exec svlogd -tt /mail/Logs/notmuch-browser
-LOG
-
-sudo chmod 755 /etc/sv/notmuch-browser/run /etc/sv/notmuch-browser/log/run
-sudo ln -s /etc/sv/notmuch-browser /etc/service/notmuch-browser
-sudo sv status notmuch-browser
+# The approved supervisor is the existing per-user runsvdir, not root runit.
+# Install the reviewed setup helper, then stage and activate one gate at a time:
+notmuch-browser-runit-setup inspect
+notmuch-browser-runit-setup stage
+notmuch-browser-runit-setup activate
+notmuch-browser-runit-setup validate
 EOF
 }
 
@@ -311,6 +346,8 @@ Environment overrides:
   NOTMUCH_BROWSER_LOG_DIR
   NOTMUCH_BROWSER_DOWNLOAD_TMP
   NOTMUCH_BROWSER_REFRESH_TIMEOUT_SECONDS
+  NOTMUCH_BROWSER_RUNIT_SERVICE
+  NOTMUCH_BROWSER_RUNIT_LOG_DIR
 EOF
 }
 

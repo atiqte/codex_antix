@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-25: Standardize the Browser on templ, HTMX, Tailwind via Bun, chi, and Per-User runit
+
+- Status: accepted
+- Context: The owner rejected Alpine.js, Alpine AJAX, and Pines, chose HTMX for all hypermedia interactions, installed Bun instead of Node/npm, and requested a reproducible, low-resource antiX runit/IceWM deployment. The current universal Readable source was validated but remained uninstalled, while production still used direct IceWM-started browser and index-loop processes.
+- Decision: Keep chi v5.3.1 and vendored HTMX 2.0.10; replace `html/template` files with type-safe templ v0.3.1020 components and committed generated Go; pin Tailwind CSS and `@tailwindcss/cli` 4.3.3 in `package.json` and `bun.lock`, built only with Bun 1.3.14. Keep local embedded assets, strict `script-src 'self'`, HTMX evaluation/script-tag/history-cache hardening, the existing universal Readable/Original behavior, localhost binding, signed exports, image confirmations, and non-mutating browser routes. Use the already-running `~/.runit/service` runsvdir through managed definitions under `~/.runit/usersv`; do not add root services or retain duplicate IceWM startup blocks after a validated cutover.
+- Consequence: Runtime remains one stripped Go binary with no Bun, Node, npm, templ CLI, Tailwind process, CDN, Alpine, Alpine AJAX, or Pines dependency. Compile-time type checking, deterministic generated assets, graceful SIGTERM shutdown, runit restart/log supervision, readiness checks, and identity-checked rollback improve maintainability and operational robustness. templ and its tool dependencies increase source/build dependencies, but not production processes; HTMX and rendered HTML still dominate request behavior, so the migration is expected to improve correctness and supervision more than raw notmuch query speed. The prior standalone universal-Readable rollout is folded into this combined migration. Production rollout, antiX/Windows GUI acceptance, strict read-only proof, reboot proof, and final HTML/TXT guide regeneration remain pending reviewed operator gates.
+
 ### 2026-07-19: Permit Sanitized Inline CSS for Sandboxed Email `srcdoc`
 
 - Status: accepted
@@ -268,7 +275,6 @@ This file records meaningful project decisions. Add a new entry when the project
 ## Pending Decisions
 
 - Git hosting provider: GitHub or GitLab
-- Whether the Go browser service should start through IceWM startup or reviewed root-level runit service after antiX validation
-- Packaging/install workflow for the Go browser service after antiX validation
+- Exact reviewed production-install artifact and rollback hashes for the templ/Bun migration after antiX staging validation
 - Next implementation milestone after the read-only Go notmuch browser service is validated
-- Dependency installation policy beyond the current approved Python standard-library utilities, Go chi notmuch browser service, local vendored HTMX asset, and build-time compiled Tailwind CSS workflow
+- Dependency installation policy beyond the approved Python utilities and pinned Go/templ/chi/HTMX/Bun/Tailwind browser workflow

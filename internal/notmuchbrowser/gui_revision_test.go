@@ -2,6 +2,7 @@ package notmuchbrowser
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -202,11 +203,62 @@ func TestAnnotatedGUILayoutHeaderContract(t *testing.T) {
 	}
 }
 
+func TestHTMXHardeningAndHistoryContract(t *testing.T) {
+	out := executeTemplateForTest(t, "page", pageView{
+		Query:      "tag:inbox",
+		SearchPage: SearchPage{Query: "tag:inbox", Limit: 50},
+	})
+	for _, want := range []string{
+		`name="htmx-config"`,
+		`allowEval`,
+		`allowScriptTags`,
+		`historyRestoreAsHxRequest`,
+		`historyCacheSize`,
+		`<body hx-history="false">`,
+		`src="/static/htmx.min.js"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("HTMX hardening contract missing %q: %s", want, out)
+		}
+	}
+	for _, unwanted := range []string{
+		`"allowEval":true`,
+		`"allowScriptTags":true`,
+		`unsafe-eval`,
+		`alpine`,
+	} {
+		if strings.Contains(out, unwanted) {
+			t.Fatalf("HTMX hardening contract contains %q: %s", unwanted, out)
+		}
+	}
+}
+
+func TestTemplEscapesIframeSrcdocAttribute(t *testing.T) {
+	out := executeTemplateForTest(t, "messageFragment", messageView{
+		Detail: MessageDetail{
+			Summary:  MessageSummary{ID: "id@example.test", Subject: "Subject"},
+			HTMLBody: "<p>HTML</p>",
+			BodyKind: "html",
+		},
+		HTMLSrcdoc: `<p title='" onload="alert(1)'>safe</p>`,
+	})
+	if strings.Contains(out, `srcdoc="<p`) || strings.Contains(out, `" onload="alert(1)`) {
+		t.Fatalf("templ emitted an unescaped srcdoc attribute: %s", out)
+	}
+	if !strings.Contains(out, `srcdoc="&lt;p title=`) {
+		t.Fatalf("escaped srcdoc attribute is missing: %s", out)
+	}
+}
+
 func executeTemplateForTest(t *testing.T, name string, data any) string {
 	t.Helper()
+	component, err := namedComponent(name, data)
+	if err != nil {
+		t.Fatalf("resolve component %s: %v", name, err)
+	}
 	var buf bytes.Buffer
-	if err := templates.ExecuteTemplate(&buf, name, data); err != nil {
-		t.Fatalf("execute template %s: %v", name, err)
+	if err := component.Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render component %s: %v", name, err)
 	}
 	return buf.String()
 }

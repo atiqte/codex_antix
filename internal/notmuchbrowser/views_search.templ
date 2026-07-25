@@ -1,0 +1,130 @@
+package notmuchbrowser
+
+templ pageComponent(view pageView) {
+	@layoutComponent(view.Title, searchWorkspaceComponent(view))
+}
+
+templ searchWorkspaceComponent(view pageView) {
+	<section class="mail-workspace" aria-label="Search and read mail">
+		<div class="search-toolbar">
+			<form class="search-form" action="/search" method="get" hx-get="/search" hx-target="#results" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#search-progress" hx-sync="this:replace">
+				<label class="search-field" for="query">
+					@iconComponent("search")
+					<span class="visually-hidden">Notmuch query</span>
+					<input id="query" name="q" type="search" value={ view.Query } autocomplete="off" spellcheck="false" autofocus placeholder="Search with notmuch syntax"/>
+				</label>
+				<input type="hidden" name="limit" value={ displayLimit(view.SearchPage) }/>
+				<button class="primary-button" type="submit">Search</button>
+			</form>
+			<div class="search-subbar">
+				<div class="query-shortcuts" aria-label="Example searches">
+					<a href="/search?q=tag%3Ainbox">tag:inbox</a>
+					<a href="/search?q=tag%3Aunread">tag:unread</a>
+					<a href="/search?q=tag%3Aattachment">tag:attachment</a>
+					<span id="search-progress" class="search-progress htmx-indicator" aria-live="polite">Searching...</span>
+				</div>
+				<div id="result-toolbar-slot" class="result-toolbar-slot">
+					@resultToolbarComponent(view)
+				</div>
+			</div>
+		</div>
+		<template id="reader-empty-template">@readerEmptyComponent()</template>
+		<div class="split-workspace" data-split-workspace>
+			<section class="results-pane" aria-label="Search results">
+				<div id="results" class="results" aria-live="polite">
+					@resultBodyComponent(view)
+				</div>
+			</section>
+			<div class="pane-divider" role="separator" aria-label="Resize result and reading panes" aria-orientation="horizontal" aria-valuemin="25" aria-valuemax="70" aria-valuenow="35" tabindex="0" data-pane-divider></div>
+			<section class="reading-pane" aria-label="Message reading pane">
+				<div id="reading-pane-content" class="reading-pane-content">
+					@readerEmptyComponent()
+				</div>
+			</section>
+		</div>
+	</section>
+}
+
+templ readerEmptyComponent() {
+	<div class="reader-empty">
+		<span class="reader-empty-icon">@iconComponent("mail-open")</span>
+		<strong>No message selected</strong>
+		<span>Choose a result to open it in the reading pane.</span>
+	</div>
+}
+
+templ resultsComponent(view pageView) {
+	<div id="result-toolbar-slot" hx-swap-oob="innerHTML">@resultToolbarComponent(view)</div>
+	@resultBodyComponent(view)
+}
+
+templ resultToolbarComponent(view pageView) {
+	<div class="result-toolbar-cluster">
+		<code class="result-query" title={ view.SearchPage.Query }>{ view.SearchPage.Query }</code>
+		<div class="result-counts">
+			<span><strong>{ view.SearchPage.Counts.Messages }</strong> messages</span>
+			<span>{ view.SearchPage.Counts.Files } files</span>
+			if len(view.SearchPage.Results) > 0 {
+				<span>{ firstShown(view.SearchPage) }-{ nextOffset(view.SearchPage) }</span>
+			}
+		</div>
+		<nav class="result-pagination" aria-label="Search result pages">
+			if hasPrev(view.SearchPage) {
+				<a class="icon-button pagination-button" href={ templ.URL(searchURL(view.SearchPage.Query, prevOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-get={ templ.URL(searchURL(view.SearchPage.Query, prevOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-target="#results" hx-push-url="true" aria-label="Previous results" title="Previous results">@iconComponent("chevron-left")</a>
+			} else {
+				<button class="icon-button pagination-button is-disabled" type="button" disabled aria-label="Previous results" title="No previous results">@iconComponent("chevron-left")</button>
+			}
+			if hasNext(view.SearchPage) {
+				<a class="icon-button pagination-button" href={ templ.URL(searchURL(view.SearchPage.Query, nextOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-get={ templ.URL(searchURL(view.SearchPage.Query, nextOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-target="#results" hx-push-url="true" aria-label="Next results" title="Next results">@iconComponent("chevron-right")</a>
+			} else {
+				<button class="icon-button pagination-button is-disabled" type="button" disabled aria-label="Next results" title="No next results">@iconComponent("chevron-right")</button>
+			}
+		</nav>
+	</div>
+}
+
+templ resultBodyComponent(view pageView) {
+	if view.Error != "" {
+		<div class="notice bad" role="alert">{ view.Error }</div>
+	} else if len(view.SearchPage.Results) > 0 {
+		<div class="result-table-wrap">
+			<table class="result-table">
+				<thead>
+					<tr>
+						<th>Date</th>
+						<th>From</th>
+						<th>Subject / Message-ID</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, result := range view.SearchPage.Results {
+						<tr data-message-row>
+							<td class="date">{ formatResultDate(result.DateRelative, result.Date) }</td>
+							<td class="sender">{ result.From }</td>
+							<td>
+								<div class="result-subject-line">
+									<a class="subject" href={ templ.URL(messageURL(result.ID, 0)) } hx-get={ templ.URL(messageURL(result.ID, 0)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true">{ result.Subject }</a>
+									<button class="mini-copy-button" type="button" data-copy-text={ result.Subject } aria-label="Copy subject" title="Copy subject">@iconComponent("copy")</button>
+								</div>
+								<div class="result-id-line">
+									<span class="path">{ result.ID }</span>
+									<button class="mini-copy-button" type="button" data-copy-text={ "Message-ID: " + result.ID } aria-label="Copy Message-ID" title="Copy Message-ID">@iconComponent("copy")</button>
+								</div>
+								<div class="result-inline-meta">
+									<span class="tags">
+										for _, tag := range result.Tags {
+											<span>{ tag }</span>
+										}
+									</span>
+									<span class="file-count">{ formatFileCount(result.FileCount) } files</span>
+								</div>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	} else {
+		<div class="notice empty-state"><strong>No results</strong><span>Try a broader notmuch query or one of the shortcuts above.</span></div>
+	}
+}

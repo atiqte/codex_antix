@@ -1,6 +1,6 @@
 # Workflow
 
-This repository currently uses a language-neutral Git workflow. Do not add runtime-specific setup steps until the project type is decided.
+This repository uses a portable Git workflow across Windows 11 and Debian/antiX. The approved application workflow includes Python standard-library migration utilities and the pinned Go/templ/chi/HTMX/Bun/Tailwind notmuch browser stack; do not add another runtime or dependency family without owner approval.
 
 ## Start a Work Session
 
@@ -25,7 +25,7 @@ git status --short --branch
 ```
 
 4. Confirm the current task is consistent with `docs/TODO.md` and `docs/PROJECT_STATE.md`.
-5. Ask before installing dependencies, deleting files, or performing non-routine remote operations.
+5. Ask before installing dependencies outside the approved lockfiles, deleting files without explicit owner approval, or performing non-routine remote operations.
 
 ## Update Project Memory
 
@@ -87,7 +87,7 @@ git push
 
 Use the most appropriate self-explanatory commit message for the work completed.
 
-## Later Connect GitHub or GitLab
+## Connecting a New Remote
 
 After the owner chooses a provider and creates an empty remote repository:
 

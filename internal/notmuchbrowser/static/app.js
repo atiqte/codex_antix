@@ -5,6 +5,23 @@
   const sidebarKey = "notmuch-browser.sidebar-collapsed";
   const splitKey = "notmuch-browser.result-pane-height-percent";
   const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+  const notice = document.querySelector("#app-notice");
+  let noticeTimer;
+
+  const hideNotice = () => {
+    if (!notice) return;
+    notice.hidden = true;
+    notice.textContent = "";
+    clearTimeout(noticeTimer);
+  };
+
+  const showNotice = (message) => {
+    if (!notice) return;
+    notice.textContent = message;
+    notice.hidden = false;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(hideNotice, 8000);
+  };
 
   const setSidebarCollapsed = (collapsed) => {
     root.classList.toggle("sidebar-collapsed", collapsed);
@@ -32,12 +49,21 @@
 
     const messageLink = event.target.closest("[data-message-row] .subject");
     if (messageLink) {
-      document.querySelectorAll("[data-message-row].selected").forEach((row) => row.classList.remove("selected"));
+      document.querySelectorAll("[data-message-row].selected").forEach((row) => {
+        row.classList.remove("selected");
+        row.querySelector(".subject")?.removeAttribute("aria-current");
+      });
       messageLink.closest("[data-message-row]").classList.add("selected");
+      messageLink.setAttribute("aria-current", "true");
     }
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && root.classList.contains("sidebar-open")) {
+      root.classList.remove("sidebar-open");
+      document.querySelector("[data-sidebar-open]")?.focus();
+      return;
+    }
     if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) return;
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
@@ -49,17 +75,37 @@
   });
 
   document.body.addEventListener("htmx:afterSwap", (event) => {
+    hideNotice();
     if (event.detail.target && event.detail.target.id === "reading-pane-content") {
       const pane = event.detail.target.closest(".reading-pane");
       if (pane) pane.scrollTop = 0;
       if (matchMedia("(max-width: 860px)").matches) {
-        event.detail.target.scrollIntoView({ block: "start", behavior: "smooth" });
+        const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+        event.detail.target.scrollIntoView({ block: "start", behavior });
       }
     } else if (event.detail.target && event.detail.target.id === "results") {
       const readingPane = document.querySelector("#reading-pane-content");
       const emptyTemplate = document.querySelector("#reader-empty-template");
       if (readingPane && emptyTemplate) readingPane.replaceChildren(emptyTemplate.content.cloneNode(true));
     }
+  });
+
+  document.body.addEventListener("htmx:beforeRequest", (event) => {
+    hideNotice();
+    event.detail.target?.setAttribute("aria-busy", "true");
+  });
+
+  document.body.addEventListener("htmx:afterRequest", (event) => {
+    event.detail.target?.removeAttribute("aria-busy");
+    if (event.detail.failed) showNotice("The request could not be completed. Your mail was not changed.");
+  });
+
+  document.body.addEventListener("htmx:sendError", () => {
+    showNotice("The local notmuch browser is unreachable. Check the service or SSH tunnel.");
+  });
+
+  document.body.addEventListener("htmx:timeout", () => {
+    showNotice("The request timed out. Try again after the current mail refresh finishes.");
   });
 
   document.querySelectorAll("[data-split-workspace]").forEach(setupSplitter);
