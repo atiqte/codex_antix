@@ -40,6 +40,23 @@ Update memory files as part of meaningful work:
 
 Keep entries concise, dated when useful, and easy to scan.
 
+## Run Reviewed antiX Operator Gates
+
+Codex prepares exactly one active batch at:
+
+```text
+codex-output/notmuch-browser-operator/current.sh
+```
+
+The owner runs it only through the committed logger:
+
+```sh
+cd /home/atiq/orca/workspaces/codex_antix/branch-codex
+./scripts/notmuch_browser_operator_run.sh
+```
+
+The runner mirrors stdout/stderr to the terminal and writes a private millisecond-stamped log under `codex-output/notmuch-browser-operator/logs/`. It also records batch identity, timestamps, exit status, and the saved-log hash. Codex reads that exact log and updates the validation ledger before replacing `current.sh` with the next reviewed gate. Do not include secrets, credentials, private message content, or unredacted configuration in batches or logs.
+
 ## Record Command-Chunk Validation
 
 When Codex gives command chunks for the owner to run outside this repository, especially on antiX, Fedora, or Windows, record the outcome in `docs/WORK_VALIDATION_LEDGER.md`.

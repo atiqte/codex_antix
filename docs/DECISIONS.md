@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-25: Use Project-Local, Logged Operator Batches for Reviewed antiX Gates
+
+- Status: accepted
+- Context: Copying a large preflight through an editor introduced leading indentation into an embedded Python `-c` body. The resulting `IndentationError` stopped the otherwise healthy read-only gate before its health/config/lock/temp assertions. The owner requested that Codex prepare complete batch files and directly inspect every timestamped terminal log before issuing the next chunk.
+- Decision: Commit `scripts/notmuch_browser_operator_run.sh` and keep the active batch, logs, and latest-log pointer under the already ignored `codex-output/notmuch-browser-operator/` workspace. Codex prepares exactly one `current.sh`; the owner invokes only the runner. The runner uses Bash with pipe-status preservation, mirrors stdout/stderr through `tee`, records the batch SHA256, nanosecond start/end times, millisecond filename stamp, exit code, and final log SHA256, and stores the batch/log workspace with private permissions. Never place passwords, tokens, private configuration contents, or message content in an operator batch or log.
+- Consequence: Command text no longer depends on terminal paste indentation, logs are immediately accessible in the shared project, and each next gate can be based on the exact prior output. Generated operator files remain outside Git, while the reusable logging mechanism is versioned. A failed gate is retained and analyzed rather than overwritten; no next mutation gate is prepared until its predecessor is reviewed.
+
 ### 2026-07-25: Standardize the Browser on templ, HTMX, Tailwind via Bun, chi, and Per-User runit
 
 - Status: accepted

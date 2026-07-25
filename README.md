@@ -93,6 +93,15 @@ BUN_BIN="$HOME/.bun/bin/bun" scripts/notmuch_browser_build.sh build
 
 The production installation and per-user runit cutover are deliberately separate operator gates. Do not run the runit helper until the staged candidate has passed the reviewed antiX validation chunks.
 
+Reviewed antiX command gates use a project-local operator workspace. Codex prepares the ignored `codex-output/notmuch-browser-operator/current.sh`; the committed runner mirrors all output to the terminal and a private millisecond-stamped log:
+
+```sh
+cd /home/atiq/orca/workspaces/codex_antix/branch-codex
+./scripts/notmuch_browser_operator_run.sh
+```
+
+The runner records the batch hash, start/end timestamps, exit code, and log SHA256. Logs stay under the ignored `codex-output/notmuch-browser-operator/logs/` directory and must be reviewed before the next batch is prepared.
+
 ## Development Policy
 
 - Do not install runtimes, packages, containers, or dependencies without explicit owner approval.
