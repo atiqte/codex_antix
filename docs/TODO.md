@@ -35,7 +35,8 @@
 - [x] Persist and independently verify the pre-reboot baseline: exact boot/session/runsvdir/service identities, hashes, routes, health, locks, and temp state passed without lifecycle or mail/index mutation.
 - [x] Diagnose the first changed-boot attempt: antiX started the linked services, late user-session `EXIT` traps stopped them, and the surviving runsvdir left both normally-up services down while provider/mail state stayed healthy.
 - [x] Add and locally validate an idempotent user-level IceWM reconciliation block with bounded prerequisite, repair, and continuous-health windows; isolated repair/idempotency passed and the full suite reached 49 tests.
-- [ ] Guardedly install the repaired helper/startup block, recover only the two managed services, prove current-boot stability, then repeat the pre-reboot and changed-boot gates.
+- [x] Guardedly install the repaired helper/startup block and recover only the two managed services; one repair followed by 60 continuous healthy seconds, exact startup-only delta, routes, provider state, and zero temp passed without rollback.
+- [ ] Persist the repaired-state pre-reboot baseline, then repeat the changed-boot gate.
 - [ ] Run the reboot/login-independent supervision gate before regenerating the final guides.
 - [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
