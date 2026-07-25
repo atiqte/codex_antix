@@ -16,7 +16,8 @@
 - [x] Start only retained candidate `c7d14e0e...` on loopback 8876 with isolated project-local temp/log, run automated HTTP/HTMX/CSP/static/message checks, and retain it only after every assertion passes; the complete gate passed before a later antiX reboot gracefully stopped the retained process.
 - [x] Restart exact candidate `c7d14e0e...` on loopback 8876 after preserving and auditing the reboot-stale runtime evidence, repeat the automated gate under fresh identity-bound paths, and retain it for reviewed antiX GUI validation.
 - [x] Manually validate the retained combined-migration candidate on antiX at `http://127.0.0.1:8876/`; the owner reported `antiX candidate GUI: PASS`.
-- [ ] Run an identity-bound post-review gate for the GUI-accepted candidate before any stop, cleanup, backup, install, or runit action.
+- [x] Run an identity-bound post-review gate for the GUI-accepted candidate; exact process/listener/log/temp/health/lock identities passed with production unchanged and the candidate retained.
+- [ ] Manually validate the retained candidate through a Windows SSH tunnel to antiX `192.168.254.128`, then run a separate identity-bound post-Windows gate before any stop, cleanup, backup, install, or runit action.
 - [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
