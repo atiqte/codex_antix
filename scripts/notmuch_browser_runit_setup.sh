@@ -279,6 +279,16 @@ link_service() {
   ln -s "$relative" "$active"
 }
 
+wait_for_supervisor() {
+  active=$1
+  waited=0
+  while [ ! -p "$active/supervise/ok" ] && [ "$waited" -lt 20 ]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+  [ -p "$active/supervise/ok" ]
+}
+
 validate_runtime() {
   sv -w 20 check "$BROWSER_ACTIVE" >/dev/null || return 1
   sv -w 20 check "$INDEX_ACTIVE" >/dev/null || return 1
@@ -351,6 +361,8 @@ activate_services() {
   "$BROWSER_CONTROL" stop || fail_activation "could not stop legacy browser"
   link_service "$BROWSER_DEF" "$BROWSER_ACTIVE"
   link_service "$INDEX_DEF" "$INDEX_ACTIVE"
+  wait_for_supervisor "$BROWSER_ACTIVE" || fail_activation "browser runit supervisor did not attach"
+  wait_for_supervisor "$INDEX_ACTIVE" || fail_activation "index runit supervisor did not attach"
   unlink "$BROWSER_DEF/down"
   unlink "$INDEX_DEF/down"
   sv -w 20 up "$BROWSER_ACTIVE" || fail_activation "browser runit activation failed"
