@@ -1,5 +1,11 @@
 # notmuch Browser-Only Search Layer for antiX Maildir++
 
+Historical pilot guide. For a new VM and the complete current Go browser, use
+`docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` or `.txt`. The archive exclusion
+and small pilot counts below record the older current-VM pilot; they are not the
+approved fresh-VM policy. Fresh VMs restore the verified 48,720-file package and
+index all of `local-maildir`.
+
 Validated on 2026-07-05 for antiX Linux runit with zzzFM/IceWM.
 
 Current result:

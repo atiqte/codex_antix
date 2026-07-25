@@ -3,6 +3,10 @@
 ## Active
 
 - [x] Review setup and memory files.
+- [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
+- [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` is indexed, while the drifted current-VM tree is never copied and test/secondary trees remain ignored.
+- [x] Make the provider-live archive scope controller compatible with the approved indexed historical archive and cover the changed policy with focused tests.
+- [ ] Pilot the complete guide on a disposable blank antiX runit VM and record exact restore, 48,720-path index parity, browser GUI, Windows tunnel, automatic new-mail indexing, reboot, and Git update results.
 - [x] Commit and push the combined migration plus updated project memory using the approved end-of-session workflow.
 - [x] Fold the unfinished standalone universal-Readable rollout into the owner-approved templ/HTMX/Tailwind/chi and per-user runit migration; do not install the old staged binary or continue its standalone harness-transfer path.
 - [x] Replace `html/template` files with templ v0.3.1020 components, pin Tailwind CSS/CLI 4.3.3 with Bun 1.3.14, retain vendored HTMX 2.0.10 and chi v5.3.1, add HTMX hardening and focused Frost/Sapphire UX improvements, and delete the superseded HTML templates after parity tests passed.
@@ -93,7 +97,7 @@
 - [ ] In that final guide update, correct the retained attachment rollback filenames to `rollback-browser.sh` and `backup-inventory.sha256`; the July 18 antiX inventory proved those are the actual validated files.
 - [x] Run the attachment/image revision rollout one reviewed antiX chunk at a time: discovery, source verification/build, isolated port validation, synthetic MIME fixture, atomic install/rollback gate, byte/ZIP/read-only proofs, manual antiX/Windows checks, and reboot proof.
 - [x] After every rollout gate passes, regenerate and validate `docs/NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt` with exact hashes, commands, expected output, rollback, copy buttons, and troubleshooting.
-- [ ] Decide whether and when to expand notmuch beyond the pilot scope after the 59G archive count drift is explained or accepted.
+- [x] Decide the fresh-VM notmuch expansion policy: restore the exact verified package into an empty tree, require 48,720-file path parity, and never enroll the unexplained 48,564-file current-VM copy.
 - [ ] Add `/mail/Mailstore/evolution/local-maildir` to Evolution with `Maildir-format mail directories`.
 - [ ] Validate the antiX Evolution archive account: `mail_tagindustries_com_sg.Inbox`, message count, opening, HTML rendering, and no error popup.
 - [ ] Transfer the verified new aggregate export to antiX, restore it as a separate Evolution account, and validate message counts/opening/HTML/attachments.

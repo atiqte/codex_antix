@@ -866,7 +866,7 @@ def verify_notmuch_paths(
     state: Path,
     backup: Path,
     archive: Path,
-    forbidden_prefix: Path,
+    forbidden_prefix: Optional[Path] = None,
 ) -> Dict[str, object]:
     paths = run_paths(run_id, state, backup)
     data = read_json(paths["run_json"])
@@ -874,10 +874,11 @@ def verify_notmuch_paths(
     if not bool(data.get("evolution_validated")):
         fail("Evolution validation must be recorded before notmuch validation")
     indexed = {line for line in indexed_paths_file.read_text(encoding="utf-8").splitlines() if line}
-    forbidden = str(resolve(forbidden_prefix)) + os.sep
-    bad = [path for path in indexed if path.startswith(forbidden)]
-    if bad:
-        fail(f"forbidden Betterbird archive entered notmuch index: {bad[0]}")
+    if forbidden_prefix is not None:
+        forbidden = str(resolve(forbidden_prefix)) + os.sep
+        bad = [path for path in indexed if path.startswith(forbidden)]
+        if bad:
+            fail(f"forbidden path entered notmuch index: {bad[0]}")
     archive = resolve(archive)
     records = read_jsonl(paths["manifest"])
     archive_id_map = build_archive_id_map(archive)
@@ -1107,14 +1108,17 @@ def compute_notmuch_ignore(
     evolution_children: Iterable[str],
     mbsync_children: Iterable[str],
 ) -> List[str]:
-    allowed_evolution = {"provider-live-archive", "betterbird-delta-maildirpp-20260704"}
+    allowed_evolution = {
+        "provider-live-archive",
+        "betterbird-delta-maildirpp-20260704",
+        "local-maildir",
+    }
     allowed_mbsync = {"provider-live"}
     ignore = {value for value in current if value}
     ignore -= {"evolution", "mbsync", *allowed_evolution, *allowed_mbsync}
     ignore.update(name for name in mail_root_children if name not in {"evolution", "mbsync"})
     ignore.update(name for name in evolution_children if name not in allowed_evolution)
     ignore.update(name for name in mbsync_children if name not in allowed_mbsync)
-    ignore.add("local-maildir")
     ignore -= allowed_evolution | allowed_mbsync
     return sorted(ignore)
 
@@ -1158,7 +1162,11 @@ def configure_notmuch_scope(
 
     current_raw = run_notmuch(("config", "get", "new.ignore")).stdout.splitlines()
     current: Set[str] = {value.strip() for value in current_raw if value.strip()}
-    allowed_evolution = {"provider-live-archive", "betterbird-delta-maildirpp-20260704"}
+    allowed_evolution = {
+        "provider-live-archive",
+        "betterbird-delta-maildirpp-20260704",
+        "local-maildir",
+    }
     allowed_mbsync = {"provider-live"}
     child_names: Dict[Path, List[str]] = {}
     for parent in (mail_root, evolution, mbsync):
@@ -1185,10 +1193,10 @@ def configure_notmuch_scope(
     tags = run_notmuch(("dump", "--format=batch-tag")).stdout
     (backup_dir / "tags.before.batch-tag").write_text(tags, encoding="utf-8", newline="\n")
     paths = run_notmuch(("search", "--output=files", "*")).stdout
-    forbidden_prefix = str(evolution / "local-maildir") + os.sep
-    forbidden_before = [path for path in paths.splitlines() if path.startswith(forbidden_prefix)]
-    if forbidden_before:
-        fail(f"forbidden Betterbird archive is already indexed: {forbidden_before[0]}")
+    historical_prefix = str(evolution / "local-maildir") + os.sep
+    historical_indexed_files = sum(
+        1 for path in paths.splitlines() if path.startswith(historical_prefix)
+    )
     before_messages = run_notmuch(("count", "*")).stdout.strip()
     before_files = run_notmuch(("count", "--output=files", "*")).stdout.strip()
     (backup_dir / "paths.before.txt").write_text(paths, encoding="utf-8", newline="\n")
@@ -1205,6 +1213,7 @@ def configure_notmuch_scope(
         "allowed_mbsync": sorted(allowed_mbsync),
         "before_messages": before_messages,
         "before_files": before_files,
+        "historical_indexed_files_before": historical_indexed_files,
         "status": "notmuch_scope_configured",
     }
 
@@ -1274,7 +1283,7 @@ def build_parser() -> argparse.ArgumentParser:
     notmuch.add_argument("run_id")
     common_paths(notmuch)
     notmuch.add_argument("--indexed-paths", required=True)
-    notmuch.add_argument("--forbidden-prefix", default="/mail/Mailstore/evolution/local-maildir")
+    notmuch.add_argument("--forbidden-prefix")
 
     canary = sub.add_parser("cleanup-canary")
     canary.add_argument("run_id")
@@ -1336,7 +1345,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         elif args.command == "mark-evolution-validated":
             print_rows(mark_evolution_validated(args.run_id, Path(args.state), Path(args.backup), args.note))
         elif args.command == "verify-notmuch":
-            print_rows(verify_notmuch_paths(args.run_id, Path(args.indexed_paths), Path(args.state), Path(args.backup), Path(args.archive), Path(args.forbidden_prefix)))
+            forbidden = Path(args.forbidden_prefix) if args.forbidden_prefix else None
+            print_rows(verify_notmuch_paths(args.run_id, Path(args.indexed_paths), Path(args.state), Path(args.backup), Path(args.archive), forbidden))
         elif args.command == "cleanup-canary":
             print_rows(cleanup_canary(args.run_id, Path(args.live), Path(args.archive), Path(args.state), Path(args.backup)))
         elif args.command == "verify-canary":

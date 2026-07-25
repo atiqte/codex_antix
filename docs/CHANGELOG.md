@@ -4,6 +4,10 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-25
 
+- Added a state-aware fresh antiX VM assistant with read-only stage discovery, exact historical archive acknowledgement, safe notmuch configuration, 80 GiB capacity gate, resumable first index, 48,720-path parity proof, full browser install, user-runit enablement, final validation, and rollback-protected `main` updates.
+- Replaced the fixed-commit expert reconstruction guide with matching beginner-first offline HTML/TXT guides covering a blank VMware antiX system, GitHub clone/pull, XFS `/mail`, current compatible Go/Bun, live mbsync, verified archive restore/indexing, the full accepted browser, SSH tunnel, automatic new-mail indexing, reboot, and troubleshooting.
+- Updated provider-live archive notmuch-scope maintenance to preserve and accept the approved indexed `local-maildir` while continuing to ignore unapproved/test trees.
+- Passed deterministic guide generation, frozen Bun/module checks, Go unit/vet/race, 65 Python tests, all shell syntax checks, the 86,332-byte asset budget, and the exact 8,093,961-byte stripped build.
 - Regenerated the final offline HTML/TXT notmuch browser reconstruction guides from one standard-library source, replacing the July 14 direct-IceWM release with the validated templ/Bun/per-user-runit build, exact post-fix source and artifact identities, antiX session reconciliation, correct rollback filenames, strict byte/non-mutation evidence, resource/restart results, Windows tunnel acceptance, and repaired reboot proof.
 - Added focused deterministic guide validation for all 11 copy targets, HTML/TXT command parity, offline resources, current/stale hashes, ASCII output, and POSIX command syntax.
 - Migrated the notmuch browser from runtime-parsed `html/template` files to templ v0.3.1020 source components with committed deterministic generated Go, retaining chi v5.3.1, vendored HTMX 2.0.10, the universal Readable/Original renderer, signed exports, image privacy gates, and non-mutating browser routes.

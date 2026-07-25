@@ -3,33 +3,35 @@
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>NOTMUCH BROWSER SERVICE - Validated Reconstruction Guide</title>
+          <title>Beginner Fresh antiX Notmuch Browser Guide</title>
           <style>
-            :root { color-scheme: light; --ink:#172033; --muted:#5b667a;
-              --line:#d7e0ec; --blue:#176b87; --panel:#f7fafc; --code:#111827; }
+            :root { color-scheme:light; --ink:#172033; --muted:#556176;
+              --line:#cfdbe7; --blue:#126782; --green:#276749; --code:#111827; }
             * { box-sizing:border-box; }
-            body { margin:0; color:var(--ink); background:#edf4f8;
-              font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+            body { margin:0; color:var(--ink); background:#eef5f8;
+              font:16px/1.58 system-ui,-apple-system,"Segoe UI",sans-serif; }
             header,main,footer { width:min(1080px,calc(100% - 28px)); margin:auto; }
-            header { padding:42px 0 22px; }
-            h1 { margin:0 0 8px; font-size:clamp(1.8rem,4vw,3rem); line-height:1.08; }
-            .lede { color:var(--muted); max-width:78ch; }
-            nav { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
-            nav a { color:var(--blue); background:white; border:1px solid var(--line);
-              border-radius:999px; padding:5px 10px; text-decoration:none; }
+            header { padding:40px 0 22px; }
+            h1 { margin:0 0 10px; font-size:clamp(1.8rem,4vw,3rem); line-height:1.08; }
+            .lede { max-width:78ch; color:var(--muted); }
+            .notice { border-left:5px solid var(--green); background:#f1fff7;
+              border-radius:8px; padding:12px 16px; max-width:84ch; }
+            nav { display:flex; flex-wrap:wrap; gap:7px; margin-top:18px; }
+            nav a { min-width:32px; text-align:center; color:var(--blue); background:white;
+              border:1px solid var(--line); border-radius:999px; padding:5px 9px;
+              text-decoration:none; }
             section { background:white; border:1px solid var(--line); border-radius:14px;
               padding:clamp(18px,3vw,30px); margin:0 0 18px;
               box-shadow:0 8px 26px rgba(23,32,51,.05); }
-            h2 { margin-top:0; line-height:1.2; }
-            p { white-space:pre-line; }
-            .codebox { position:relative; margin-top:18px; }
+            h2 { margin-top:0; line-height:1.22; }
+            p { max-width:88ch; }
+            .codebox { margin-top:18px; }
             button { border:0; border-radius:8px; color:white; background:var(--blue);
               padding:9px 13px; font-weight:700; cursor:pointer; margin-bottom:8px; }
-            button.copied { background:#247a48; }
+            button.copied { background:var(--green); }
             pre { margin:0; overflow:auto; color:#edf5ff; background:var(--code);
               border-radius:10px; padding:18px; tab-size:2; }
-            pre code { color:inherit; background:transparent; padding:0;
-              font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; }
+            pre code { color:inherit; font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; }
             footer { color:var(--muted); padding:12px 0 36px; }
             @media print { body { background:white; } section { box-shadow:none; }
               button,nav { display:none; } header,main,footer { width:100%; } }
@@ -37,337 +39,138 @@
         </head>
         <body>
           <header>
-            <h1>NOTMUCH BROWSER SERVICE</h1>
-            <p class="lede">Validated templ/HTMX/Tailwind/chi browser and repaired
-            per-user runit reconstruction guide for antiX, with Windows SSH access.</p>
+            <h1>Fresh antiX Notmuch Browser Setup</h1>
+            <p class="lede">A from-scratch, beginner-friendly reconstruction of the
+            complete Go/chi/templ/HTMX/Tailwind browser, including the verified
+            48,720-file historical archive and automatic new-mail indexing.</p>
+            <p class="notice"><strong>Safety rule:</strong> follow the steps in order
+            and stop whenever an expected check fails. The assistant never formats
+            a disk or invents credentials.</p>
             <p><strong>Updated:</strong> 2026-07-25</p>
-            <nav aria-label="Guide sections">
-              <a href="#section-1">1</a><a href="#section-2">2</a><a href="#section-3">3</a><a href="#section-4">4</a><a href="#section-5">5</a><a href="#section-6">6</a><a href="#section-7">7</a><a href="#section-8">8</a><a href="#section-9">9</a><a href="#section-10">10</a><a href="#section-11">11</a><a href="#section-12">12</a><a href="#section-13">13</a><a href="#section-14">14</a><a href="#section-15">15</a><a href="#section-16">16</a>
-            </nav>
+            <nav aria-label="Guide sections"><a href="#section-1">1</a><a href="#section-2">2</a><a href="#section-3">3</a><a href="#section-4">4</a><a href="#section-5">5</a><a href="#section-6">6</a><a href="#section-7">7</a><a href="#section-8">8</a><a href="#section-9">9</a><a href="#section-10">10</a><a href="#section-11">11</a><a href="#section-12">12</a><a href="#section-13">13</a><a href="#section-14">14</a><a href="#section-15">15</a><a href="#section-16">16</a><a href="#section-17">17</a><a href="#section-18">18</a><a href="#section-19">19</a><a href="#section-20">20</a><a href="#section-21">21</a><a href="#section-22">22</a><a href="#section-23">23</a><a href="#section-24">24</a></nav>
           </header>
-          <main>
-            <section id="section-1"><h2>1. Scope, architecture, and safety</h2><p>This guide reconstructs the production service accepted on 2026-07-25: a Go 1.25+ application using chi v5.3.1, templ v0.3.1020, local HTMX 2.0.10, and Tailwind CSS 4.3.3 compiled by Bun 1.3.14. Production is one stripped Go binary with embedded assets. It needs no Bun, Node, npm, templ CLI, Tailwind process, CDN, Alpine, or remote image proxy.</p>
-<p>The HTTP listener is 127.0.0.1:8765. Windows reaches it through an SSH local-forward. Browser routes search and view mail and provide capability-gated decoded attachment, ZIP, and inline-image responses. They never edit Maildir files, notmuch tags, or the notmuch database. Evolution remains the application for reply, forward, compose, send, tag changes, and mail deletion.</p>
-<p>Routes are GET /, /search, /message, /attachment, /attachments.zip, /inline-image, /status, /healthz, and /static/*. POST is rejected. Process-lifetime HMAC capabilities bind export purpose, Message-ID, selected duplicate, MIME part, filename, and media type. Restarting invalidates old capabilities. HTML stays in a sandboxed iframe. Embedded and remote images require separate confirmations, and the Go service never fetches remote images.</p>
-<p>Default limits are two inline-image operations, one attachment/ZIP operation, 64 MiB per inline image, 512 MiB per attachment, 200 ZIP entries, 2 GiB decoded ZIP output, two-minute inline timeout, and fifteen-minute attachment/ZIP timeout. Temporary files live under /mail/AppData/notmuch-browser/download-tmp with private modes and are removed after success or failure.</p></section><section id="section-2"><h2>2. Exact validated artifacts and provenance</h2><p>Browser build provenance:</p>
-<p>- Clean-build source commit: e6876f2e9a39bb2ad03573af0d615ffbd9e19c24 - Validated clean-build tar: 2,232,320 bytes, 110 members - Clean-build tar SHA256: 4d0b6d9c9e88ad1fab61ffcc2d0ef152c993e67b729f8150c552bed8298347cd - Build manifest SHA256: 57d6e3609d426e269550b391411447e666eb7339454c5df6b62cc3c098750d6a - Build report SHA256: 7f13bd3d6621237e39f5e6a6afbaee60bfd11dfece845aa0f4188d5c0eb6554c - Candidate pointer SHA256: 47a65fdbca38170937f4a18810b9a8eb5644d2dcfdf6ee6dfe05270ca9daf4ad</p>
-<p>Use post-fix source commit a1728127940f0824fb91d3dd97abe636be47690e for reconstruction. It contains the identical browser source plus the validated antiX session-race repair. A deterministic git archive of that commit, with prefix source/, is 2,334,720 bytes, has 114 members, and has SHA256 5e58f63b9ef3eca0b1e8fc2b8b9013f1985aeaae7817424848ae1ed5ccd361a1.</p>
-<p>Installed production artifacts:</p>
-<p>- notmuch-browser: 8,093,961 bytes; SHA256 c7d14e0ee792595cd168a131cb05307214ae1129dc449f982fa48d30aa5bfed9 - notmuch-browser-control: 10,502 bytes; SHA256 4b8231a2c886dfb1247d4dfa6b3de043e67d230e4fad1bc202b7452936ca04a8 - notmuch-browser-index-control: 8,620 bytes; SHA256 1ddf93c9c5f9943bcc9b4f744f3e835e6c12f0df83a8a467ac061d2b38f6b007 - notmuch-browser-runit-setup: 20,308 bytes; SHA256 598762b0f98147460cff3e937b69a47b7aa531e9e4e80807c4f75e540fdc0c77</p>
-<p>Embedded static files include app.css 23,983 bytes, app.js 7,070 bytes, and htmx.min.js 51,238 bytes. Those three total 82,291 bytes; all embedded static files including licenses/icons total 86,332 bytes, below the 90 KiB build gate.</p>
-<p>Production paths are ~/.local/bin/notmuch-browser{,-control, -index-control,-runit-setup}, ~/.config/notmuch/default/config, /mail/SearchIndex/notmuch/default, /mail/Mailstore, /mail/AppData/notmuch-browser, /mail/Logs/notmuch-browser, and ~/.runit/usersv plus ~/.runit/service.</p></section><section id="section-3"><h2>3. Prerequisites and reconstruction contract</h2><p>The target must be antiX with /mail mounted, Go 1.25 or newer (validated with Go 1.26.4), notmuch, curl, sha256sum, tar, install, runit sv/svlogd, an existing per-user runsvdir supervising ~/.runit/service, and an IceWM startup file. Build regeneration also needs Bun exactly 1.3.14. package.json and bun.lock pin Tailwind and @tailwindcss/cli 4.3.3; go.mod/go.sum pin templ, chi, and x/net.</p>
-<p>Do not create or edit /etc/service. Do not replace /etc/user_session.d/runit-user-session.sh. The helper manages only ~/.runit/usersv/notmuch-browser, ~/.runit/usersv/notmuch-browser-index, and their two links under ~/.runit/service. IceWM runs only the bounded session reconciler after login; it does not directly supervise either application process.</p>
-<p>Generated templ Go and compiled CSS are committed. A production-only machine can install the already verified binary and scripts without Bun or templ. Building from source intentionally runs frozen dependency preparation and must be done only on a machine where those build dependencies are approved.</p></section><section id="section-4"><h2>4. Windows: obtain, verify, and transfer exact post-fix source</h2><p>Run from Windows PowerShell. This creates the same deterministic uncompressed tar measured above. Replace the antiX address if DHCP assigned another address. If Git network access is unavailable, obtain the repository through a trusted existing copy, then run the same checkout/archive/hash checks before transfer.</p><div class="codebox"><button type="button" data-copy-target="cmd-01">Copy Windows source transfer</button><pre id="cmd-01"><code>Set-StrictMode -Version Latest
-$ErrorActionPreference = &#x27;Stop&#x27;
-$Commit = &#x27;a1728127940f0824fb91d3dd97abe636be47690e&#x27;
-$Expected = &#x27;5E58F63B9EF3ECA0B1E8FC2B8B9013F1985AEAAE7817424848AE1ED5CCD361A1&#x27;
-$Repo = Join-Path $PWD &#x27;codex_antix-guide-source&#x27;
-$Archive = Join-Path $PWD &#x27;notmuch-browser-source-a172812.tar&#x27;
-
-git clone https://github.com/atiqte/codex_antix.git $Repo
-git -C $Repo checkout --detach $Commit
-if ((git -C $Repo rev-parse HEAD) -ne $Commit) { throw &#x27;Wrong commit&#x27; }
-if (git -C $Repo status --porcelain) { throw &#x27;Source tree is dirty&#x27; }
-git -C $Repo archive --format=tar --prefix=source/ -o $Archive $Commit
-
-$Item = Get-Item -LiteralPath $Archive
-$Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Archive).Hash
-$Members = @(tar -tf $Archive)
-if ($Item.Length -ne 2334720) { throw &quot;Wrong size: $($Item.Length)&quot; }
-if ($Hash -ne $Expected) { throw &quot;Wrong SHA256: $Hash&quot; }
-if ($Members.Count -ne 114) { throw &quot;Wrong member count: $($Members.Count)&quot; }
-if (@($Members | Sort-Object -Unique).Count -ne 114) { throw &#x27;Duplicate member&#x27; }
-
-Test-NetConnection 192.168.254.128 -Port 22
-scp $Archive atiq@192.168.254.128:/home/atiq/</code></pre></div></section><section id="section-5"><h2>5. antiX: fail-closed prerequisite and safety audit</h2><p>Run before extracting, building, backing up, or stopping anything. This is read-only. It checks the exact source object, build tools, notmuch safety configuration, per-user runit, listener posture, locks, and Maildir/download temporary state.</p><div class="codebox"><button type="button" data-copy-target="cmd-02">Copy antiX preflight</button><pre id="cmd-02"><code>set -eu
-ARCHIVE=&quot;$HOME/notmuch-browser-source-a172812.tar&quot;
-CONFIG=&quot;$HOME/.config/notmuch/default/config&quot;
-USER_SERVICE=&quot;$HOME/.runit/service&quot;
-
-test -f &quot;$ARCHIVE&quot;
-printf &#x27;%s  %s\n&#x27; \
-  &#x27;5e58f63b9ef3eca0b1e8fc2b8b9013f1985aeaae7817424848ae1ed5ccd361a1&#x27; \
-  &quot;$ARCHIVE&quot; | sha256sum -c -
-test &quot;$(wc -c &lt; &quot;$ARCHIVE&quot; | tr -d &#x27; &#x27;)&quot; = 2334720
-test &quot;$(tar -tf &quot;$ARCHIVE&quot; | wc -l | tr -d &#x27; &#x27;)&quot; = 114
-test &quot;$(tar -tf &quot;$ARCHIVE&quot; | sort -u | wc -l | tr -d &#x27; &#x27;)&quot; = 114
-tar -tf &quot;$ARCHIVE&quot; | awk &#x27;
-  /^\// || /(^|\/)\.\.($|\/)/ { bad=1 }
-  END { exit bad ? 1 : 0 }
-&#x27;
-
-test -r &quot;$CONFIG&quot;
-test &quot;$(notmuch --config=&quot;$CONFIG&quot; config get database.path)&quot; = \
-  /mail/SearchIndex/notmuch/default
-test &quot;$(notmuch --config=&quot;$CONFIG&quot; config get database.mail_root)&quot; = \
-  /mail/Mailstore
-test &quot;$(notmuch --config=&quot;$CONFIG&quot; config get maildir.synchronize_flags)&quot; = false
-test &quot;$(notmuch --config=&quot;$CONFIG&quot; config get index.decrypt)&quot; = false
-awk &#x27;$2 == &quot;/mail&quot; { found=1 } END { exit(found ? 0 : 1) }&#x27; /proc/mounts
-
-command -v go
-go version
-test &quot;$(bun --version)&quot; = 1.3.14
-command -v curl
-command -v sv
-command -v svlogd
-test -d &quot;$HOME/.runit/usersv&quot;
-test -d &quot;$USER_SERVICE&quot;
-pgrep -u &quot;$(id -u)&quot; -f &quot;runsvdir -P $USER_SERVICE&quot;
-test -f &quot;$HOME/.icewm/startup&quot;
-
-test ! -d /mail/AppData/isync/provider-live-loop/lock
-test ! -d /mail/AppData/notmuch-browser/index-refresh.lock
-find /mail/Mailstore -type f -path &#x27;*/tmp/*&#x27; -print -quit |
-  grep -q . &amp;&amp; { echo &#x27;Maildir tmp is not empty&#x27;; exit 1; } || true
-find /mail/AppData/notmuch-browser/download-tmp -maxdepth 1 \
-  -type f -name &#x27;nmb-*&#x27; -print -quit 2&gt;/dev/null |
-  grep -q . &amp;&amp; { echo &#x27;download temp is not empty&#x27;; exit 1; } || true
-
-ss -ltnp | grep &#x27;127.0.0.1:8765&#x27; || true
-curl -fsS --max-time 15 http://127.0.0.1:8765/healthz || true
-echo status=preflight_complete</code></pre></div></section><section id="section-6"><h2>6. antiX: extract and reproduce the build</h2><p>Extract into a new empty directory. The all target performs frozen Bun preparation, Go module download/verification, templ and Tailwind generation twice for reproducibility, Go tests/vet/race, shell syntax, the full Python suite, asset budget, and stripped build. The validated suite at the repaired source had 49 Python tests. Production remains untouched because output is written inside the staging directory.</p><div class="codebox"><button type="button" data-copy-target="cmd-03">Copy source build</button><pre id="cmd-03"><code>set -eu
-ARCHIVE=&quot;$HOME/notmuch-browser-source-a172812.tar&quot;
-WORK=&quot;$HOME/notmuch-browser-rebuild-a172812&quot;
-test ! -e &quot;$WORK&quot;
-install -d -m 700 &quot;$WORK&quot;
-tar -xf &quot;$ARCHIVE&quot; -C &quot;$WORK&quot;
-cd &quot;$WORK/source&quot;
-
-scripts/notmuch_browser_build.sh all
-
-test &quot;$(wc -c &lt; notmuch-browser | tr -d &#x27; &#x27;)&quot; = 8093961
-printf &#x27;%s  %s\n&#x27; \
-  &#x27;c7d14e0ee792595cd168a131cb05307214ae1129dc449f982fa48d30aa5bfed9&#x27; \
-  notmuch-browser | sha256sum -c -
-printf &#x27;%s\n&#x27; \
-  &#x27;4b8231a2c886dfb1247d4dfa6b3de043e67d230e4fad1bc202b7452936ca04a8  scripts/notmuch_browser_control.sh&#x27; \
-  &#x27;1ddf93c9c5f9943bcc9b4f744f3e835e6c12f0df83a8a467ac061d2b38f6b007  scripts/notmuch_browser_index_control.sh&#x27; \
-  &#x27;598762b0f98147460cff3e937b69a47b7aa531e9e4e80807c4f75e540fdc0c77  scripts/notmuch_browser_runit_setup.sh&#x27; |
-  sha256sum -c -
-test &quot;$(find internal/notmuchbrowser/static -maxdepth 1 -type f \
-  -exec wc -c {} + | awk &#x27;END { print $1 }&#x27;)&quot; = 86332
-echo status=build_reproduced</code></pre></div></section><section id="section-7"><h2>7. Back up the prior installation before replacement</h2><p>On an upgrade, preserve the currently installed browser, controls, config, and IceWM startup before replacing files. The validated production rollout retained a preinstall pointer under /mail/AppData/notmuch-browser and a backup containing backup-inventory.sha256 plus rollback-browser.sh. Those are the validated names; do not substitute rollback.sh or SHA256SUMS.</p>
-<p>The following creates a private inventory backup. If this is a genuinely fresh VM, absent application files are recorded as absent. Keep this backup until the new service passes GUI, read-only, restart, and reboot checks. Its executable rollback-browser.sh verifies the exact backup and pointer, rolls back supervision first when active, stops the direct replacement, restores or removes only the four inventoried application paths, restores config/startup, and restarts only a retained prior browser/control pair. Review its resolved backup target before use.</p><div class="codebox"><button type="button" data-copy-target="cmd-04">Copy preinstall backup</button><pre id="cmd-04"><code>set -eu
-RUN_ID=&quot;$(date +%Y%m%d-%H%M%S)&quot;
-BACKUP=&quot;/mail/Backups/notmuch-browser/${RUN_ID}-before-templ-runit&quot;
-POINTER=&quot;/mail/AppData/notmuch-browser/templ-runit-preinstall-rollback-current&quot;
-test ! -e &quot;$BACKUP&quot;
-install -d -m 700 &quot;$BACKUP&quot;
-install -d -m 700 /mail/AppData/notmuch-browser
-
-for name in notmuch-browser notmuch-browser-control \
-  notmuch-browser-index-control notmuch-browser-runit-setup; do
-  if [ -e &quot;$HOME/.local/bin/$name&quot; ]; then
-    cp -p &quot;$HOME/.local/bin/$name&quot; &quot;$BACKUP/$name&quot;
-  else
-    printf &#x27;%s\n&#x27; &quot;$name&quot; &gt;&gt; &quot;$BACKUP/absent-before.txt&quot;
-  fi
+          <main><section id="section-1"><h2>1. What this guide creates</h2><p>This is the from-scratch guide for a new x86_64 antiX Linux runit VM<br>with zzzFM/IceWM on a Windows 11 VMware host. No prior Linux, Go,<br>notmuch, Bun, Tailwind, or runit knowledge is assumed.</p><p>At the end, the VM has the complete accepted Go browser: chi routing,<br>templ views, local HTMX 2.0.10, Tailwind CSS 4.3.3 built with Bun,<br>search and message reading, Readable/Original/plain modes, duplicate<br>selection, signed individual attachments, Save All ZIP, confirmed<br>embedded/remote images, and status/health pages.</p><p>The browser listens only on 127.0.0.1:8765. Windows accesses it through<br>an SSH tunnel. Browser routes never change Maildir files, tags, or the<br>notmuch database. Evolution remains the compose/reply/send client.</p></section><section id="section-2"><h2>2. Understand the three moving parts</h2><p>Git copies the application source, helper scripts, tests, and this<br>guide. Git does not copy email, passwords, the restored archive, local<br>logs, or the notmuch search database.</p><p>mbsync receives new provider mail into Maildir. Its normal loop waits<br>about 180 seconds after a sync. notmuch does not receive mail: it builds<br>and refreshes a separate search database. Its normal loop checks about<br>every 60 seconds and waits if mbsync is busy.</p><p>Therefore notmuch new is necessary. After the first large index it is<br>incremental. A newly received message normally becomes searchable<br>after mbsync delivers it plus at most one index interval. The browser<br>does not need to restart.</p></section><section id="section-3"><h2>3. Before starting</h2><p>You need: a Windows 11 computer; VMware; an antiX runit ISO; internet;<br>sudo permission in antiX; GitHub repository access; and the verified<br>historical split-archive folder.</p><p>Give the VM enough CPU/RAM for a Go build. Add a separate virtual disk<br>of at least 250 GB for /mail. After restoring the 59 GB archive, at<br>least 80 GiB free is mandatory before initial indexing; 100 GiB free<br>is preferred. Take a VMware snapshot before disk work.</p><p>Never paste disk commands until you have identified the new empty<br>virtual disk. The setup assistant deliberately never partitions,<br>formats, edits fstab, deletes mail, or creates credentials.</p></section><section id="section-4"><h2>4. Install antiX and clone the main branch</h2><p>Install antiX runit with zzzFM/IceWM normally, log in as your regular<br>user, open a terminal, and run this block. GitHub may ask for your<br>username and a personal access token if the repository is private.</p><p>Expected final lines: branch main, an origin URL, and no changed files.<br>Stop if clone or checkout fails.</p><div class="codebox"><button type="button" data-copy-target="cmd-01">Copy first clone</button><pre id="cmd-01"><code>set -eu
+sudo apt update
+sudo apt install git ca-certificates
+cd &quot;$HOME&quot;
+test ! -e codex_antix
+git clone --branch main https://github.com/atiqte/codex_antix.git codex_antix
+cd &quot;$HOME/codex_antix&quot;
+git branch --show-current
+git remote -v
+git status --short --branch</code></pre></div></section><section id="section-5"><h2>5. Start the one-step-at-a-time assistant</h2><p>Stay in the repository directory. inspect and status are read-only.<br>next prints only the next required stage; it does not silently install<br>packages, write credentials, or start the long index.</p><p>Run next again after every completed step. If it reports a different<br>stage than expected, stop and read its status output.</p><div class="codebox"><button type="button" data-copy-target="cmd-02">Copy assistant start</button><pre id="cmd-02"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh inspect
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-6"><h2>6. Create the dedicated XFS /mail disk</h2><p>Open existing_DIY-Guide/antiX_VM_XFS_Maildir_Disk_Setup_Guide.html<br>from the cloned repository and follow it carefully. That guide covers<br>identifying the second VMware disk, creating XFS, mounting /mail, and<br>making the mount persistent. Do not guess the device name.</p><p>Run this read-only verification afterward. Expected: TARGET is /mail,<br>FSTYPE is xfs, and SIZE is approximately the virtual disk size. If<br>/mail resolves to the antiX root filesystem, stop.</p><div class="codebox"><button type="button" data-copy-target="cmd-03">Copy XFS verification</button><pre id="cmd-03"><code>set -eu
+findmnt --target /mail
+test &quot;$(findmnt -n -o FSTYPE --target /mail)&quot; = xfs
+df -h /mail
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-7"><h2>7. Install antiX operating-system packages</h2><p>This installs the command-line tools, notmuch, mbsync/isync, SSH,<br>build tools, and antiX runit integration. It does not install Go or<br>Bun. Answer yes if apt asks for confirmation.</p><p>Expected: every command -v line prints a path and sv --help runs.</p><div class="codebox"><button type="button" data-copy-target="cmd-04">Copy OS package install</button><pre id="cmd-04"><code>set -eu
+sudo apt update
+sudo apt install git curl ca-certificates unzip xz-utils rsync python3 \
+  notmuch isync libsasl2-modules runit-antix runit-service-ssh iproute2 \
+  openssh-client openssh-server build-essential
+for tool in git curl python3 rsync notmuch mbsync sv svlogd ssh ss unzip tar sha256sum findmnt; do
+  command -v &quot;$tool&quot;
 done
-cp -p &quot;$HOME/.config/notmuch/default/config&quot; &quot;$BACKUP/notmuch-config&quot;
-cp -p &quot;$HOME/.icewm/startup&quot; &quot;$BACKUP/icewm-startup&quot;
-
-cat &gt; &quot;$BACKUP/rollback-browser.sh&quot; &lt;&lt;&#x27;ROLLBACK&#x27;
-#!/bin/sh
-set -eu
-BACKUP_DIR=$(CDPATH= cd -- &quot;$(dirname -- &quot;$0&quot;)&quot; &amp;&amp; pwd)
-PREINSTALL_POINTER=/mail/AppData/notmuch-browser/templ-runit-preinstall-rollback-current
-RUNIT_POINTER=/mail/AppData/notmuch-browser/user-runit-rollback-current
-BIN_DIR=&quot;$HOME/.local/bin&quot;
-
-test -s &quot;$PREINSTALL_POINTER&quot;
-test &quot;$(sed -n &#x27;1p&#x27; &quot;$PREINSTALL_POINTER&quot;)&quot; = &quot;$BACKUP_DIR&quot;
-case &quot;$BACKUP_DIR&quot; in
-  /mail/Backups/notmuch-browser/*) ;;
-  *) echo &#x27;Refusing backup outside approved root&#x27; &gt;&amp;2; exit 1 ;;
-esac
-(cd &quot;$BACKUP_DIR&quot; &amp;&amp; sha256sum -c backup-inventory.sha256)
-
-if [ -s &quot;$RUNIT_POINTER&quot; ]; then
-  test -x &quot;$BIN_DIR/notmuch-browser-runit-setup&quot;
-  &quot;$BIN_DIR/notmuch-browser-runit-setup&quot; rollback
-elif [ -L &quot;$HOME/.runit/service/notmuch-browser&quot; ] ||
-     [ -L &quot;$HOME/.runit/service/notmuch-browser-index&quot; ]; then
-  echo &#x27;Refusing active runit links without rollback pointer&#x27; &gt;&amp;2
-  exit 1
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-8"><h2>8. Install verified Go 1.26.5</h2><p>This uses the official linux-amd64 archive and verifies its SHA256.<br>The command refuses to replace an existing /usr/local/go directory.<br>If that directory already exists, stop and review it instead of<br>deleting it.</p><p>Expected: go version go1.26.5 linux/amd64.</p><div class="codebox"><button type="button" data-copy-target="cmd-05">Copy Go install</button><pre id="cmd-05"><code>set -eu
+GO_ARCHIVE=/tmp/go1.26.5.linux-amd64.tar.gz
+curl -fL https://go.dev/dl/go1.26.5.linux-amd64.tar.gz -o &quot;$GO_ARCHIVE&quot;
+printf &#x27;%s  %s\n&#x27; \
+  5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053 \
+  &quot;$GO_ARCHIVE&quot; | sha256sum -c -
+test ! -e /usr/local/go
+sudo tar -C /usr/local -xzf &quot;$GO_ARCHIVE&quot;
+grep -Fqx &#x27;export PATH=/usr/local/go/bin:$PATH&#x27; &quot;$HOME/.profile&quot; 2&gt;/dev/null ||
+  printf &#x27;%s\n&#x27; &#x27;export PATH=/usr/local/go/bin:$PATH&#x27; &gt;&gt; &quot;$HOME/.profile&quot;
+export PATH=/usr/local/go/bin:$PATH
+go version
+test &quot;$(go version | awk &#x27;{print $3}&#x27;)&quot; = go1.26.5
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-9"><h2>9. Install verified Bun 1.3.14</h2><p>Bun is used only to reproduce the Tailwind build. Production runs one<br>Go binary and does not need a Bun process. The repository lockfile<br>keeps Tailwind and @tailwindcss/cli at 4.3.3.</p><p>Expected: bun --version prints 1.3.14. Do not run bun update.</p><div class="codebox"><button type="button" data-copy-target="cmd-06">Copy Bun install</button><pre id="cmd-06"><code>set -eu
+curl -fsSL https://bun.com/install | bash -s &quot;bun-v1.3.14&quot;
+export BUN_INSTALL=&quot;$HOME/.bun&quot;
+export PATH=&quot;$BUN_INSTALL/bin:/usr/local/go/bin:$PATH&quot;
+test &quot;$(bun --version)&quot; = 1.3.14
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-10"><h2>10. Configure live mail reception with mbsync</h2><p>The first write-config command is interactive. Enter your provider<br>IMAP server, login, and password-command details. The generated normal<br>folders are receive-only: PullNew, Remove None, Expunge None. Only the<br>dedicated Sent channel permits PushNew.</p><p>Read each result before continuing. list must show the expected remote<br>folders. The first real sync can take time. autosync-validate finishes<br>with the 180-second loop running and no stale lock.</p><div class="codebox"><button type="button" data-copy-target="cmd-07">Copy mbsync setup</button><pre id="cmd-07"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+./scripts/mbsync_provider_inbox_setup.sh create-layout
+./scripts/mbsync_provider_inbox_setup.sh write-config
+./scripts/mbsync_provider_inbox_setup.sh list
+./scripts/mbsync_provider_inbox_setup.sh dry-run
+./scripts/mbsync_provider_inbox_setup.sh sync-once
+./scripts/mbsync_provider_inbox_setup.sh production-layout
+./scripts/mbsync_provider_inbox_setup.sh write-production-config
+./scripts/mbsync_provider_inbox_setup.sh production-list
+./scripts/mbsync_provider_inbox_setup.sh production-sync
+./scripts/mbsync_provider_inbox_setup.sh write-autosync
+./scripts/mbsync_provider_inbox_setup.sh install-autosync-startup
+./scripts/mbsync_provider_inbox_setup.sh autosync-validate
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-11"><h2>11. Restore the exact historical local-maildir archive</h2><p>Copy the complete verified export folder to the exact staging path<br>below. It contains manifest.json, inventory.jsonl, and 21 unchanged<br>part files. Use the separate Maildir++ transport guide for USB or<br>VMware shared-folder transfer.</p><p>The destination must be absent or completely empty. Never restore over<br>another tree. Expected verification: archive status ok; 48,720 cur;<br>zero new/tmp; one metadata file; 62,430,783,277 regular bytes; no<br>symlinks or special files.</p><p>Do not copy the drifted 48,564-file tree from the older VM.</p><div class="codebox"><button type="button" data-copy-target="cmd-08">Copy archive restore</button><pre id="cmd-08"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+MANIFEST=/mail/import-staging/maildirpp-archive-export-20260701-215204/manifest.json
+DEST=/mail/Mailstore/evolution/local-maildir
+test -f &quot;$MANIFEST&quot;
+if [ -e &quot;$DEST&quot; ]; then
+  test -d &quot;$DEST&quot;
+  test -z &quot;$(find &quot;$DEST&quot; -mindepth 1 -print -quit)&quot;
 fi
-
-if [ -x &quot;$BIN_DIR/notmuch-browser-index-control&quot; ]; then
-  &quot;$BIN_DIR/notmuch-browser-index-control&quot; stop || true
-fi
-if [ -x &quot;$BIN_DIR/notmuch-browser-control&quot; ]; then
-  &quot;$BIN_DIR/notmuch-browser-control&quot; stop || true
-fi
-
-restore_or_remove() {
-  name=$1
-  mode=$2
-  target=&quot;$BIN_DIR/$name&quot;
-  if [ -f &quot;$BACKUP_DIR/$name&quot; ]; then
-    install -m &quot;$mode&quot; &quot;$BACKUP_DIR/$name&quot; &quot;$target&quot;
-  elif [ -f &quot;$BACKUP_DIR/absent-before.txt&quot; ] &amp;&amp;
-       grep -Fxq &quot;$name&quot; &quot;$BACKUP_DIR/absent-before.txt&quot;; then
-    [ ! -e &quot;$target&quot; ] || unlink &quot;$target&quot;
-  else
-    echo &quot;Missing inventory decision for $name&quot; &gt;&amp;2
-    exit 1
-  fi
-}
-
-restore_or_remove notmuch-browser 755
-restore_or_remove notmuch-browser-control 700
-restore_or_remove notmuch-browser-index-control 700
-restore_or_remove notmuch-browser-runit-setup 700
-cp -p &quot;$BACKUP_DIR/notmuch-config&quot; \
-  &quot;$HOME/.config/notmuch/default/config&quot;
-cp -p &quot;$BACKUP_DIR/icewm-startup&quot; &quot;$HOME/.icewm/startup&quot;
-
-if [ -x &quot;$BIN_DIR/notmuch-browser&quot; ] &amp;&amp;
-   [ -x &quot;$BIN_DIR/notmuch-browser-control&quot; ]; then
-  &quot;$BIN_DIR/notmuch-browser-control&quot; start
-fi
-if [ -x &quot;$BIN_DIR/notmuch-browser-index-control&quot; ]; then
-  &quot;$BIN_DIR/notmuch-browser-index-control&quot; start
-fi
-echo status=preinstall_artifacts_restored
-ROLLBACK
-chmod 700 &quot;$BACKUP/rollback-browser.sh&quot;
-sh -n &quot;$BACKUP/rollback-browser.sh&quot;
-(
-  cd &quot;$BACKUP&quot;
-  find . -maxdepth 1 -type f \
-    ! -name backup-inventory.sha256 -printf &#x27;%P\0&#x27; |
-    sort -z | xargs -0 sha256sum &gt; backup-inventory.sha256
-)
-chmod 600 &quot;$BACKUP&quot;/*
-chmod 700 &quot;$BACKUP/rollback-browser.sh&quot;
-printf &#x27;%s\n&#x27; &quot;$BACKUP&quot; &gt; &quot;$POINTER&quot;
-chmod 600 &quot;$POINTER&quot;
-(cd &quot;$BACKUP&quot; &amp;&amp; sha256sum -c backup-inventory.sha256)
-echo &quot;rollback_backup=$BACKUP&quot;</code></pre></div></section><section id="section-8"><h2>8. Install artifacts, stage disabled runit services, and activate</h2><p>Pause the provider-live loop before an upgrade if its control reports active synchronization; wait for its lock to disappear. The block below installs exact files atomically enough for a user-local reconstruction, stages both definitions with down markers, inspects them, and activates. Activation creates its own checksummed supervision rollback backup, stops the legacy direct processes, attaches runsv, validates health, removes only the two legacy direct IceWM blocks, and installs one session-reconciliation block.</p>
-<p>Do not run stage if unmanaged definitions or active links already occupy the target names. Inspect and resolve that ownership question first.</p><div class="codebox"><button type="button" data-copy-target="cmd-05">Copy install and runit activation</button><pre id="cmd-05"><code>set -eu
-SOURCE=&quot;$HOME/notmuch-browser-rebuild-a172812/source&quot;
-install -d -m 700 &quot;$HOME/.local/bin&quot;
-install -m 755 &quot;$SOURCE/notmuch-browser&quot; \
-  &quot;$HOME/.local/bin/notmuch-browser&quot;
-install -m 700 &quot;$SOURCE/scripts/notmuch_browser_control.sh&quot; \
-  &quot;$HOME/.local/bin/notmuch-browser-control&quot;
-install -m 700 &quot;$SOURCE/scripts/notmuch_browser_index_control.sh&quot; \
-  &quot;$HOME/.local/bin/notmuch-browser-index-control&quot;
-install -m 700 &quot;$SOURCE/scripts/notmuch_browser_runit_setup.sh&quot; \
-  &quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot;
-
-printf &#x27;%s\n&#x27; \
-  &#x27;c7d14e0ee792595cd168a131cb05307214ae1129dc449f982fa48d30aa5bfed9  &#x27;&quot;$HOME&quot;&#x27;/.local/bin/notmuch-browser&#x27; \
-  &#x27;4b8231a2c886dfb1247d4dfa6b3de043e67d230e4fad1bc202b7452936ca04a8  &#x27;&quot;$HOME&quot;&#x27;/.local/bin/notmuch-browser-control&#x27; \
-  &#x27;1ddf93c9c5f9943bcc9b4f744f3e835e6c12f0df83a8a467ac061d2b38f6b007  &#x27;&quot;$HOME&quot;&#x27;/.local/bin/notmuch-browser-index-control&#x27; \
-  &#x27;598762b0f98147460cff3e937b69a47b7aa531e9e4e80807c4f75e540fdc0c77  &#x27;&quot;$HOME&quot;&#x27;/.local/bin/notmuch-browser-runit-setup&#x27; |
-  sha256sum -c -
-sh -n &quot;$HOME/.local/bin/notmuch-browser-control&quot;
-sh -n &quot;$HOME/.local/bin/notmuch-browser-index-control&quot;
-sh -n &quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot;
-
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; inspect
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; stage
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; inspect
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; activate
-echo status=templ_runit_activated</code></pre></div></section><section id="section-9"><h2>9. Runtime, listener, route, and reconciliation validation</h2><p>The health response must contain ok=true, read_only=true, and mail_mutation=false. The listener must be loopback-only. Exactly one reconciliation marker pair and zero legacy direct browser/index marker pairs must remain. The helper requires both services continuously healthy for 60 seconds within a bounded 180-second window after login.</p><div class="codebox"><button type="button" data-copy-target="cmd-06">Copy runtime validation</button><pre id="cmd-06"><code>set -eu
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; validate
+python3 src/maildirpp_transport.py verify-archive --manifest &quot;$MANIFEST&quot;
+python3 src/maildirpp_transport.py unpack --manifest &quot;$MANIFEST&quot; --dest &quot;$DEST&quot;
+python3 src/maildirpp_transport.py verify-tree --manifest &quot;$MANIFEST&quot; --dest &quot;$DEST&quot;
+python3 src/maildirpp_transport.py inspect --source &quot;$DEST&quot;
+df -h /mail</code></pre></div></section><section id="section-12"><h2>12. Reverify and acknowledge the archive gate</h2><p>This intentionally verifies the large package and restored tree again.<br>It rejects the wrong archive hashes, wrong counts, links/special files,<br>or less than 80 GiB free. Only then does it write a small private<br>acknowledgement marker.</p><p>Expected: status=archive_restore_acknowledged and the next stage is<br>notmuch-config.</p><div class="codebox"><button type="button" data-copy-target="cmd-09">Copy archive acknowledgement</button><pre id="cmd-09"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh acknowledge archives-restored
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-13"><h2>13. Create the safe notmuch configuration</h2><p>Replace the example name and email. This is identity metadata, not a<br>password. The database lives under /mail/SearchIndex and scans the<br>real /mail/Mailstore tree.</p><p>local-maildir is deliberately not in new.ignore, so the full historical<br>archive will be indexed. Only the named test/secondary archive folders<br>remain ignored. synchronize_flags=false prevents notmuch flag/tag<br>synchronization from altering Maildir filenames; index.decrypt=false<br>disables automatic decryption.</p><div class="codebox"><button type="button" data-copy-target="cmd-10">Copy notmuch configuration</button><pre id="cmd-10"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh configure-notmuch \
+  &quot;REPLACE WITH YOUR NAME&quot; &quot;replace-with-your-email@example.com&quot;
+notmuch --config=&quot;$HOME/.config/notmuch/default/config&quot; config get new.ignore
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-14"><h2>14. Run the first large historical index</h2><p>This is the long step. It pauses active mbsync/index loops, backs up<br>existing config/tags/database state, and runs notmuch new without the<br>normal 600-second refresh timeout. Output is saved under<br>/mail/Logs/notmuch-browser/fresh-vm-setup.</p><p>You may safely rerun the same command after power loss or interruption;<br>notmuch continues incrementally. Success requires exact path parity for<br>all 48,720 restored messages. Unique message count may be smaller<br>because duplicate Message-IDs are valid; file-path parity is the gate.</p><div class="codebox"><button type="button" data-copy-target="cmd-11">Copy initial historical index</button><pre id="cmd-11"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh initial-index
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-15"><h2>15. Build and install the complete browser</h2><p>This performs a frozen Bun install, Go module verification, templ and<br>Tailwind generation, reproducibility checks, Go tests/vet/race, Python<br>tests, shell syntax checks, the embedded-asset budget, and a stripped<br>binary build. It then installs the browser and control helpers under<br>~/.local/bin, backing up any prior application files.</p><p>Go dependencies remain pinned by go.mod/go.sum. Tailwind dependencies<br>remain pinned by package.json/bun.lock. Do not run go get -u or bun<br>update as part of reconstruction.</p><div class="codebox"><button type="button" data-copy-target="cmd-12">Copy browser build and install</button><pre id="cmd-12"><code>set -eu
+export PATH=&quot;$HOME/.bun/bin:/usr/local/go/bin:$PATH&quot;
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh build-install
+./scripts/notmuch_browser_fresh_vm_setup.sh next</code></pre></div></section><section id="section-16"><h2>16. Enable repaired per-user runit supervision</h2><p>antiX should already run a per-user runsvdir for ~/.runit/service.<br>These checks create only the two empty user directories if absent;<br>they never write /etc/service. If pgrep prints nothing, log out of<br>IceWM and log back in, then retry. Do not create a second runsvdir.</p><p>enable-services stages disabled definitions, activates them, installs<br>the bounded IceWM session reconciler, and validates browser and index<br>health. The initial 48,720-file gate must pass first.</p><div class="codebox"><button type="button" data-copy-target="cmd-13">Copy user-runit enablement</button><pre id="cmd-13"><code>set -eu
+mkdir -p &quot;$HOME/.runit/usersv&quot; &quot;$HOME/.runit/service&quot;
+pgrep -a -u &quot;$(id -u)&quot; -f &quot;runsvdir -P $HOME/.runit/service&quot;
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh enable-services
+./scripts/notmuch_browser_fresh_vm_setup.sh validate</code></pre></div></section><section id="section-17"><h2>17. Enable SSH and connect from Windows 11</h2><p>On antiX, confirm SSH is supervised and find the VM address. The<br>browser must remain bound only to 127.0.0.1:8765.</p><div class="codebox"><button type="button" data-copy-target="cmd-14">Copy antiX SSH checks</button><pre id="cmd-14"><code>set -eu
+sudo sv up /etc/service/ssh
+sudo sv status /etc/service/ssh
+hostname -I
+ss -ltn | grep &#x27;127.0.0.1:8765&#x27;
+curl -fsS http://127.0.0.1:8765/healthz</code></pre></div></section><section id="section-18"><h2>18. Open the Windows SSH tunnel</h2><p>Run this in Windows PowerShell and replace both placeholders. Keep the<br>PowerShell window open. Then browse to http://127.0.0.1:8765/ on<br>Windows. The -N option opens only the tunnel; it does not open a remote<br>shell.</p><div class="codebox"><button type="button" data-copy-target="cmd-15">Copy Windows tunnel</button><pre id="cmd-15"><code>ssh -N -L 8765:127.0.0.1:8765 REPLACE_WITH_ANTIX_USER@REPLACE_WITH_VM_IP</code></pre></div></section><section id="section-19"><h2>19. Manual browser acceptance</h2><p>Search for a known historical message and a recent live message. Open<br>both. Check Readable, Original, and plain display modes; duplicate<br>selection; individual attachment download; Save All ZIP; embedded<br>image confirmation; remote image confirmation/reset; narrow-window<br>layout; and the Status page.</p><p>Health must say ok=true, read_only=true, and mail_mutation=false.<br>Confirm there are no overlapping controls, error popups, or files left<br>under Maildir tmp or the browser download-temp directory.</p></section><section id="section-20"><h2>20. Prove automatic new-mail indexing</h2><p>Send a test message to the configured account. The first status shows<br>current service state. Wait for the next mbsync and notmuch cycles, then<br>search for a distinctive subject. This is the real proof that mail<br>reception and incremental indexing both work.</p><p>mbsync normally waits 180 seconds after each sync and the index loop<br>normally waits 60 seconds. Exact arrival time depends on where each<br>loop is in its cycle. No browser restart is required.</p><div class="codebox"><button type="button" data-copy-target="cmd-16">Copy automatic-index proof</button><pre id="cmd-16"><code>set -eu
+&quot;$HOME/.local/bin/mbsync-provider-live-control&quot; status
+&quot;$HOME/.local/bin/notmuch-browser-index-control&quot; status
 &quot;$HOME/.local/bin/notmuch-browser-control&quot; status
-&quot;$HOME/.local/bin/notmuch-browser-index-control&quot; status
-sv status &quot;$HOME/.runit/service/notmuch-browser&quot;
-sv status &quot;$HOME/.runit/service/notmuch-browser-index&quot;
+echo &quot;After sending the test email, wait up to about five minutes.&quot;
+notmuch --config=&quot;$HOME/.config/notmuch/default/config&quot; \
+  search &#x27;subject:&quot;REPLACE WITH DISTINCTIVE TEST SUBJECT&quot;&#x27;</code></pre></div></section><section id="section-21"><h2>21. Reboot proof</h2><p>Reboot antiX, log back into IceWM, wait one minute, and run this block.<br>Expected: both runit services are running, health passes, mbsync is<br>active, and local-maildir remains absent from new.ignore.</p><div class="codebox"><button type="button" data-copy-target="cmd-17">Copy post-reboot checks</button><pre id="cmd-17"><code>set -eu
+cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh validate
+&quot;$HOME/.local/bin/mbsync-provider-live-control&quot; status
+&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; inspect
+notmuch --config=&quot;$HOME/.config/notmuch/default/config&quot; config get new.ignore</code></pre></div></section><section id="section-22"><h2>22. Daily use and safe GitHub updates</h2><p>Normally you only open the Windows tunnel and use the browser. Use<br>status if mail looks stale. refresh-index requests one immediate,<br>lock-protected incremental notmuch new.</p><p>For a repository update, use the update command from a clean main<br>branch. It performs git pull --ff-only, rebuilds locked assets, backs<br>up installed application files, restarts both runit services, validates<br>health, and restores the prior application files if validation fails.<br>It never replaces Maildir or the notmuch database.</p><div class="codebox"><button type="button" data-copy-target="cmd-18">Copy daily and update commands</button><pre id="cmd-18"><code>cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh status
+&quot;$HOME/.local/bin/notmuch-browser-control&quot; refresh-index
 
-HEALTH=&quot;$(curl -fsS --max-time 15 http://127.0.0.1:8765/healthz)&quot;
-printf &#x27;%s\n&#x27; &quot;$HEALTH&quot; | grep -F &#x27;&quot;ok&quot;:true&#x27;
-printf &#x27;%s\n&#x27; &quot;$HEALTH&quot; | grep -F &#x27;&quot;read_only&quot;:true&#x27;
-printf &#x27;%s\n&#x27; &quot;$HEALTH&quot; | grep -F &#x27;&quot;mail_mutation&quot;:false&#x27;
-test &quot;$(curl -sS -o /dev/null -w &#x27;%{http_code}&#x27; \
-  http://127.0.0.1:8765/)&quot; = 200
-test &quot;$(curl -sS -o /dev/null -w &#x27;%{http_code}&#x27; \
-  &#x27;http://127.0.0.1:8765/search?q=tag%3Ainbox&#x27;)&quot; = 200
-test &quot;$(curl -sS -o /dev/null -w &#x27;%{http_code}&#x27; \
-  http://127.0.0.1:8765/status)&quot; = 200
-
-ss -ltnp | grep &#x27;127.0.0.1:8765&#x27;
-! ss -ltnp | grep -E &#x27;(^|[[:space:]])(0\.0\.0\.0|\[::\]):8765&#x27;
-test &quot;$(grep -Fxc &#x27;# BEGIN NOTMUCH BROWSER USER RUNIT SESSION RECONCILE&#x27; \
-  &quot;$HOME/.icewm/startup&quot;)&quot; = 1
-test &quot;$(grep -Fxc &#x27;# END NOTMUCH BROWSER USER RUNIT SESSION RECONCILE&#x27; \
-  &quot;$HOME/.icewm/startup&quot;)&quot; = 1
-test &quot;$(grep -Fxc &#x27;# BEGIN NOTMUCH BROWSER SERVICE&#x27; \
-  &quot;$HOME/.icewm/startup&quot; || true)&quot; = 0
-test &quot;$(grep -Fxc &#x27;# BEGIN NOTMUCH BROWSER INDEX REFRESH SERVICE&#x27; \
-  &quot;$HOME/.icewm/startup&quot; || true)&quot; = 0
-echo status=runtime_validation_passed</code></pre></div></section><section id="section-10"><h2>10. Manual antiX GUI acceptance</h2><p>Open http://127.0.0.1:8765/ on antiX. Confirm search, counts/range, fixed Previous/Next controls, responsive result rows, the horizontal desktop result/message splitter, metadata including Cc and copy buttons, Readable/Original/plain display, duplicate selection, individual attachment and Save All, embedded-image confirmation, separate remote image confirmation, permission reset on message/duplicate change, status, narrow layout, keyboard/pointer splitter behavior, and no clipping or unexpected popup.</p>
-<p>The owner completed this checklist against the isolated candidate and reported &quot;antiX candidate GUI: PASS&quot;. That manual acceptance complements automated route and exact-byte checks; it does not replace them.</p></section><section id="section-11"><h2>11. Windows SSH tunnel and GUI acceptance</h2><p>Keep the service on loopback. Run this from Windows PowerShell, leave the SSH process open, then browse http://127.0.0.1:8765/. If local port 8765 is already occupied on Windows, use 8876 on the left side and browse http://127.0.0.1:8876/. The validated candidate used local 8876; production normally uses local 8765.</p><div class="codebox"><button type="button" data-copy-target="cmd-07">Copy Windows tunnel</button><pre id="cmd-07"><code>Test-NetConnection 192.168.254.128 -Port 22
-ssh -N -L 8765:127.0.0.1:8765 atiq@192.168.254.128</code></pre></div></section><section id="section-12"><h2>12. Read-only, exact-byte, capability, and ZIP proof</h2><p>For a production proof, first pause provider-live and stop only the index refresh loop so background writers cannot be confused with a browser mutation. Capture sorted indexed paths, indexed content hashes, tags, Mailstore metadata, counts, config/artifact identities, locks, and temporary-file state before and after representative traffic. Always restore the index/provider state in a trap.</p>
-<p>The accepted strict gate used scripts/notmuch_browser_strict_validator.py. It proved root/search/message/status responses, POST 405, invalid, tampered, and wrong-purpose capability 403 responses, selected-duplicate isolation, an exact 162,241-byte attachment with SHA256 92afdde3d5a99c7b780b8da6977ff9c7b25ad220d4a74e4be2242be92cab02cc, an exact 4,078-byte inline image with SHA256 4814092beac5a9e50e3e57b156e8cfcb7fc55e688f361c20268c5c1e0a61d3bd, CSP/reset behavior, and two safe three-entry Store ZIPs. The before and after stable snapshot SHA256 was identical: 7f0312e7bd0c0602aeb04d7a4876c7214883547002005de8872c33b9a58d7a37. Counts at that bounded proof were 1,635 messages, 2,834 indexed files, and 1,635 tagged message records; normal mail later increased them.</p>
-<p>Use the retained operator runner for another formal mailbox proof rather than copying only fragments of the old gate. For a quick non-mutating daily audit, use the block below.</p><div class="codebox"><button type="button" data-copy-target="cmd-08">Copy read-only quick audit</button><pre id="cmd-08"><code>set -eu
-CONFIG=&quot;$HOME/.config/notmuch/default/config&quot;
-BEFORE=&quot;$(mktemp)&quot;
-AFTER=&quot;$(mktemp)&quot;
-notmuch --config=&quot;$CONFIG&quot; search --format=text0 --output=files &#x27;*&#x27; |
-  sort -z | sha256sum &gt; &quot;$BEFORE&quot;
-
-curl -fsS -o /dev/null http://127.0.0.1:8765/
-curl -fsS -o /dev/null \
-  &#x27;http://127.0.0.1:8765/search?q=tag%3Ainbox&#x27;
-curl -fsS -o /dev/null http://127.0.0.1:8765/status
-
-notmuch --config=&quot;$CONFIG&quot; search --format=text0 --output=files &#x27;*&#x27; |
-  sort -z | sha256sum &gt; &quot;$AFTER&quot;
-cmp &quot;$BEFORE&quot; &quot;$AFTER&quot;
-test ! -d /mail/AppData/notmuch-browser/index-refresh.lock
-find /mail/AppData/notmuch-browser/download-tmp -maxdepth 1 \
-  -type f -name &#x27;nmb-*&#x27; -print -quit 2&gt;/dev/null |
-  grep -q . &amp;&amp; exit 1 || true
-echo status=quick_read_only_audit_passed</code></pre></div></section><section id="section-13"><h2>13. Resource, restart, and repaired reboot evidence</h2><p>The bounded resource gate completed 90 of 90 HTTP requests with status 200. Browser peaks were 25,520 KiB RSS, 15 threads, and 55 file descriptors, below gates of 65,536 KiB, 64 threads, and 128 descriptors. The controlled runit-aware restart rotated browser and index identities, logged graceful browser shutdown, rejected an old capability with 403, returned identical bytes through a fresh capability, and restored the provider unpaused with last exit 0.</p>
-<p>The first changed-boot attempt exposed an antiX session-hook race: overlapping /etc/user_session.d wrappers stopped normally-up services after the surviving runsvdir started. The repair deliberately leaves that distro file unchanged. One IceWM block launches notmuch-browser-runit-setup session-reconcile, which waits for prerequisites, reasserts only the two managed services, and requires 60 continuous healthy seconds within 180 seconds.</p>
-<p>Final proof log notmuch-browser-operator-20260725-203802-977.log has SHA256 fe18ec8f19796607d7d45c621c2e6e92e5608b0a0086aaab82b3871d913e8202. Boot changed to 5c996053-b1ab-4904-aa41-a0fbd1420fa5. The current-boot reconciliation log recorded three repairs then stable_seconds=60. Fresh runsv ancestry, loopback-only listener, routes, read-only health, exact attachment bytes, provider state, locks, and zero temp passed. The eleven-file evidence manifest SHA256 is 4af19fb2dca62622be0b3d6b79e233b698acc0acc53c7d05e1fe32b145182325.</p><div class="codebox"><button type="button" data-copy-target="cmd-09">Copy post-login reconciliation proof</button><pre id="cmd-09"><code>set -eu
-LOG=/tmp/notmuch-browser-user-runit-session-reconcile.log
-test -s &quot;$LOG&quot;
-grep -F &#x27;status=user_runit_session_reconciled&#x27; &quot;$LOG&quot;
-grep -E &#x27;stable_seconds=60|stable_seconds=[6-9][0-9]&#x27; &quot;$LOG&quot;
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; validate
-pgrep -u &quot;$(id -u)&quot; -af &quot;runsvdir -P $HOME/.runit/service&quot;
-sv status &quot;$HOME/.runit/service/notmuch-browser&quot;
-sv status &quot;$HOME/.runit/service/notmuch-browser-index&quot;
-curl -fsS http://127.0.0.1:8765/healthz
-ss -ltnp | grep &#x27;127.0.0.1:8765&#x27;
-test ! -d /mail/AppData/isync/provider-live-loop/lock
-test ! -d /mail/AppData/notmuch-browser/index-refresh.lock
-echo status=post_login_reconciliation_healthy</code></pre></div></section><section id="section-14"><h2>14. Rollback</h2><p>Roll back only after resolving the exact target and verifying the pointer. The runit helper rollback verifies its activation backup, brings down only the two managed services, removes only their exact links, restores the saved IceWM startup, archives the pointer, and restarts the legacy direct controls. It does not restore a separately replaced binary. For an upgrade, verify and use the retained preinstall backup and its reviewed rollback-browser.sh after the supervision rollback.</p>
-<p>On the validated VM, the activation pointer is /mail/AppData/notmuch-browser/user-runit-rollback-current. Its backup inventory is artifacts.sha256. The earlier full preinstall package uses rollback-browser.sh and backup-inventory.sha256. Never guess a backup directory, never point outside /mail/Backups/notmuch-browser, and do not delete retained evidence as part of rollback.</p><div class="codebox"><button type="button" data-copy-target="cmd-10">Copy guarded runit rollback</button><pre id="cmd-10"><code>set -eu
-POINTER=/mail/AppData/notmuch-browser/user-runit-rollback-current
-test -s &quot;$POINTER&quot;
-BACKUP=&quot;$(sed -n &#x27;1p&#x27; &quot;$POINTER&quot;)&quot;
-case &quot;$BACKUP&quot; in
-  /mail/Backups/notmuch-browser/*) ;;
-  *) echo &#x27;Refusing pointer outside backup root&#x27; &gt;&amp;2; exit 1 ;;
-esac
-test -d &quot;$BACKUP&quot;
-(cd &quot;$BACKUP&quot; &amp;&amp; sha256sum -c artifacts.sha256)
-printf &#x27;Verified rollback target: %s\n&#x27; &quot;$BACKUP&quot;
-
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; rollback
-&quot;$HOME/.local/bin/notmuch-browser-control&quot; status
-&quot;$HOME/.local/bin/notmuch-browser-index-control&quot; status
-curl -fsS http://127.0.0.1:8765/healthz
-echo status=user_runit_rollback_verified</code></pre></div></section><section id="section-15"><h2>15. Daily operations and stale-index repair</h2><p>Use the runit-aware controls; they delegate lifecycle, status, and logs to runit whenever the managed links are active. Search may briefly lag during mbsync or before the next 60-second index pass. A missing indexed Maildir path normally repairs on the next safe refresh. The refresh command refuses unsafe notmuch configuration and coordinates the mbsync and notmuch lock directories.</p>
-<p>Do not manually start a second browser, index loop, or runsvdir. Do not edit the generated service run files directly; update the source helper, test it, then restage through a separately reviewed change.</p><div class="codebox"><button type="button" data-copy-target="cmd-11">Copy daily operations</button><pre id="cmd-11"><code>&quot;$HOME/.local/bin/notmuch-browser-control&quot; status
-&quot;$HOME/.local/bin/notmuch-browser-index-control&quot; status
+# Run this only when you intentionally want the newest main branch:
+./scripts/notmuch_browser_fresh_vm_setup.sh update</code></pre></div></section><section id="section-23"><h2>23. Troubleshooting and recovery</h2><p>Always run status first. If initial-index failed, read its newest log,<br>correct the reported problem, confirm at least 80 GiB free, and rerun<br>initial-index. A missing completion marker means services cannot be<br>enabled.</p><p>If search is stale but both loops are healthy, run one refresh-index.<br>If a lock is reported, do not delete it while its PID is alive. If the<br>browser update rolled back, status reports the retained backup path;<br>keep that backup until the corrected version passes.</p><p>Never solve an indexing problem by deleting local-maildir. notmuch&#x27;s<br>database is a sidecar, while the verified Maildir archive is the<br>irreplaceable source.</p><div class="codebox"><button type="button" data-copy-target="cmd-19">Copy troubleshooting report</button><pre id="cmd-19"><code>cd &quot;$HOME/codex_antix&quot;
+./scripts/notmuch_browser_fresh_vm_setup.sh status
 &quot;$HOME/.local/bin/notmuch-browser-control&quot; logs
 &quot;$HOME/.local/bin/notmuch-browser-index-control&quot; logs
-&quot;$HOME/.local/bin/notmuch-browser-control&quot; refresh-index
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; inspect
-&quot;$HOME/.local/bin/notmuch-browser-runit-setup&quot; validate</code></pre></div></section><section id="section-16"><h2>16. Completion checklist</h2><p>Completion requires all of the following: exact artifact hashes; Go, Python, shell, deterministic generation, asset, and stripped-size gates; managed user-runit links and runsv ancestry; one reconciliation marker pair and no legacy direct blocks; loopback-only 8765; health reporting OK/read-only/non-mutating; root/search/message/status/static behavior; antiX GUI PASS; Windows tunnel GUI PASS; strict stable before/after proof; exact attachment/image/ZIP and capability rejection; resource peaks below limits; graceful restart and stale-capability rejection; changed-boot current-session reconciliation; provider-live restored; absent locks; empty Maildir/download temp; and retained, verified rollback evidence.</p>
-<p>The 2026-07-25 migration passed every item. Mailbox counts and process IDs in historical evidence are observations, not permanent assertions. Artifact, source, log, pointer, and evidence hashes are the durable identities.</p></section>
-          </main>
-          <footer>
-            Offline document. All styling and copy behavior are embedded locally.
-            The plain-text companion contains the same command blocks.
-          </footer>
+ls -lt /mail/Logs/notmuch-browser/fresh-vm-setup
+df -h /mail</code></pre></div></section><section id="section-24"><h2>24. Completion checklist</h2><p>Complete means: /mail is XFS; the exact 48,720-file archive passed<br>package/tree inspection; at least 80 GiB was free before initial<br>indexing; all archive paths are in notmuch; local-maildir is not<br>ignored; the full browser feature set passed; browser/index are under<br>repaired user runit; 8765 is localhost-only; the Windows tunnel works;<br>reboot recovery works; and a newly received test email became<br>searchable automatically.</p><p>Keep the verified split archive outside Git as disaster-recovery<br>material. Keep credentials mode 600 and never commit them.</p></section></main>
+          <footer>Offline guide. Styling and copy controls are embedded; the TXT
+          companion contains the same commands.</footer>
           <script>
             async function copyText(value) {
               if (navigator.clipboard && window.isSecureContext) {

@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-25: Reconstruct Fresh antiX VMs From main and Index the Verified Historical Archive
+
+- Status: accepted
+- Context: The owner wants a beginner with little stack knowledge to clone the repository on a completely new antiX runit/zzzFM-IceWM VM and reproduce the complete current browser. The historical `local-maildir` must be searchable, but the existing VM's tree drifted from the verified 48,720 `cur` files to 48,564 and must not be treated as a source.
+- Decision: Deliver a state-aware one-step assistant plus matching offline HTML/TXT guide from the default `main` branch. Require a dedicated XFS `/mail` disk, current compatible Go 1.26.5, Bun 1.3.14, locked application dependencies, deletion-safe live mbsync, and restore only from the verified split package into an empty tree. Require exact package/tree counts, 80 GiB free, remove `local-maildir` from `new.ignore`, run an unbounded resumable first `notmuch new`, and compare all 48,720 restored paths with notmuch output before enabling the complete browser and 60-second index loop.
+- Consequence: Git remains the source/application synchronization layer but never contains mail, credentials, logs, or the notmuch database. New mail is received by the roughly 180-second mbsync loop and becomes searchable through the roughly 60-second incremental notmuch loop without restarting the browser. Browser routes remain non-mutating. The current drifted VM is not changed by this repository implementation; its future archive enrollment requires a separate guarded rollout.
+
 ### 2026-07-25: Use Project-Local, Logged Operator Batches for Reviewed antiX Gates
 
 - Status: accepted

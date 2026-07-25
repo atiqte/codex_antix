@@ -64,7 +64,11 @@ class NotmuchBrowserServiceGuideTests(unittest.TestCase):
         self.assertEqual(self.generator.render_text(), self.text)
 
     def test_copy_targets_are_unique_complete_and_nonempty(self):
-        self.assertEqual(11, len(self.parser.targets))
+        expected_commands = sum(
+            1 for section in self.generator.SECTIONS if section.get("code")
+        )
+        self.assertEqual(19, expected_commands)
+        self.assertEqual(expected_commands, len(self.parser.targets))
         self.assertEqual(len(self.parser.targets), len(set(self.parser.targets)))
         self.assertEqual(len(self.parser.ids), len(set(self.parser.ids)))
         self.assertEqual(set(self.parser.targets), set(self.parser.codes))
@@ -75,29 +79,48 @@ class NotmuchBrowserServiceGuideTests(unittest.TestCase):
         for target in self.parser.targets:
             self.assertIn(self.parser.codes[target], self.text)
 
-    def test_offline_resources_and_required_identities(self):
+    def test_offline_resources_and_required_fresh_install_contract(self):
         self.assertEqual([], self.parser.resources)
         self.assertNotIn("@import", self.html)
         self.assertNotIn("url(http", self.html)
         required = {
-            "a1728127940f0824fb91d3dd97abe636be47690e",
-            "5e58f63b9ef3eca0b1e8fc2b8b9013f1985aeaae7817424848ae1ed5ccd361a1",
-            "c7d14e0ee792595cd168a131cb05307214ae1129dc449f982fa48d30aa5bfed9",
-            "4b8231a2c886dfb1247d4dfa6b3de043e67d230e4fad1bc202b7452936ca04a8",
-            "1ddf93c9c5f9943bcc9b4f744f3e835e6c12f0df83a8a467ac061d2b38f6b007",
-            "598762b0f98147460cff3e937b69a47b7aa531e9e4e80807c4f75e540fdc0c77",
-            "fe18ec8f19796607d7d45c621c2e6e92e5608b0a0086aaab82b3871d913e8202",
-            "4af19fb2dca62622be0b3d6b79e233b698acc0acc53c7d05e1fe32b145182325",
+            "go1.26.5",
+            "5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053",
+            "Bun 1.3.14",
+            "Tailwind CSS 4.3.3",
+            "HTMX 2.0.10",
+            "48,720",
+            "62,430,783,277",
+            "80 GiB",
+            "250 GB",
+            "notmuch_browser_fresh_vm_setup.sh",
+            "acknowledge archives-restored",
+            "initial-index",
+            "git pull --ff-only",
+            "automatic new-mail indexing",
+            "127.0.0.1:8765",
         }
         for identity in required:
             self.assertIn(identity, self.text)
             self.assertIn(identity, self.html)
-        for stale in (
-            "50e6b1adbcf32201496f6d6f5a3d53c060d0c39e1831ca1b5ecac3d48838f37e",
-            "f56332f7746ba0a621da784135cdb1379a8e3f1310e7bfd2de9ed00ac2af5f9e",
+        self.assertIn("local-maildir is deliberately not in new.ignore", self.text)
+        self.assertIn("Do not copy the drifted 48,564-file tree", self.text)
+        self.assertIn("does not need to restart.", self.text)
+
+    def test_beginner_safety_and_feature_contract(self):
+        for phrase in (
+            "No prior Linux, Go,",
+            "never partitions,",
+            "one-step-at-a-time assistant",
+            "Stop if clone or checkout fails",
+            "signed individual attachments",
+            "Save All ZIP",
+            "embedded/remote images",
+            "read_only=true",
+            "mail_mutation=false",
+            "reboot recovery works",
         ):
-            self.assertNotIn(stale, self.text)
-            self.assertNotIn(stale, self.html)
+            self.assertIn(phrase, self.text)
 
     def test_posix_command_blocks_parse(self):
         shell_sections = [

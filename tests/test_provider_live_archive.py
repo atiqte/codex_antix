@@ -138,14 +138,7 @@ Channel provider-live-sent-upload
         indexed = base / "indexed.txt"
         id_map = archive.build_archive_id_map(archive_root)
         indexed.write_text("\n".join(str(path) for path in id_map.values()) + "\n", encoding="utf-8")
-        archive.verify_notmuch_paths(
-            run_id,
-            indexed,
-            state,
-            backup,
-            archive_root,
-            base / "mail" / "Mailstore" / "evolution" / "local-maildir",
-        )
+        archive.verify_notmuch_paths(run_id, indexed, state, backup, archive_root)
         return env
 
     def test_estimate_selects_all_messages_for_target_zero(self):
@@ -194,7 +187,7 @@ Channel provider-live-sent-upload
             mbsync_children={"provider-live", "provider-inbox-test"},
         )
 
-        self.assertIn("local-maildir", result)
+        self.assertNotIn("local-maildir", result)
         self.assertIn("old-delta", result)
         self.assertIn("provider-inbox-test", result)
         self.assertIn("unexpected-root", result)
@@ -342,7 +335,7 @@ Channel provider-live-sent-upload
             after = archive.build_archive_id_map(archive_root)
             self.assertEqual(after[archive_id], renamed)
 
-    def test_notmuch_forbidden_archive_is_refused(self):
+    def test_notmuch_historical_archive_is_allowed(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             env, _verified = self.complete_copy(base)
@@ -354,8 +347,41 @@ Channel provider-live-sent-upload
             forbidden.mkdir(parents=True)
             indexed.write_text("\n".join(str(path) for path in current + [forbidden / "cur" / "bad"]) + "\n", encoding="utf-8")
 
+            result = archive.verify_notmuch_paths(
+                "20260711-120000", indexed, state, backup, archive_root
+            )
+            self.assertTrue(result["notmuch_verified"])
+
+    def test_notmuch_explicit_forbidden_prefix_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            env, _verified = self.complete_copy(base)
+            _live, archive_root, state, backup, *_rest = env
+            archive.mark_evolution_validated(
+                "20260711-120000", state, backup, "ok"
+            )
+            indexed = base / "indexed.txt"
+            current = list(archive.build_archive_id_map(archive_root).values())
+            forbidden = base / "mail" / "test-maildir"
+            forbidden.mkdir(parents=True)
+            indexed.write_text(
+                "\n".join(
+                    str(path)
+                    for path in current + [forbidden / "cur" / "bad"]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
             with self.assertRaises(archive.ArchiveError):
-                archive.verify_notmuch_paths("20260711-120000", indexed, state, backup, archive_root, forbidden)
+                archive.verify_notmuch_paths(
+                    "20260711-120000",
+                    indexed,
+                    state,
+                    backup,
+                    archive_root,
+                    forbidden,
+                )
 
     def test_cleanup_canary_bulk_cleanup_and_rollback(self):
         with tempfile.TemporaryDirectory() as tmp:

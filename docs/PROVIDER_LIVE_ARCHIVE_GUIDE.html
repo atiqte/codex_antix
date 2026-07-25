@@ -129,7 +129,7 @@ findmnt -rn -o TARGET,SOURCE,FSTYPE,OPTIONS | sed -n '1,160p'
 for p in "/media/$USER" "/run/media/$USER" /mnt/hgfs; do
   [ ! -e "$p" ] || { echo "candidate=$p"; ls -la "$p" | sed -n '1,80p'; }
 done</pre></div>
-  <div class="warn">Stop here and review the output. All Maildir <code>tmp</code> counts must be zero, the production mbsync block must match the validated policy, and the full Betterbird archive must not be indexed.</div>
+  <div class="warn">Stop here and review the output. All Maildir <code>tmp</code> counts must be zero, the production mbsync block must match the validated policy, and an indexed historical <code>local-maildir</code> must match its separately verified fresh-VM baseline.</div>
 </section>
 
 <section>
@@ -192,8 +192,8 @@ grep -RInE 'BackendName=maildir|provider-live-archive|TAG-Mustang Local Archive'
 </section>
 
 <section>
-  <h2>Chunk 4: Enroll Only This Archive in notmuch</h2>
-  <p>This automatically backs up config, tags, counts, and indexed paths. It refuses unsafe notmuch settings and any currently indexed full Betterbird path. Scope enrollment uses <code>notmuch new --full-scan</code>; routine refreshes remain incremental.</p>
+  <h2>Chunk 4: Enroll the Approved Archive Scope in notmuch</h2>
+  <p>This automatically backs up config, tags, counts, and indexed paths. It refuses unsafe notmuch settings. The verified historical <code>local-maildir</code> remains included alongside the provider-live archive; test and unapproved secondary trees remain ignored. Scope enrollment uses <code>notmuch new --full-scan</code>; routine refreshes remain incremental.</p>
   <div class="cmd"><div class="cmd-head"><span>antiX terminal</span><button data-copy="c4">Copy</button></div><pre id="c4">set -eu
 provider-live-archive-control configure-notmuch-scope
 provider-live-archive-control status
@@ -207,7 +207,7 @@ printf 'archive_indexed_files='
 notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/provider-live-archive/' || true
 printf 'full_betterbird_indexed_files='
 notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/local-maildir/' || true</pre></div>
-  <p>The empty archive may have zero files. The full Betterbird count must be zero.</p>
+  <p>The empty provider archive may have zero files. On a completed fresh-VM setup, the historical archive count must match its verified 48,720-file path baseline.</p>
 </section>
 
 <section>

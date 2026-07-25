@@ -51,6 +51,8 @@ Start Here: Fresh Installation
 Do not start with install or prepare. Start with Chunk 1. Paste its complete
 terminal output for review. Continue only when the current provider-live,
 notmuch, Evolution, locks, tmp directories, and mount candidates are known.
+The verified historical local-maildir archive is now an approved indexed
+scope; its count must match the separately validated fresh-VM baseline.
 
 Chunk 1 - Read-Only antiX Discovery
 -----------------------------------
@@ -217,14 +219,15 @@ After the GUI is closed:
 The reviewed source must contain `BackendName=maildir` and the exact archive
 path before continuing.
 
-Chunk 4 - Enroll Only the New Archive in notmuch
-------------------------------------------------
+Chunk 4 - Enroll the Approved Archive Scope in notmuch
+-------------------------------------------------------
 
 Run only after Chunk 1 and the Evolution source are reviewed. This command
 backs up the notmuch config, tags, counts, and indexed-path inventory before
-changing `new.ignore`. It refuses unsafe database settings and refuses to
-continue if the deferred full Betterbird archive is already indexed. Scope
-enrollment uses `notmuch new --full-scan`; routine refreshes remain incremental.
+changing `new.ignore`. It refuses unsafe database settings. The verified
+historical `local-maildir` remains included alongside the provider-live archive;
+test and unapproved secondary trees remain ignored. Scope enrollment uses
+`notmuch new --full-scan`; routine refreshes remain incremental.
 
   set -eu
   provider-live-archive-control configure-notmuch-scope
@@ -240,7 +243,8 @@ enrollment uses `notmuch new --full-scan`; routine refreshes remain incremental.
   printf 'full_betterbird_indexed_files='
   notmuch --config="$CONFIG" search --output=files '*' | grep -c '^/mail/Mailstore/evolution/local-maildir/' || true
 
-The empty archive count may be zero. The full Betterbird count must be zero.
+The empty provider archive count may be zero. On a completed fresh-VM setup,
+the historical archive count must match its verified 48,720-file path baseline.
 
 Chunk 5 - Install and Start the Read-Only Threshold Monitor
 ------------------------------------------------------------
@@ -381,7 +385,7 @@ behaviors must be validated through reviewed terminal chunks before production
 cleanup is approved:
 
 - Exact Evolution source registration and monthly folder rendering.
-- Current notmuch `new.ignore` rewrite and full-archive exclusion.
+- Current notmuch `new.ignore` rewrite with verified `local-maildir` inclusion.
 - IceWM monitor start and daily notification behavior.
 - External USB/HGFS mount identity, capacity, package corruption test, and
   complete package verification.

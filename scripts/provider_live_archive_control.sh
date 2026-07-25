@@ -379,7 +379,7 @@ verify_notmuch() {
   paths_file="$STATE/runs/$run_id/notmuch-indexed-paths.txt"
   notmuch --config="$NOTMUCH_CONFIG" search --output=files '*' > "$paths_file"
   chmod 600 "$paths_file"
-  engine_common verify-notmuch "$run_id" --indexed-paths "$paths_file" --forbidden-prefix /mail/Mailstore/evolution/local-maildir
+  engine_common verify-notmuch "$run_id" --indexed-paths "$paths_file"
   resume_index
   end_transaction
 }
@@ -393,13 +393,12 @@ configure_notmuch_scope() {
   paths_file="$STATE/notmuch-scope-paths-after.txt"
   notmuch --config="$NOTMUCH_CONFIG" search --output=files '*' > "$paths_file"
   chmod 600 "$paths_file"
-  if grep -Fq '/mail/Mailstore/evolution/local-maildir/' "$paths_file"; then
-    die "forbidden 59G Betterbird archive entered notmuch index"
-  fi
+  historical_count=$(grep -Fc '/mail/Mailstore/evolution/local-maildir/' "$paths_file" || true)
   resume_index
   resume_browser
   end_transaction
   log "status=notmuch_scope_configured"
+  log "historical_local_maildir_indexed_files=$historical_count"
 }
 
 sync_once_while_loop_stopped() {
