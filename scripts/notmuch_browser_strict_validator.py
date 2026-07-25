@@ -88,12 +88,16 @@ def parse_page(raw):
     text = raw.decode("utf-8", "replace")
     parser = Collector()
     parser.feed(text)
+    urls = list(parser.urls)
     srcdocs = []
     for value in parser.srcdocs:
         for _ in range(3):
             value = html.unescape(value)
         srcdocs.append(value)
-    return text, parser.urls, srcdocs
+        srcdoc_parser = Collector()
+        srcdoc_parser.feed(value)
+        urls.extend(srcdoc_parser.urls)
+    return text, urls, srcdocs
 
 
 def capability_payload(base, url):
