@@ -22,7 +22,8 @@
 - [x] Gracefully stop only the exact retained candidate after final identity checks, preserve all runtime/build evidence without deleting anything, and reprove unchanged production plus free port 8876.
 - [x] Create and independently verify a separate pre-install rollback package for the currently installed browser/control/index artifacts, notmuch config, and IceWM startup before staging or replacing anything.
 - [x] Atomically install candidate `c7d14e0e...`, the two runit-aware controls, and the runit setup helper under the existing direct/IceWM supervision path, with automatic rollback on any failure and no runit staging or activation yet.
-- [ ] Stage only the disabled per-user runit browser/index definitions, validate exact managed/down markers and scripts, and prove no active links or change to direct production, provider-live, or IceWM startup.
+- [x] Stage only the disabled per-user runit browser/index definitions, validate exact managed/down markers and scripts, and prove no active links or change to direct production, provider-live, or IceWM startup.
+- [ ] Activate the staged per-user runit browser/index services with provider-live paused, automatic supervision rollback, exact symlink/runtime/health checks, and removal of only the two legacy IceWM blocks after success.
 - [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
