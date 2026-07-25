@@ -71,8 +71,12 @@ test_project() {
   go vet ./...
   go test -race -count=1 ./...
   for script in scripts/*.sh; do
-    sh -n "$script"
+    case "$(sed -n '1p' "$script")" in
+      '#!/bin/bash'*) bash -n "$script" ;;
+      *) sh -n "$script" ;;
+    esac
   done
+  python3 -m unittest discover -s tests -v
   asset_bytes=$(find internal/notmuchbrowser/static -maxdepth 1 -type f -exec wc -c {} + |
     awk 'END { print $1 }')
   [ "$asset_bytes" -le 92160 ] ||

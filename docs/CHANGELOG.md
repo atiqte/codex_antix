@@ -9,6 +9,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Added runit-aware browser/index controls and a fail-closed per-user runit stage/activate/validate/rollback helper for the existing `~/.runit/service` supervisor, including `/mail` readiness, bounded `svlogd`, health checks, checksummed rollback evidence, and automatic legacy restoration on failed activation.
 - Passed frozen dependency/module verification, deterministic templ/Tailwind generation, Go unit/vet/race/coverage, 46 Python tests, all shell syntax checks, an 86,332-byte static-asset budget, and a stripped 8,093,961-byte Linux build. Production and final HTML/TXT guides remain unchanged pending reviewed antiX/Windows/read-only/runit/reboot gates.
 - Added a project-local operator-batch runner that captures stdout/stderr, nanosecond start/end metadata, batch identity, exit status, and a millisecond-stamped private log; one ignored `current.sh` is prepared and reviewed at a time.
+- Completed the combined-migration read-only production preflight after correcting two harness-only failures; exact production identities, health/safety settings, locks, temporary state, listeners, runsvdir, and IceWM markers all passed without changing state. Extended clean-build validation to select Bash by shebang and run the complete Python suite.
 
 ## 2026-07-19
 
