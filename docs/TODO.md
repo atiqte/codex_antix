@@ -40,7 +40,7 @@
 - [x] Repeat the changed-boot gate against the repaired v2 baseline: current-boot reconciliation performed three repairs then held 60 stable seconds; fresh runit services, logs, routes, exact attachment bytes, provider state, and zero residue passed.
 - [x] Run the reboot/login-independent supervision gate before regenerating the final guides.
 - [x] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
-- [ ] Regenerate and statically validate the final HTML/TXT Go browser reconstruction guides for the validated combined migration.
+- [x] Regenerate and statically validate the final HTML/TXT Go browser reconstruction guides for the validated combined migration.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
 - [x] Implement and locally validate body-resource classification, confirmed CID/data/SVG/relative image rendering, genuine-attachment-only Save All, and local Inter/Aporetic/Aptos font stacks without bundling fonts; package exact no-font bundle `notmuch-browser-body-images-src-20260718-183128.tar.gz`.

@@ -4,6 +4,8 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-25
 
+- Regenerated the final offline HTML/TXT notmuch browser reconstruction guides from one standard-library source, replacing the July 14 direct-IceWM release with the validated templ/Bun/per-user-runit build, exact post-fix source and artifact identities, antiX session reconciliation, correct rollback filenames, strict byte/non-mutation evidence, resource/restart results, Windows tunnel acceptance, and repaired reboot proof.
+- Added focused deterministic guide validation for all 11 copy targets, HTML/TXT command parity, offline resources, current/stale hashes, ASCII output, and POSIX command syntax.
 - Migrated the notmuch browser from runtime-parsed `html/template` files to templ v0.3.1020 source components with committed deterministic generated Go, retaining chi v5.3.1, vendored HTMX 2.0.10, the universal Readable/Original renderer, signed exports, image privacy gates, and non-mutating browser routes.
 - Added Bun 1.3.14 build metadata with exact Tailwind CSS/CLI 4.3.3 pins, a frozen/reproducible build helper, HTMX eval/script/history hardening, targeted Frost/Sapphire accessibility/error-state polish, and graceful SIGINT/SIGTERM HTTP shutdown.
 - Added runit-aware browser/index controls and a fail-closed per-user runit stage/activate/validate/rollback helper for the existing `~/.runit/service` supervisor, including `/mail` readiness, bounded `svlogd`, health checks, checksummed rollback evidence, and automatic legacy restoration on failed activation.

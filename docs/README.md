@@ -21,7 +21,7 @@ mail migration utilities and read-only Go notmuch browser.
 - `EVOLUTION_FLATPAK_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the Evolution Flatpak guide.
 - `MBSYNC_ANTIX_GUIDE.html`: offline browser guide with copy buttons for the first deletion-safe mbsync INBOX test on antiX.
 - `MBSYNC_ANTIX_GUIDE.txt`: terminal-friendly plain text version of the mbsync antiX guide.
-- `NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt`: the currently validated production reconstruction guide. Its templ/Bun/per-user-runit replacement is intentionally deferred until the combined migration passes antiX, Windows, read-only, rollback, resource, and reboot gates.
+- `NOTMUCH_GO_BROWSER_SERVICE_GUIDE.html` and `.txt`: the final validated templ/HTMX/Tailwind/chi and repaired per-user-runit production reconstruction guide, including exact source/artifact hashes, rollback, strict non-mutation, resource, Windows tunnel, restart, and reboot evidence.
 
 ## antiX Desktop Helpers
 
@@ -29,6 +29,7 @@ mail migration utilities and read-only Go notmuch browser.
 - `../scripts/mbsync_provider_inbox_setup.sh`: antiX helper for installing isync/mbsync, creating the isolated `/mail` test layout, writing a pull-only INBOX config, dry-running, and pulling once.
 - `../scripts/notmuch_browser_build.sh`: pinned Bun/Go preparation, templ/Tailwind generation, verification, tests, and stripped browser build.
 - `../scripts/notmuch_browser_runit_setup.sh`: fail-closed staging, activation, validation, and rollback for only the existing per-user runit tree.
+- `../scripts/generate_notmuch_browser_service_guide.py`: standard-library generator for the matching offline HTML and terminal-friendly text reconstruction guides.
 
 For transport commands, `--manifest` always points to `manifest.json`.
 `inventory.jsonl` must stay beside it and is read automatically by the
