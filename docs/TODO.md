@@ -29,8 +29,8 @@
 - [x] Add and locally compile a corrected standard-library strict validator that selects a genuine attachment common to both duplicate files while retaining the audited inline part as a separate exact-byte check.
 - [x] Review strict attempt 2: genuine attachment downloads and rejection controls advanced, then the validator stopped because it did not inspect the signed inline-image URL inside decoded iframe `srcdoc`; background services recovered and download temp returned to zero.
 - [x] Extend the strict validator’s page parser to collect URLs from decoded sandboxed iframe content and prove exactly one part-6 inline capability is now selected.
-- [ ] Rerun the complete strict browser non-mutation proof with the corrected validator and require identical before/after snapshots plus clean background restoration.
-- [ ] Run strict browser read-only proof, resource observation, controlled service restart, and reboot/login-independent supervision gates before regenerating the final guides.
+- [x] Rerun the complete strict browser non-mutation proof with the corrected validator; exact attachment/image/ZIP checks, identical before/after snapshots, zero temporary residue, and clean background restoration passed.
+- [ ] Run resource observation, controlled service restart, and reboot/login-independent supervision gates before regenerating the final guides.
 - [ ] Run the combined migration through reviewed antiX preflight, clean staging/build, isolated port 8876, antiX/Windows GUI, atomic production install, per-user runit cutover, strict read-only, resource, restart, and reboot gates one operator chunk at a time.
 - [x] Implement, test, responsively browser-validate, and clean-package the local GUI2 replacement as the exact 31-member bundle `notmuch-browser-gui2-src-20260718-160432.tar.gz`.
 - [x] Run GUI2 Chunk 3 through the manual gate: all 24 owner GUI checks and the major automated HTTP/rendering checks passed; cleanup remained safe, but the route/rejection harness exited silently and the artifact was not installed.
