@@ -14,7 +14,8 @@
 - [x] Run a read-only enrollment backup-size, capacity, destination, and command-path preflight; Gate 04 passed with 104,973,672 KiB free and a conservative 1,158,676 KiB requirement without production writes.
 - [x] Run the final read-only hardened-enrollment audit; Gate 05 proved the exact helper restoration order, source acknowledgement, services, health, capacity, and lock-free baseline without production writes.
 - [x] Preserve Gate 06 as a failed enrollment attempt: indexing/parity succeeded, the outer duplicate-inclusive count assertion failed, and automatic rollback restored the exact old database/config/services while preserving the enrolled database.
-- [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with a prefix-filtered corrected enrollment retry.
+- [x] Run the prefix-filtered corrected enrollment retry; Gate 07 passed with exact 48,564/247/148/4/0 static source parity, 31,418 unique messages/51,588 files, verified backup, restored services, and no rollback.
+- [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with an isolated multi-source browser build/runtime validation before production replacement.
 - [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
