@@ -1,0 +1,36 @@
+operator_run_started=2026-07-26T23:58:42,969597693+06:00
+operator_run_stamp=20260726-235842-963
+operator_host=antix
+operator_user=atiq
+operator_repo=/home/atiq/orca/workspaces/codex_antix/branch-codex
+operator_batch=/home/atiq/orca/workspaces/codex_antix/branch-codex/codex-output/notmuch-browser-operator/current.sh
+operator_batch_sha256=6643d3515fd16f752fd91fe66a70991ef948fe444d71fc78cba6b918485a6ed1
+operator_log=/home/atiq/orca/workspaces/codex_antix/branch-codex/codex-output/notmuch-browser-operator/logs/notmuch-browser-operator-20260726-235842-963.log
+gate=08-multisource-candidate-clean-build-and-isolated-validation
+gate_started=2026-07-26T23:58:42,980370000+06:00
+privacy_contract=counts_hashes_public_source_labels_and_statuses_only
+authorized_production_change=no
+authorized_candidate_build_and_isolated_start=yes
+authorized_mail_tag_index_config_mutation=no
+repository_commit=a83eb8ec409c3ce8b4b65e00c1c3d8fb3cd609a9
+repository_branch=atiqte/branch-codex
+upstream_commit=a83eb8ec409c3ce8b4b65e00c1c3d8fb3cd609a9
+repository_clean_before=yes
+gate_07_batch_sha256=0dcaf1eef95e3aae0ba4ea36da7f0b46d0ea36b023c79e7996cc5a5554cbbe4e
+gate_07_log_sha256=107c1431be976b85d3f7130ed862dfd39e3d40a62d82768b17f78f399440e773
+gate_07_record_sha256=3ea6f0b059214a984d59dcdd52aac92bbcaa5dffbba2fb0ef00c3ca9622b5c66
+gate_07_evidence=verified
+build_script_sha256=49f742ca3323b611ab62b225b5c01e1beb6af3e75ffd9b7191215e47f11d6207
+production_binary_sha256=c7d14e0ee792595cd168a131cb05307214ae1129dc449f982fa48d30aa5bfed9
+config_sha256=50adc22cf114991e6b021fa0eefb91f10d636f34117c4c14c169bb09856446a7
+marker_sha256=e17e3b4510a872fe6a4f733ac29f12f5a3d2d80eea65f60d9b80e1934078e914
+final_new_ignore=betterbird-post-main-archive-maildirpp-20260704-205827
+port_8876_listeners_before=0
+awk: cmd. line:1: $4 == \"127.0.0.1:8765\" {count++} END {print count+0}
+awk: cmd. line:1:       ^ backslash not last character on line
+status=blocked
+reason=production_port_8765_listener_count mismatch
+actual=
+expected=1
+operator_batch_exit=1
+operator_run_finished=2026-07-26T23:58:43,183984619+06:00
