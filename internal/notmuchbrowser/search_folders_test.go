@@ -107,6 +107,32 @@ func TestSearchUsesStrictMessageOrderAndSelectedFolderDuplicate(t *testing.T) {
 	}
 }
 
+func TestScopedDefaultSearchPreservesNotmuchMatchAllSemantics(t *testing.T) {
+	folder := SearchFolder{
+		Value:        "evolution/test-maildir",
+		Label:        "All folders",
+		RelativePath: "evolution/test-maildir",
+	}
+	want := `path:"evolution/test-maildir/**"`
+	for _, query := range []string{"", "*"} {
+		got, err := scopedSearchQuery(query, folder)
+		if err != nil {
+			t.Fatalf("query=%q: %v", query, err)
+		}
+		if got != want {
+			t.Fatalf("query=%q got=%q want=%q", query, got, want)
+		}
+	}
+
+	got, err := scopedSearchQuery("tag:inbox", folder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `(tag:inbox) and path:"evolution/test-maildir/**"`; got != want {
+		t.Fatalf("explicit query got=%q want=%q", got, want)
+	}
+}
+
 func TestResultDateBoundaries(t *testing.T) {
 	location := time.FixedZone("Asia/Dhaka", 6*60*60)
 	previous := time.Local

@@ -176,7 +176,11 @@ func scopedSearchQuery(query string, folder SearchFolder) (string, error) {
 	if clean != folder.RelativePath || clean == "." || strings.HasPrefix(clean, "../") || filepath.IsAbs(filepath.FromSlash(clean)) {
 		return "", fmt.Errorf("invalid search folder path")
 	}
-	return "(" + query + ") and " + scopedPathTerm(clean), nil
+	pathTerm := scopedPathTerm(clean)
+	if query == "*" {
+		return pathTerm, nil
+	}
+	return "(" + query + ") and " + pathTerm, nil
 }
 
 func scopedPathTerm(relative string) string {
