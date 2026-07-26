@@ -18,7 +18,7 @@
 - [x] Preserve Gate 08 as a failed isolated-validation attempt: malformed quote escaping stopped at the first `awk` listener check before candidate creation/build/start, while production and the enrolled index remained unchanged.
 - [x] Retry the clean-build and isolated port-8876 validation with the `awk` quoting corrected; Gate 09 passed build/runtime/five-source checks and exposed that scoped default `*` searches omit the four indexed, untagged test-maildir messages.
 - [x] Make a scoped default search use its source path term directly instead of wrapping notmuch's special `*`, add regression coverage, and pass the complete reproducible local build/test gate.
-- [ ] Retry isolated validation with the corrected `26967a5d...` candidate and Gate 09's committed failure evidence pinned.
+- [x] Retry isolated validation with the corrected `26967a5d...` candidate and Gate 09's committed failure evidence pinned; Gate 10 passed and retained the candidate on localhost 8876.
 - [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with an isolated multi-source browser build/runtime validation before production replacement.
 - [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
