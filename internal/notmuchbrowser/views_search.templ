@@ -8,6 +8,19 @@ templ searchWorkspaceComponent(view pageView) {
 	<section class="mail-workspace" aria-label="Search and read mail">
 		<div class="search-toolbar">
 			<form class="search-form" action="/search" method="get" hx-get="/search" hx-target="#results" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#search-progress" hx-sync="this:replace">
+				<label class="folder-field" for="folder">
+					<span class="visually-hidden">Mail folder</span>
+					<select id="folder" name="folder" aria-label="Mail folder" data-search-folder>
+						<option value="all" selected?={ folderSelected(view.SearchPage.Folder.Value, "all") }>{ folderOptionLabel(view.SearchPage.FolderCatalog.All) }</option>
+						for _, group := range view.SearchPage.FolderCatalog.Groups {
+							<optgroup label={ group.Label }>
+								for _, option := range group.Options {
+									<option value={ option.Value } selected?={ folderSelected(view.SearchPage.Folder.Value, option.Value) }>{ folderOptionLabel(option) }</option>
+								}
+							</optgroup>
+						}
+					</select>
+				</label>
 				<label class="search-field" for="query">
 					@iconComponent("search")
 					<span class="visually-hidden">Notmuch query</span>
@@ -18,9 +31,10 @@ templ searchWorkspaceComponent(view pageView) {
 			</form>
 			<div class="search-subbar">
 				<div class="query-shortcuts" aria-label="Example searches">
-					<a href="/search?q=tag%3Ainbox">tag:inbox</a>
-					<a href="/search?q=tag%3Aunread">tag:unread</a>
-					<a href="/search?q=tag%3Aattachment">tag:attachment</a>
+					<a href={ templ.URL(searchShortcutURL("*", view.SearchPage.Folder.Value)) }>*</a>
+					<a href={ templ.URL(searchShortcutURL("tag:inbox", view.SearchPage.Folder.Value)) }>tag:inbox</a>
+					<a href={ templ.URL(searchShortcutURL("tag:unread", view.SearchPage.Folder.Value)) }>tag:unread</a>
+					<a href={ templ.URL(searchShortcutURL("tag:attachment", view.SearchPage.Folder.Value)) }>tag:attachment</a>
 					<span id="search-progress" class="search-progress htmx-indicator" aria-live="polite">Searching...</span>
 				</div>
 				<div id="result-toolbar-slot" class="result-toolbar-slot">
@@ -62,6 +76,7 @@ templ resultToolbarComponent(view pageView) {
 	<div class="result-toolbar-cluster">
 		<code class="result-query" title={ view.SearchPage.Query }>{ view.SearchPage.Query }</code>
 		<div class="result-counts">
+			<span class="search-order">Newest first</span>
 			<span><strong>{ view.SearchPage.Counts.Messages }</strong> messages</span>
 			<span>{ view.SearchPage.Counts.Files } files</span>
 			if len(view.SearchPage.Results) > 0 {
@@ -70,12 +85,12 @@ templ resultToolbarComponent(view pageView) {
 		</div>
 		<nav class="result-pagination" aria-label="Search result pages">
 			if hasPrev(view.SearchPage) {
-				<a class="icon-button pagination-button" href={ templ.URL(searchURL(view.SearchPage.Query, prevOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-get={ templ.URL(searchURL(view.SearchPage.Query, prevOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-target="#results" hx-push-url="true" aria-label="Previous results" title="Previous results">@iconComponent("chevron-left")</a>
+				<a class="icon-button pagination-button" href={ templ.URL(searchURL(view.SearchPage.Query, view.SearchPage.Folder.Value, prevOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-get={ templ.URL(searchURL(view.SearchPage.Query, view.SearchPage.Folder.Value, prevOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-target="#results" hx-push-url="true" aria-label="Previous results" title="Previous results">@iconComponent("chevron-left")</a>
 			} else {
 				<button class="icon-button pagination-button is-disabled" type="button" disabled aria-label="Previous results" title="No previous results">@iconComponent("chevron-left")</button>
 			}
 			if hasNext(view.SearchPage) {
-				<a class="icon-button pagination-button" href={ templ.URL(searchURL(view.SearchPage.Query, nextOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-get={ templ.URL(searchURL(view.SearchPage.Query, nextOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-target="#results" hx-push-url="true" aria-label="Next results" title="Next results">@iconComponent("chevron-right")</a>
+				<a class="icon-button pagination-button" href={ templ.URL(searchURL(view.SearchPage.Query, view.SearchPage.Folder.Value, nextOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-get={ templ.URL(searchURL(view.SearchPage.Query, view.SearchPage.Folder.Value, nextOffset(view.SearchPage), displayLimit(view.SearchPage))) } hx-target="#results" hx-push-url="true" aria-label="Next results" title="Next results">@iconComponent("chevron-right")</a>
 			} else {
 				<button class="icon-button pagination-button is-disabled" type="button" disabled aria-label="Next results" title="No next results">@iconComponent("chevron-right")</button>
 			}
@@ -99,11 +114,11 @@ templ resultBodyComponent(view pageView) {
 				<tbody>
 					for _, result := range view.SearchPage.Results {
 						<tr data-message-row>
-							<td class="date">{ formatResultDate(result.DateRelative, result.Date) }</td>
+							<td class="date"><time datetime={ resultDateTime(result.Timestamp, result.Date) } title={ resultDateTitle(result.Timestamp, result.Date) }>{ formatResultDate(result.Timestamp, result.Date, view.SearchPage.RenderedAt) }</time></td>
 							<td class="sender">{ result.From }</td>
 							<td>
 								<div class="result-subject-line">
-									<a class="subject" href={ templ.URL(messageURL(result.ID, 0)) } hx-get={ templ.URL(messageURL(result.ID, 0)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true">{ result.Subject }</a>
+									<a class="subject" href={ templ.URL(messageURL(result.ID, result.SelectedDup)) } hx-get={ templ.URL(messageURL(result.ID, result.SelectedDup)) } hx-target="#reading-pane-content" hx-swap="innerHTML" hx-push-url="true">{ result.Subject }</a>
 									<button class="mini-copy-button" type="button" data-copy-text={ result.Subject } aria-label="Copy subject" title="Copy subject">@iconComponent("copy")</button>
 								</div>
 								<div class="result-id-line">

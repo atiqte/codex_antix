@@ -29,7 +29,10 @@ SECTIONS = [
             templ views, local HTMX 2.0.10, Tailwind CSS 4.3.3 built with Bun,
             search and message reading, Readable/Original/plain modes, duplicate
             selection, signed individual attachments, Save All ZIP, confirmed
-            embedded/remote images, and status/health pages.
+            embedded/remote images, and status/health pages. Its folder selector
+            can search All Mail or each approved source separately: provider-live,
+            provider-inbox-test, local-maildir, betterbird-delta, the provider
+            archive, and test-maildir.
 
             The browser listens only on 127.0.0.1:8765. Windows accesses it through
             an SSH tunnel. Browser routes never change Maildir files, tags, or the
@@ -54,6 +57,10 @@ SECTIONS = [
             incremental. A newly received message normally becomes searchable
             after mbsync delivers it plus at most one index interval. The browser
             does not need to restart.
+
+            Search results are individual logical messages, never thread-grouped.
+            They are always newest first. Duplicate Maildir files with the same
+            Message-ID stay one result and can be selected after opening it.
             """
         ),
     },
@@ -63,7 +70,10 @@ SECTIONS = [
             """
             You need: a Windows 11 computer; VMware; an antiX runit ISO; internet;
             sudo permission in antiX; GitHub repository access; and the verified
-            historical split-archive folder.
+            historical split-archive folder. To reproduce the secondary sources,
+            also keep verified Maildir transport packages for betterbird-delta,
+            provider-inbox-test, and test-maildir. The provider-live source comes
+            from mbsync. The provider archive may legitimately be an empty folder.
 
             Give the VM enough CPU/RAM for a Go build. Add a separate virtual disk
             of at least 250 GB for /mail. After restoring the 59 GB archive, at
@@ -282,10 +292,10 @@ SECTIONS = [
         "title": "11. Restore the exact historical local-maildir archive",
         "body": clean(
             """
-            Copy the complete verified export folder to the exact staging path
-            below. It contains manifest.json, inventory.jsonl, and 21 unchanged
-            part files. Use the separate Maildir++ transport guide for USB or
-            VMware shared-folder transfer.
+            Copy the complete verified local-maildir export folder to the exact
+            staging path below. It contains manifest.json, inventory.jsonl, and
+            21 unchanged part files. Use the separate Maildir++ transport guide
+            for USB or VMware shared-folder transfer.
 
             The destination must be absent or completely empty. Never restore over
             another tree. Expected verification: archive status ok; 48,720 cur;
@@ -293,6 +303,19 @@ SECTIONS = [
             symlinks or special files.
 
             Do not copy the drifted 48,564-file tree from the older VM.
+
+            Restore the optional verified secondary source packages with the same
+            verify-archive, unpack, verify-tree, and inspect sequence, changing
+            MANIFEST and DEST for each package. Their exact destinations are
+            /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704,
+            /mail/Mailstore/mbsync/provider-inbox-test, and
+            /mail/Mailstore/evolution/test-maildir. Create the empty
+            /mail/Mailstore/evolution/provider-live-archive directory. Never copy
+            credentials or an old notmuch database as part of these packages.
+            The three REPLACE_WITH names in the command block are the verified
+            export-folder names produced when you packed those sources. Stop if
+            you do not have those packages; GitHub cannot contain or recreate
+            private email.
             """
         ),
         "label": "Copy archive restore",
@@ -312,6 +335,29 @@ SECTIONS = [
             python3 src/maildirpp_transport.py unpack --manifest "$MANIFEST" --dest "$DEST"
             python3 src/maildirpp_transport.py verify-tree --manifest "$MANIFEST" --dest "$DEST"
             python3 src/maildirpp_transport.py inspect --source "$DEST"
+
+            restore_verified_source() {
+              PACKAGE=$1
+              SOURCE_DEST=$2
+              SOURCE_MANIFEST="/mail/import-staging/$PACKAGE/manifest.json"
+              test -f "$SOURCE_MANIFEST"
+              test ! -e "$SOURCE_DEST" ||
+                test -z "$(find "$SOURCE_DEST" -mindepth 1 -print -quit)"
+              python3 src/maildirpp_transport.py verify-archive --manifest "$SOURCE_MANIFEST"
+              python3 src/maildirpp_transport.py unpack --manifest "$SOURCE_MANIFEST" --dest "$SOURCE_DEST"
+              python3 src/maildirpp_transport.py verify-tree --manifest "$SOURCE_MANIFEST" --dest "$SOURCE_DEST"
+              python3 src/maildirpp_transport.py inspect --source "$SOURCE_DEST"
+            }
+            restore_verified_source \
+              REPLACE_WITH_BETTERBIRD_DELTA_EXPORT_FOLDER \
+              /mail/Mailstore/evolution/betterbird-delta-maildirpp-20260704
+            restore_verified_source \
+              REPLACE_WITH_PROVIDER_INBOX_TEST_EXPORT_FOLDER \
+              /mail/Mailstore/mbsync/provider-inbox-test
+            restore_verified_source \
+              REPLACE_WITH_EVOLUTION_TEST_EXPORT_FOLDER \
+              /mail/Mailstore/evolution/test-maildir
+            install -d -m 700 /mail/Mailstore/evolution/provider-live-archive
             df -h /mail
             """
         ),
@@ -349,10 +395,11 @@ SECTIONS = [
             real /mail/Mailstore tree.
 
             local-maildir is deliberately not in new.ignore, so the full historical
-            archive will be indexed. Only the named test/secondary archive folders
-            remain ignored. synchronize_flags=false prevents notmuch flag/tag
-            synchronization from altering Maildir filenames; index.decrypt=false
-            disables automatic decryption.
+            archive will be indexed. Every other available approved source is also
+            indexed. The only ignored name is the unavailable legacy
+            betterbird-post-main archive. synchronize_flags=false prevents notmuch
+            flag/tag synchronization from altering Maildir filenames;
+            index.decrypt=false disables automatic decryption.
             """
         ),
         "label": "Copy notmuch configuration",
@@ -379,8 +426,10 @@ SECTIONS = [
 
             You may safely rerun the same command after power loss or interruption;
             notmuch continues incrementally. Success requires exact path parity for
-            all 48,720 restored messages. Unique message count may be smaller
-            because duplicate Message-IDs are valid; file-path parity is the gate.
+            all 48,720 restored local-maildir messages. Available secondary
+            sources are indexed in the same pass and receive source-specific
+            tags. Unique message count may be smaller because duplicate
+            Message-IDs are valid; file-path parity is the local archive gate.
             """
         ),
         "label": "Copy initial historical index",
@@ -491,11 +540,23 @@ SECTIONS = [
         "title": "19. Manual browser acceptance",
         "body": clean(
             """
-            Search for a known historical message and a recent live message. Open
-            both. Check Readable, Original, and plain display modes; duplicate
-            selection; individual attachment download; Save All ZIP; embedded
-            image confirmation; remote image confirmation/reset; narrow-window
-            layout; and the Status page.
+            The opening search is All Mail with query *. Confirm the folder menu
+            shows provider-live, provider-inbox-test, local-maildir,
+            betterbird-delta, provider-live-archive, and test-maildir. Select each
+            nonempty source and confirm every row belongs to that source. The
+            empty provider archive must remain selectable and return zero results.
+
+            Search for a known historical message and a recent live message. Every
+            result must be one logical message rather than a thread, with newest
+            first on every page. Open both. Check Readable, Original, and plain
+            display modes; duplicate selection; individual attachment download;
+            Save All ZIP; embedded image confirmation; remote image
+            confirmation/reset; narrow-window layout; and the Status page.
+
+            Confirm date display at the boundaries: under 60 seconds says Now;
+            1-59 minutes says N min ago; 60-119 minutes says 1 hour ago; older
+            messages use local antiX time, 12-hour AM/PM, and seconds. Yesterday
+            begins with Yesterday; older dates include the weekday and full date.
 
             Health must say ok=true, read_only=true, and mail_mutation=false.
             Confirm there are no overlapping controls, error popups, or files left
@@ -537,7 +598,8 @@ SECTIONS = [
             """
             Reboot antiX, log back into IceWM, wait one minute, and run this block.
             Expected: both runit services are running, health passes, mbsync is
-            active, and local-maildir remains absent from new.ignore.
+            active, and new.ignore contains only the unavailable legacy
+            betterbird-post-main archive.
             """
         ),
         "label": "Copy post-reboot checks",
@@ -619,11 +681,13 @@ SECTIONS = [
             """
             Complete means: /mail is XFS; the exact 48,720-file archive passed
             package/tree inspection; at least 80 GiB was free before initial
-            indexing; all archive paths are in notmuch; local-maildir is not
-            ignored; the full browser feature set passed; browser/index are under
-            repaired user runit; 8765 is localhost-only; the Windows tunnel works;
-            reboot recovery works; and a newly received test email became
-            searchable automatically.
+            indexing; all archive paths are in notmuch; all available approved
+            sources are selectable; new.ignore contains only the unavailable
+            legacy betterbird-post-main archive; results are single messages and
+            always newest first; the date contract passed; the full browser
+            feature set passed; browser/index are under repaired user runit; 8765
+            is localhost-only; the Windows tunnel works; reboot recovery works;
+            and a newly received test email became searchable automatically.
 
             Keep the verified split archive outside Git as disaster-recovery
             material. Keep credentials mode 600 and never commit them.
@@ -637,7 +701,7 @@ def render_text() -> str:
     parts = [
         "# NOTMUCH GO BROWSER SERVICE - Beginner Fresh antiX VM Guide",
         "",
-        "Updated: 2026-07-25",
+        "Updated: 2026-07-26",
         "Target: antiX Linux runit edition with zzzFM/IceWM on Windows 11 VMware",
         "Repository update branch: main",
         "",
@@ -730,7 +794,7 @@ def render_html() -> str:
             <p class="notice"><strong>Safety rule:</strong> follow the steps in order
             and stop whenever an expected check fails. The assistant never formats
             a disk or invents credentials.</p>
-            <p><strong>Updated:</strong> 2026-07-25</p>
+            <p><strong>Updated:</strong> 2026-07-26</p>
             <nav aria-label="Guide sections">{nav}</nav>
           </header>
           <main>{''.join(cards)}</main>

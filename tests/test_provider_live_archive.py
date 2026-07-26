@@ -183,13 +183,14 @@ Channel provider-live-sent-upload
         result = archive.compute_notmuch_ignore(
             current={"evolution", "mbsync", "existing-ignore"},
             mail_root_children={"evolution", "mbsync", "unexpected-root"},
-            evolution_children={"provider-live-archive", "betterbird-delta-maildirpp-20260704", "local-maildir", "old-delta"},
+            evolution_children={"provider-live-archive", "betterbird-delta-maildirpp-20260704", "local-maildir", "test-maildir", "old-delta"},
             mbsync_children={"provider-live", "provider-inbox-test"},
         )
 
         self.assertNotIn("local-maildir", result)
         self.assertIn("old-delta", result)
-        self.assertIn("provider-inbox-test", result)
+        self.assertNotIn("provider-inbox-test", result)
+        self.assertNotIn("test-maildir", result)
         self.assertIn("unexpected-root", result)
         self.assertNotIn("evolution", result)
         self.assertNotIn("mbsync", result)

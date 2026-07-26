@@ -3,8 +3,16 @@
 ## Active
 
 - [x] Review setup and memory files.
+- [x] Implement approved source/folder selection for provider-live, provider-inbox-test, local-maildir, the existing 247-message betterbird-delta, the empty provider-live archive, and test-maildir.
+- [x] Make every search result one unique logical message, force authoritative newest-first order, preserve the selected source duplicate, and implement the exact antiX-local relative/absolute date contract.
+- [x] Add guarded current-source inspection, acknowledgement, backup, sequential indexing, tags, path-parity proof, automatic rollback, and explicit rollback tooling.
+- [x] Extend the stable operator runner with result manifests and add privacy-reviewed exact batch/log/result promotion for durable Git evidence.
+- [x] Update the fresh-VM helper, provider archive scope, and beginner HTML/TXT guides so all available approved sources are indexed and only the unavailable post-main archive stays ignored.
+- [ ] Run, review, record, commit, and push each multi-source antiX operator gate, beginning with the prepared read-only preflight.
+- [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
+- [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
-- [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` is indexed, while the drifted current-VM tree is never copied and test/secondary trees remain ignored.
+- [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` and all available approved sources are indexed while the drifted current-VM tree is never copied.
 - [x] Make the provider-live archive scope controller compatible with the approved indexed historical archive and cover the changed policy with focused tests.
 - [ ] Pilot the complete guide on a disposable blank antiX runit VM and record exact restore, 48,720-path index parity, browser GUI, Windows tunnel, automatic new-mail indexing, reboot, and Git update results.
 - [x] Commit and push the combined migration plus updated project memory using the approved end-of-session workflow.

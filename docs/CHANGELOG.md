@@ -2,6 +2,15 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-26
+
+- Added an approved-source GUI catalog for live mail, provider-inbox-test, local-maildir, the existing Betterbird delta, provider-live-archive, and test-maildir, including safe nonempty Maildir subfolder discovery and selectable empty sources.
+- Changed search paging to one unique Message-ID per row with authoritative newest-first ordering, selected-source duplicate opening, All Mail/`*` defaults, and exact antiX-local relative/absolute date labels.
+- Added a guarded current-source enrollment tool with exact acknowledgement, capacity/config gates, staged indexing and source tags, per-source path parity, full backup, automatic failure rollback, explicit rollback, and focused tests.
+- Extended the operator runner with immutable result manifests and added privacy-reviewed exact batch/log/result promotion under `docs/validation/notmuch-browser-multisource/`.
+- Updated fresh-VM setup, provider-live archive scope policy, and matching beginner HTML/TXT guides so every available approved source is indexed and only the unavailable post-main archive remains ignored.
+- Passed reproducible generation, Go unit/vet/race, all 73 Python tests, shell syntax, `git diff --check`, the 87,110-byte asset budget, and a stripped 8,147,209-byte browser build with SHA256 `a87276c5...`.
+
 ## 2026-07-25
 
 - Added a state-aware fresh antiX VM assistant with read-only stage discovery, exact historical archive acknowledgement, safe notmuch configuration, 80 GiB capacity gate, resumable first index, 48,720-path parity proof, full browser install, user-runit enablement, final validation, and rollback-protected `main` updates.

@@ -1112,8 +1112,9 @@ def compute_notmuch_ignore(
         "provider-live-archive",
         "betterbird-delta-maildirpp-20260704",
         "local-maildir",
+        "test-maildir",
     }
-    allowed_mbsync = {"provider-live"}
+    allowed_mbsync = {"provider-live", "provider-inbox-test"}
     ignore = {value for value in current if value}
     ignore -= {"evolution", "mbsync", *allowed_evolution, *allowed_mbsync}
     ignore.update(name for name in mail_root_children if name not in {"evolution", "mbsync"})
@@ -1166,8 +1167,9 @@ def configure_notmuch_scope(
         "provider-live-archive",
         "betterbird-delta-maildirpp-20260704",
         "local-maildir",
+        "test-maildir",
     }
-    allowed_mbsync = {"provider-live"}
+    allowed_mbsync = {"provider-live", "provider-inbox-test"}
     child_names: Dict[Path, List[str]] = {}
     for parent in (mail_root, evolution, mbsync):
         child_names[parent] = []

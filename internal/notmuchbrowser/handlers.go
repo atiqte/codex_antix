@@ -16,11 +16,30 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := normalizeQuery(r.URL.Query().Get("q"))
-	page, err := s.Client.Search(r.Context(), query, 0, defaultLimit(s.Config))
+	catalog, err := s.Client.SearchFolderCatalog(r.Context())
 	if err != nil {
 		s.renderPage(r.Context(), w, http.StatusOK, "Search", pageView{
 			Query: query,
 			Error: err.Error(),
+		})
+		return
+	}
+	folder, ok := catalog.Resolve(r.URL.Query().Get("folder"))
+	if !ok {
+		s.renderPage(r.Context(), w, http.StatusOK, "Search", pageView{
+			Query:      query,
+			Error:      "Unknown mail folder selection.",
+			SearchPage: SearchPage{FolderCatalog: catalog, Folder: catalog.All},
+		})
+		return
+	}
+	page, err := s.Client.Search(r.Context(), query, folder, 0, defaultLimit(s.Config))
+	page.FolderCatalog = catalog
+	if err != nil {
+		s.renderPage(r.Context(), w, http.StatusOK, "Search", pageView{
+			Query:      query,
+			Error:      err.Error(),
+			SearchPage: page,
 		})
 		return
 	}
@@ -37,7 +56,34 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	query := normalizeQuery(r.URL.Query().Get("q"))
 	offset := parseNonNegative(r.URL.Query().Get("offset"), 0)
 	limit := parseLimit(r.URL.Query().Get("limit"), defaultLimit(s.Config), s.Config.MaxResults)
-	page, err := s.Client.Search(r.Context(), query, offset, limit)
+	catalog, err := s.Client.SearchFolderCatalog(r.Context())
+	if err != nil {
+		view := pageView{Query: query, Error: err.Error()}
+		if isHTMX(r) {
+			w.Header().Set("Vary", "HX-Request")
+			s.renderResults(r.Context(), w, http.StatusOK, view)
+			return
+		}
+		s.renderPage(r.Context(), w, http.StatusOK, "Search", view)
+		return
+	}
+	folder, ok := catalog.Resolve(r.URL.Query().Get("folder"))
+	if !ok {
+		view := pageView{
+			Query:      query,
+			Error:      "Unknown mail folder selection.",
+			SearchPage: SearchPage{FolderCatalog: catalog, Folder: catalog.All},
+		}
+		if isHTMX(r) {
+			w.Header().Set("Vary", "HX-Request")
+			s.renderResults(r.Context(), w, http.StatusOK, view)
+			return
+		}
+		s.renderPage(r.Context(), w, http.StatusOK, "Search", view)
+		return
+	}
+	page, err := s.Client.Search(r.Context(), query, folder, offset, limit)
+	page.FolderCatalog = catalog
 	view := pageView{Query: query, SearchPage: page}
 	if err != nil {
 		view.Error = err.Error()

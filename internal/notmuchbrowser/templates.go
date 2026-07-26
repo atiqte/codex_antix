@@ -165,12 +165,26 @@ func hasNext(page SearchPage) bool {
 	return nextOffset(page) < page.Counts.Messages
 }
 
-func searchURL(query string, offset int, limit int) string {
+func searchURL(query string, folder string, offset int, limit int) string {
 	values := url.Values{}
 	values.Set("q", query)
+	if folder != "" && folder != "all" {
+		values.Set("folder", folder)
+	}
 	values.Set("offset", strconv.Itoa(offset))
 	values.Set("limit", strconv.Itoa(limit))
 	return "/search?" + values.Encode()
+}
+
+func searchShortcutURL(query string, folder string) string {
+	return searchURL(query, folder, 0, 50)
+}
+
+func folderSelected(current string, candidate string) bool {
+	if current == "" {
+		current = "all"
+	}
+	return current == candidate
 }
 
 func messageURL(id string, duplicate int) string {
@@ -226,23 +240,67 @@ func formatReaderDate(raw string) string {
 	return formatDateInLocation(raw, "Mon, 02 Jan 2006, 03:04:05 PM", time.Local)
 }
 
-func formatResultDate(relative string, raw string) string {
-	relative = strings.TrimSpace(relative)
-	if relative == "" {
-		return formatDateInLocation(raw, "02 Jan 2006, 03:04 PM", time.Local)
+func formatResultDate(timestamp int64, raw string, now time.Time) string {
+	parsed, ok := resultDate(timestamp, raw)
+	if !ok {
+		return strings.TrimSpace(raw)
 	}
+	if now.IsZero() {
+		now = time.Now()
+	}
+	parsed = parsed.In(time.Local)
+	now = now.In(time.Local)
+	if parsed.After(now) {
+		return parsed.Format("Mon, 02 Jan 2006, 03:04:05 PM")
+	}
+	age := now.Sub(parsed)
+	switch {
+	case age < time.Minute:
+		return "Now"
+	case age < time.Hour:
+		return strconv.Itoa(int(age/time.Minute)) + " min ago"
+	case age < 2*time.Hour:
+		return "1 hour ago"
+	case sameCalendarDay(parsed, now):
+		return "Today " + parsed.Format("03:04:05 PM")
+	case sameCalendarDay(parsed, now.AddDate(0, 0, -1)):
+		return "Yesterday " + parsed.Format("03:04:05 PM")
+	default:
+		return parsed.Format("Mon, 02 Jan 2006, 03:04:05 PM")
+	}
+}
 
-	fields := strings.Fields(relative)
-	last := fields[len(fields)-1]
-	parsed, err := time.Parse("15:04", last)
+func resultDateTime(timestamp int64, raw string) string {
+	parsed, ok := resultDate(timestamp, raw)
+	if !ok {
+		return ""
+	}
+	return parsed.In(time.Local).Format(time.RFC3339)
+}
+
+func resultDateTitle(timestamp int64, raw string) string {
+	parsed, ok := resultDate(timestamp, raw)
+	if !ok {
+		return strings.TrimSpace(raw)
+	}
+	return parsed.In(time.Local).Format("Mon, 02 Jan 2006, 03:04:05 PM MST")
+}
+
+func resultDate(timestamp int64, raw string) (time.Time, bool) {
+	if timestamp > 0 {
+		return time.Unix(timestamp, 0), true
+	}
+	parsed, err := mail.ParseDate(strings.TrimSpace(raw))
 	if err != nil {
-		return relative
+		return time.Time{}, false
 	}
-	prefix := strings.TrimSpace(strings.TrimSuffix(relative, last))
-	if prefix == "" {
-		return parsed.Format("03:04 PM")
-	}
-	return prefix + " " + parsed.Format("03:04 PM")
+	return parsed, true
+}
+
+func sameCalendarDay(a time.Time, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
 }
 
 func formatDateInLocation(raw string, layout string, location *time.Location) string {

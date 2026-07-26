@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-07-25
+Last updated: 2026-07-26
 
 ## Project Identity
 
@@ -18,7 +18,16 @@ The owner approved Python standard-library utilities for transporting a full Bet
 
 ## Current Objective
 
-Maintain the project memory, mail utilities, and beginner-first fresh-VM reconstruction path for the fully validated templ/HTMX/Tailwind/chi browser, repaired per-user runit supervision, exact historical archive indexing, and automatic incremental refresh.
+Maintain the project memory, mail utilities, and beginner-first fresh-VM reconstruction path for the fully validated templ/HTMX/Tailwind/chi browser, repaired per-user runit supervision, exact historical archive indexing, automatic incremental refresh, and the guarded multi-source search rollout.
+
+## Current Multi-Source Rollout
+
+- The repository implementation exposes All Mail and these approved GUI sources when their directories exist: `mbsync/provider-live`, `mbsync/provider-inbox-test`, `evolution/local-maildir`, `evolution/betterbird-delta-maildirpp-20260704`, `evolution/provider-live-archive`, and `evolution/test-maildir`. An empty approved source remains selectable; only nonempty discovered Maildir subfolders are added.
+- Search pagination is driven by `notmuch search --output=messages --sort=newest-first`, so each unique Message-ID is one row and thread grouping cannot change the order. Metadata is fetched in bounded batches and reordered to the authoritative ID list. A source-specific result opens the duplicate file from that source when the same Message-ID has copies in multiple trees.
+- Result dates use the notmuch message timestamp and antiX local time: under 60 seconds is `Now`; 1-59 minutes is `N min ago`; 60-119 minutes is `1 hour ago`; older same-day/yesterday rows include 12-hour time with seconds; older rows include weekday, full date, and time.
+- `scripts/notmuch_browser_source_enroll.sh` provides read-only inspection, exact current-inventory acknowledgement, sequential enrollment, per-source path parity, full config/tag/database backup, automatic failure rollback, explicit rollback, and final validation. The unavailable `betterbird-post-main-archive-maildirpp-20260704-205827` remains the only intended `new.ignore` value.
+- The current production enrollment and browser replacement have not run. They will proceed one reviewed operator chunk at a time after the implementation branch commit. Each gate records its exact batch, complete privacy-limited log, hashes, outcome, and ledger summary before the next gate.
+- Local validation on 2026-07-26 passed deterministic templ/Tailwind regeneration, Go unit tests, `go vet`, Go race tests, all 73 Python tests, every shell syntax check, the 87,110-byte embedded asset budget, and a stripped 8,147,209-byte binary with SHA256 `a87276c5c17936489fe8ccad4de80eec3ba79cadb466ed2260825cdf4b5d19d6`.
 
 ## What Exists Now
 

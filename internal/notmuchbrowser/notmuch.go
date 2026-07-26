@@ -71,11 +71,32 @@ type Counts struct {
 }
 
 type SearchPage struct {
-	Query   string
-	Offset  int
-	Limit   int
-	Counts  Counts
-	Results []MessageSummary
+	Query         string
+	Folder        SearchFolder
+	FolderCatalog SearchFolderCatalog
+	Offset        int
+	Limit         int
+	Counts        Counts
+	Results       []MessageSummary
+	RenderedAt    time.Time
+}
+
+type SearchFolder struct {
+	Value        string
+	Label        string
+	RelativePath string
+	Messages     int
+	ShowCount    bool
+}
+
+type SearchFolderGroup struct {
+	Label   string
+	Options []SearchFolder
+}
+
+type SearchFolderCatalog struct {
+	All    SearchFolder
+	Groups []SearchFolderGroup
 }
 
 type MessageSummary struct {
@@ -91,6 +112,9 @@ type MessageSummary struct {
 	Matched      bool
 	Excluded     bool
 	Error        string
+	Timestamp    int64
+	SelectedDup  int
+	FilePaths    []string
 }
 
 type MessageDetail struct {
@@ -169,9 +193,16 @@ func (c NotmuchClient) Count(ctx context.Context, query string) (Counts, error) 
 	return Counts{Messages: messages, Files: files}, nil
 }
 
-func (c NotmuchClient) Search(ctx context.Context, query string, offset int, limit int) (SearchPage, error) {
+func (c NotmuchClient) Search(ctx context.Context, query string, folder SearchFolder, offset int, limit int) (SearchPage, error) {
 	query = normalizeQuery(query)
 	if err := c.Config.ValidateQuery(query); err != nil {
+		return SearchPage{}, err
+	}
+	if folder.Value == "" {
+		folder = allMailFolder()
+	}
+	scopedQuery, err := scopedSearchQuery(query, folder)
+	if err != nil {
 		return SearchPage{}, err
 	}
 	if offset < 0 {
@@ -181,37 +212,92 @@ func (c NotmuchClient) Search(ctx context.Context, query string, offset int, lim
 		limit = c.Config.MaxResults
 	}
 
-	counts, err := c.Count(ctx, query)
+	counts, err := c.Count(ctx, scopedQuery)
 	if err != nil {
 		return SearchPage{}, err
 	}
 
-	stdout, err := c.runTextLimited(
+	stdout, _, err := c.Runner.Run(
 		ctx,
-		c.Config.ShowTimeout,
-		maxSearchJSONBytes,
-		"show",
-		"--format=json",
-		"--entire-thread=false",
-		"--body=false",
+		c.Config.CommandTimeout,
+		"search",
+		"--format=text0",
+		"--output=messages",
+		"--sort=newest-first",
 		"--offset="+strconv.Itoa(offset),
 		"--limit="+strconv.Itoa(limit),
-		query,
+		scopedQuery,
 	)
 	if err != nil {
 		return SearchPage{}, err
 	}
-	summaries, err := ParseSummaries([]byte(stdout))
+	orderedIDs, err := parseMessageIDOutput(stdout)
+	if err != nil {
+		return SearchPage{}, err
+	}
+	summaries, err := c.summariesForIDs(ctx, orderedIDs, folder)
 	if err != nil {
 		return SearchPage{}, err
 	}
 	return SearchPage{
-		Query:   query,
-		Offset:  offset,
-		Limit:   limit,
-		Counts:  counts,
-		Results: summaries,
+		Query:      query,
+		Folder:     folder,
+		Offset:     offset,
+		Limit:      limit,
+		Counts:     counts,
+		Results:    summaries,
+		RenderedAt: time.Now(),
 	}, nil
+}
+
+func (c NotmuchClient) summariesForIDs(ctx context.Context, orderedIDs []string, folder SearchFolder) ([]MessageSummary, error) {
+	if len(orderedIDs) == 0 {
+		return nil, nil
+	}
+	const batchSize = 50
+	byID := make(map[string]MessageSummary, len(orderedIDs))
+	for start := 0; start < len(orderedIDs); start += batchSize {
+		end := start + batchSize
+		if end > len(orderedIDs) {
+			end = len(orderedIDs)
+		}
+		terms := make([]string, 0, end-start)
+		for _, id := range orderedIDs[start:end] {
+			terms = append(terms, "id:"+quoteNotmuchValue(id))
+		}
+		internalQuery := "(" + strings.Join(terms, " or ") + ")"
+		stdout, err := c.runTextLimited(
+			ctx,
+			c.Config.ShowTimeout,
+			maxSearchJSONBytes,
+			"show",
+			"--format=json",
+			"--entire-thread=false",
+			"--body=false",
+			"--sort=newest-first",
+			internalQuery,
+		)
+		if err != nil {
+			return nil, err
+		}
+		found, err := ParseSummaries([]byte(stdout))
+		if err != nil {
+			return nil, err
+		}
+		for _, summary := range found {
+			summary.SelectedDup = selectedDuplicateForFolder(summary.FilePaths, folder, c.Config.ExpectedMailRoot)
+			byID[summary.ID] = summary
+		}
+	}
+	out := make([]MessageSummary, 0, len(orderedIDs))
+	for _, id := range orderedIDs {
+		summary, ok := byID[id]
+		if !ok {
+			return nil, fmt.Errorf("notmuch metadata missing for ordered message id")
+		}
+		out = append(out, summary)
+	}
+	return out, nil
 }
 
 func (c NotmuchClient) Message(ctx context.Context, id string, duplicate int) (MessageDetail, error) {
@@ -517,6 +603,8 @@ func summaryFromMap(m map[string]any) MessageSummary {
 		FileCount:    filenameCount(m["filename"]),
 		Matched:      boolValue(m["match"]),
 		Excluded:     boolValue(m["excluded"]),
+		Timestamp:    int64Value(m["timestamp"]),
+		FilePaths:    stringSlice(m["filename"]),
 	}
 	if summary.Subject == "" {
 		summary.Subject = "(no subject)"
@@ -676,7 +764,7 @@ func browserImageType(mediaType string) bool {
 func normalizeQuery(q string) string {
 	q = strings.TrimSpace(q)
 	if q == "" {
-		return "tag:inbox"
+		return "*"
 	}
 	return q
 }
@@ -713,6 +801,27 @@ func intValue(v any) int {
 		return parsed
 	case string:
 		parsed, _ := strconv.Atoi(strings.TrimSpace(value))
+		return parsed
+	default:
+		return 0
+	}
+}
+
+func int64Value(v any) int64 {
+	switch value := v.(type) {
+	case float64:
+		return int64(value)
+	case float32:
+		return int64(value)
+	case int:
+		return int64(value)
+	case int64:
+		return value
+	case json.Number:
+		parsed, _ := strconv.ParseInt(value.String(), 10, 64)
+		return parsed
+	case string:
+		parsed, _ := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 		return parsed
 	default:
 		return 0

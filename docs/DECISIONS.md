@@ -4,6 +4,27 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-26: Use Explicit Approved Sources, Unique Messages, and Newest-First Search
+
+- Status: accepted
+- Context: The owner wants the complete browser to search the large historical archive plus live, provider test, Betterbird delta, provider archive, and Evolution test trees from one beginner-friendly GUI. The requested missing 249-message post-main archive is not present on this VM; the owner selected the existing 247-message `betterbird-delta-maildirpp-20260704` tree instead.
+- Decision: Expose only the approved source registry and its safely discovered nonempty Maildir subfolders. Keep an approved empty source selectable. Use an All Mail default with query `*`. Build pages from `notmuch search --output=messages --sort=newest-first`, then fetch metadata in bounded batches and restore that authoritative order. Show one row per unique Message-ID, never a thread row, and open the duplicate belonging to the selected source when possible. Date labels use the notmuch timestamp in antiX local time with the approved `Now`, minutes, one-hour, Today, Yesterday, and weekday/full-date formats.
+- Consequence: A source selector cannot escape the approved Mailstore roots, result order cannot depend on thread aggregation or metadata response order, and duplicate copies remain accessible without producing duplicate search rows. Catalog counts add bounded read-only notmuch count calls to each search request.
+
+### 2026-07-26: Enroll Current Mail Sources Through Reversible Reviewed Gates
+
+- Status: accepted
+- Context: Current production indexes only part of Mailstore, while the owner wants the drifted but authoritative current `local-maildir` and the approved secondary trees indexed without risking mail, tags, configuration, services, or the existing database.
+- Decision: Require exact count/manifest acknowledgement before mutation; verify XFS, free space, safe config, and non-symlink sources; quiesce the background writers; preserve config, tags, full database, indexed paths, Maildir path inventories, and checksums; then remove ignores and run `notmuch new` in stages. Clear default new-message tags during historical enrollment, apply source tags explicitly, restore live `unread inbox` defaults, prove exact per-source path parity and unchanged source manifests, and automatically restore the saved database/config/service state after failure. Keep only unavailable `betterbird-post-main-archive-maildirpp-20260704-205827` ignored.
+- Consequence: The large current archive can be indexed incrementally with a complete rollback point and no browser-route mutation. Enrollment must still pass the operator-run preflight and acknowledgement gates before it is authorized to change production.
+
+### 2026-07-26: Commit Privacy-Limited Operator Evidence After Every Rollout Gate
+
+- Status: accepted
+- Context: The owner requires the exact command/code chunk and its exact terminal result, including successes and failures, to become durable GitHub material for a beginner reconstruction guide.
+- Decision: Continue to execute only the ignored `current.sh` through the stable runner. The runner writes an immutable result manifest with batch/log hashes and both pipeline exits. After reviewing a run, promote the exact batch, complete privacy-limited log, and machine-readable record under `docs/validation/notmuch-browser-multisource/`, update the ledger/index, manually confirm that no mail content, Message-IDs, capability tokens, credentials, cookies, or private keys are present, then commit and push before preparing the next gate.
+- Consequence: Gate history is reproducible and failures are preserved, while sensitive output is excluded by batch design plus automated and manual review. The narrow committed-log exception applies only to this privacy-limited evidence directory.
+
 ### 2026-07-25: Reconstruct Fresh antiX VMs From main and Index the Verified Historical Archive
 
 - Status: accepted

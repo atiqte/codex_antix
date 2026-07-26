@@ -9,16 +9,18 @@ import (
 )
 
 func TestAnnotatedGUIResultToolbarAndCopyControls(t *testing.T) {
+	renderedAt := time.Date(2026, 7, 14, 22, 0, 0, 0, time.Local)
 	view := pageView{SearchPage: SearchPage{
-		Query:  "tag:inbox",
-		Limit:  50,
-		Counts: Counts{Messages: 101, Files: 151},
+		Query:      "tag:inbox",
+		Limit:      50,
+		Counts:     Counts{Messages: 101, Files: 151},
+		RenderedAt: renderedAt,
 		Results: []MessageSummary{{
-			ID:           "abc@example.test",
-			Subject:      `Quarterly "special" <plan>`,
-			From:         "A User <a@example.test>",
-			DateRelative: "Yest. 20:23",
-			FileCount:    2,
+			ID:        "abc@example.test",
+			Subject:   `Quarterly "special" <plan>`,
+			From:      "A User <a@example.test>",
+			Timestamp: renderedAt.AddDate(0, 0, -1).Add(-97 * time.Minute).Unix(),
+			FileCount: 2,
 		}},
 	}}
 	out := executeTemplateForTest(t, "results", view)
@@ -41,7 +43,7 @@ func TestAnnotatedGUIResultToolbarAndCopyControls(t *testing.T) {
 	for _, want := range []string{
 		`data-copy-text="Quarterly &#34;special&#34; &lt;plan&gt;"`,
 		`data-copy-text="Message-ID: abc@example.test"`,
-		`Yest. 08:23 PM`,
+		`Yesterday 08:23:00 PM`,
 		`aria-label="Previous results"`,
 		`aria-label="Next results"`,
 	} {
@@ -175,13 +177,22 @@ func TestAnnotatedGUIDateFormatting(t *testing.T) {
 		t.Fatalf("formatReaderDate=%q", got)
 	}
 
-	for input, want := range map[string]string{
-		"Yest. 20:23": "Yest. 08:23 PM",
-		"Today 00:05": "Today 12:05 AM",
-		"July 14":     "July 14",
-	} {
-		if got := formatResultDate(input, raw); got != want {
-			t.Fatalf("formatResultDate(%q)=%q, want %q", input, got, want)
+	now := time.Date(2026, 7, 14, 22, 0, 0, 0, dhaka)
+	tests := []struct {
+		name string
+		when time.Time
+		want string
+	}{
+		{name: "now", when: now.Add(-59 * time.Second), want: "Now"},
+		{name: "minutes", when: now.Add(-33 * time.Minute), want: "33 min ago"},
+		{name: "one-hour", when: now.Add(-60 * time.Minute), want: "1 hour ago"},
+		{name: "today", when: now.Add(-2 * time.Hour), want: "Today 08:00:00 PM"},
+		{name: "yesterday", when: time.Date(2026, 7, 13, 20, 23, 1, 0, dhaka), want: "Yesterday 08:23:01 PM"},
+		{name: "older", when: time.Date(2026, 7, 12, 20, 23, 1, 0, dhaka), want: "Sun, 12 Jul 2026, 08:23:01 PM"},
+	}
+	for _, tt := range tests {
+		if got := formatResultDate(tt.when.Unix(), "", now); got != tt.want {
+			t.Fatalf("%s: formatResultDate=%q, want %q", tt.name, got, tt.want)
 		}
 	}
 }

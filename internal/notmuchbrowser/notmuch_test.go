@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -149,26 +150,31 @@ func TestSearchCommandConstruction(t *testing.T) {
 		outputs: map[string]string{
 			"count\x00tag:inbox":                   "1\n",
 			"count\x00--output=files\x00tag:inbox": "2\n",
-			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=10\x00--limit=25\x00tag:inbox": sampleNotmuchJSON,
+			"search\x00--format=text0\x00--output=messages\x00--sort=newest-first\x00--offset=10\x00--limit=25\x00tag:inbox":     "id:abc@example.test\x00",
+			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--sort=newest-first\x00(id:\"abc@example.test\")": sampleNotmuchJSON,
 		},
 		errs: map[string]error{},
 	}
 	client := NotmuchClient{Config: cfg, Runner: runner}
-	page, err := client.Search(context.Background(), "tag:inbox", 10, 25)
+	page, err := client.Search(context.Background(), "tag:inbox", allMailFolder(), 10, 25)
 	if err != nil {
 		t.Fatalf("Search returned error: %v", err)
 	}
 	if page.Counts.Messages != 1 || page.Counts.Files != 2 {
 		t.Fatalf("unexpected counts: %#v", page.Counts)
 	}
-	if len(runner.calls) != 3 {
-		t.Fatalf("expected 3 notmuch calls, got %d", len(runner.calls))
+	if len(runner.calls) != 4 {
+		t.Fatalf("expected 4 notmuch calls, got %d", len(runner.calls))
 	}
-	show := strings.Join(runner.calls[2], " ")
-	for _, want := range []string{"show", "--format=json", "--entire-thread=false", "--body=false", "--offset=10", "--limit=25", "tag:inbox"} {
-		if !strings.Contains(show, want) {
-			t.Fatalf("show command missing %q: %s", want, show)
+	search := strings.Join(runner.calls[2], " ")
+	for _, want := range []string{"search", "--format=text0", "--output=messages", "--sort=newest-first", "--offset=10", "--limit=25", "tag:inbox"} {
+		if !strings.Contains(search, want) {
+			t.Fatalf("search command missing %q: %s", want, search)
 		}
+	}
+	show := strings.Join(runner.calls[3], " ")
+	if !strings.Contains(show, `(id:"abc@example.test")`) {
+		t.Fatalf("metadata command missing selected message id: %s", show)
 	}
 }
 
@@ -207,7 +213,7 @@ func TestRunnerErrorPropagates(t *testing.T) {
 		},
 	}
 	client := NotmuchClient{Config: cfg, Runner: runner}
-	_, err := client.Search(context.Background(), "tag:inbox", 0, 10)
+	_, err := client.Search(context.Background(), "tag:inbox", allMailFolder(), 0, 10)
 	if err == nil {
 		t.Fatalf("expected search error")
 	}
@@ -445,17 +451,22 @@ func newHTTPTestServer(t *testing.T) *Server {
 	t.Helper()
 	cfg := testConfig()
 	cfg.DownloadTempDir = filepath.Join(t.TempDir(), "download-tmp")
+	cfg.ExpectedMailRoot = filepath.Join(t.TempDir(), "Mailstore")
+	if err := os.MkdirAll(cfg.ExpectedMailRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	runner := &fakeRunner{
 		outputs: map[string]string{
 			"count\x00tag:inbox":                   "1\n",
 			"count\x00--output=files\x00tag:inbox": "2\n",
-			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00tag:inbox": sampleNotmuchJSON,
+			"search\x00--format=text0\x00--output=messages\x00--sort=newest-first\x00--offset=0\x00--limit=50\x00tag:inbox":      "id:abc@example.test\x00",
+			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--sort=newest-first\x00(id:\"abc@example.test\")": sampleNotmuchJSON,
 			"count\x00tag:attachment":                   "1\n",
 			"count\x00--output=files\x00tag:attachment": "2\n",
-			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00tag:attachment": sampleNotmuchJSON,
+			"search\x00--format=text0\x00--output=messages\x00--sort=newest-first\x00--offset=0\x00--limit=50\x00tag:attachment": "id:abc@example.test\x00",
 			"count\x00*":                   "1\n",
 			"count\x00--output=files\x00*": "2\n",
-			"show\x00--format=json\x00--entire-thread=false\x00--body=false\x00--offset=0\x00--limit=50\x00*": sampleNotmuchJSON,
+			"search\x00--format=text0\x00--output=messages\x00--sort=newest-first\x00--offset=0\x00--limit=50\x00*": "id:abc@example.test\x00",
 			"config\x00get\x00database.path":                  cfg.ExpectedDatabasePath + "\n",
 			"config\x00get\x00database.mail_root":             cfg.ExpectedMailRoot + "\n",
 			"config\x00get\x00maildir.synchronize_flags":      cfg.ExpectedSyncFlags + "\n",
@@ -486,6 +497,7 @@ const sampleNotmuchJSON = `[
         "match": true,
         "excluded": false,
         "filename": ["/mail/a", "/mail/b"],
+        "timestamp": 1783324800,
         "date_relative": "Today",
         "tags": ["inbox", "unread"],
         "headers": {

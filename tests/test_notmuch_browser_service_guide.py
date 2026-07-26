@@ -106,6 +106,14 @@ class NotmuchBrowserServiceGuideTests(unittest.TestCase):
         self.assertIn("local-maildir is deliberately not in new.ignore", self.text)
         self.assertIn("Do not copy the drifted 48,564-file tree", self.text)
         self.assertIn("does not need to restart.", self.text)
+        self.assertIn("provider-inbox-test", self.text)
+        self.assertIn("provider-live-archive", self.text)
+        self.assertIn("never thread-grouped", self.text)
+        self.assertIn("always newest first", self.text)
+        self.assertIn("60-119 minutes says 1 hour ago", self.text)
+        self.assertIn(
+            "new.ignore contains only the unavailable legacy", self.text
+        )
 
     def test_beginner_safety_and_feature_contract(self):
         for phrase in (

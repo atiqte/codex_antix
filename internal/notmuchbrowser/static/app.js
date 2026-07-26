@@ -74,6 +74,13 @@
     }
   });
 
+  document.addEventListener("change", (event) => {
+    const folder = event.target.closest("[data-search-folder]");
+    if (!folder) return;
+    const form = folder.closest("form");
+    if (form) form.requestSubmit();
+  });
+
   document.body.addEventListener("htmx:afterSwap", (event) => {
     hideNotice();
     if (event.detail.target && event.detail.target.id === "reading-pane-content") {

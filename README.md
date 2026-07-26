@@ -15,6 +15,8 @@ The broader application direction is now selected for v1: a lightweight Go web s
 - The repository pins templ 0.3.1020 through the Go tool directive and Tailwind CSS/CLI 4.3.3 through `package.json` plus `bun.lock`; Node and npm are not part of the workflow.
 - `scripts/notmuch_browser_build.sh` reproduces dependencies, generated templ files, compiled CSS, tests, and a stripped binary. `scripts/notmuch_browser_runit_setup.sh` stages, activates, validates, or rolls back only the existing per-user runit service tree.
 - `scripts/notmuch_browser_fresh_vm_setup.sh` is the state-aware beginner assistant for a blank antiX VM. It verifies the exact 48,720-file historical restore, enforces free-space and configuration gates, performs the long resumable first index, installs the full browser, enables user runit, validates automatic indexing, and provides guarded `main`-branch updates.
+- The browser search page now offers All Mail plus approved source/folder selection for live mail, provider-inbox-test, local-maildir, betterbird-delta, provider-live-archive, and test-maildir. Results are always individual logical messages in newest-first order with precise antiX-local date labels.
+- `scripts/notmuch_browser_source_enroll.sh` guards current-VM source expansion with exact inventory acknowledgement, free-space/config checks, staged indexing, path-parity validation, complete backup, and automatic rollback. Privacy-reviewed operator evidence can be promoted into `docs/validation/notmuch-browser-multisource/`.
 - Offline DIY guides now cover Betterbird profile transport, converted Maildir++ archive transport with USB and Win11 host-share transfer, the dynamic post-main-archive Betterbird aggregate delta workflow to antiX Evolution, the validated Evolution Flatpak setup on antiX, the deletion-safe production `provider-live` setup, the approval-gated provider-live local archive controller, the browser-only notmuch pilot workflow, and the complete beginner-first blank-VM reconstruction of the full Go chi/templ/HTMX/Tailwind browser with historical archive indexing, automatic incremental refresh, Windows tunnel, and reboot validation.
 - AntiX helper scripts are available for Evolution Flatpak integration, production mbsync/Sent upload, provider-live archive monitoring and transactions, and Go notmuch browser control/index refresh.
 - Windows 11 and Debian Linux portability is a project requirement.
@@ -101,7 +103,7 @@ cd /home/atiq/orca/workspaces/codex_antix/branch-codex
 ./scripts/notmuch_browser_operator_run.sh
 ```
 
-The runner records the batch hash, start/end timestamps, exit code, and log SHA256. Logs stay under the ignored `codex-output/notmuch-browser-operator/logs/` directory and must be reviewed before the next batch is prepared.
+The runner records the batch hash, start/end timestamps, exit code, and log SHA256. Logs stay under the ignored `codex-output/notmuch-browser-operator/logs/` directory and must be reviewed before the next batch is prepared. For the multi-source rollout, `scripts/notmuch_browser_operator_record.sh` copies the exact batch, complete privacy-limited log, and hash record into the committed validation directory only after automated and manual privacy review.
 
 ## Development Policy
 

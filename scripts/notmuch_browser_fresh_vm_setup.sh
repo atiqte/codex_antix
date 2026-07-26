@@ -41,7 +41,7 @@ MIN_FREE_KIB=${NOTMUCH_FRESH_MIN_FREE_KIB:-83886080}
 ARCHIVE_MARKER="$STATE_DIR/archive-restored.env"
 INDEX_MARKER="$STATE_DIR/initial-index.env"
 INSTALL_MARKER="$STATE_DIR/browser-installed.env"
-IGNORE_VALUES="betterbird-post-main-archive-maildirpp-20260704-205827 provider-inbox-test test-maildir"
+IGNORE_VALUES="betterbird-post-main-archive-maildirpp-20260704-205827"
 
 say() {
   printf '%s\n' "$*"
@@ -342,7 +342,7 @@ configure_notmuch() {
   notmuch --config="$CONFIG" config set user.name "$user_name"
   notmuch --config="$CONFIG" config set user.primary_email "$primary_email"
   notmuch --config="$CONFIG" config set new.tags unread inbox
-  # Intentionally exclude only test/secondary archives. local-maildir is indexed.
+  # Index every approved source and exclude only the unavailable legacy archive.
   notmuch --config="$CONFIG" config set new.ignore $IGNORE_VALUES
   notmuch --config="$CONFIG" config set search.exclude_tags deleted spam
   notmuch --config="$CONFIG" config set maildir.synchronize_flags false
@@ -359,6 +359,10 @@ configure_notmuch() {
 }
 
 restore_background_services() {
+  if [ "${INITIAL_TAGS_CLEARED:-no}" = yes ] && [ -s "$CONFIG" ]; then
+    notmuch --config="$CONFIG" config set new.tags unread inbox >/dev/null 2>&1 || true
+    INITIAL_TAGS_CLEARED=no
+  fi
   if [ "${INDEX_WAS_RUNNING:-no}" = yes ] && [ -x "$INDEX_CONTROL" ]; then
     "$INDEX_CONTROL" start >/dev/null 2>&1 || true
   fi
@@ -421,6 +425,9 @@ initial_index() {
 
   say "status=initial_index_running"
   say "log=$run_log"
+  notmuch --config="$CONFIG" config set new.tags
+  INITIAL_TAGS_CLEARED=yes
+  export INITIAL_TAGS_CLEARED
   run_tmp=$(mktemp "$LOG_DIR/.initial-index.XXXXXX")
   if notmuch --config="$CONFIG" new > "$run_tmp" 2>&1; then
     cat "$run_tmp"
@@ -432,6 +439,14 @@ initial_index() {
     die "notmuch new failed with exit $result; fix the error and rerun initial-index"
   fi
   chmod 600 "$run_log"
+
+  notmuch --config="$CONFIG" tag +inbox +unread -- 'path:mbsync/provider-live/**'
+  notmuch --config="$CONFIG" tag +historical-archive -- 'path:evolution/local-maildir/**'
+  notmuch --config="$CONFIG" tag +betterbird-delta -- 'path:evolution/betterbird-delta-maildirpp-20260704/**'
+  notmuch --config="$CONFIG" tag +provider-inbox-test -- 'path:mbsync/provider-inbox-test/**'
+  notmuch --config="$CONFIG" tag +test-mail -- 'path:evolution/test-maildir/**'
+  notmuch --config="$CONFIG" config set new.tags unread inbox
+  INITIAL_TAGS_CLEARED=no
 
   expected_paths=$(mktemp "$STATE_DIR/.archive-expected.XXXXXX")
   actual_paths=$(mktemp "$STATE_DIR/.archive-indexed.XXXXXX")

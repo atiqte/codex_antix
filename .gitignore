@@ -6,6 +6,8 @@
 # Logs
 *.log
 logs/
+!docs/validation/notmuch-browser-multisource/logs/
+!docs/validation/notmuch-browser-multisource/logs/*.log
 
 # OS files
 .DS_Store
