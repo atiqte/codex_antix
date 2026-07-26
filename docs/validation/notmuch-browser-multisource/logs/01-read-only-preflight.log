@@ -1,0 +1,176 @@
+operator_run_started=2026-07-26T22:27:58,990496789+06:00
+operator_run_stamp=20260726-222758-982
+operator_host=antix
+operator_user=atiq
+operator_repo=/home/atiq/orca/workspaces/codex_antix/branch-codex
+operator_batch=/home/atiq/orca/workspaces/codex_antix/branch-codex/codex-output/notmuch-browser-operator/current.sh
+operator_batch_sha256=01a177738f70c4d08b05f1ed5cbea1c4f03fccc77e91938abbeb2ca320237322
+operator_log=/home/atiq/orca/workspaces/codex_antix/branch-codex/codex-output/notmuch-browser-operator/logs/notmuch-browser-operator-20260726-222758-982.log
+gate=01-read-only-multisource-preflight
+gate_started=2026-07-26T22:27:58,997750212+06:00
+privacy_contract=counts_hashes_statuses_only
+mail_or_index_mutation_authorized=no
+repository_commit=7935502c1e618aa6480415c14b15d2329a4647b0
+repository_branch=atiqte/branch-codex
+upstream_commit=7935502c1e618aa6480415c14b15d2329a4647b0
+repository_clean=yes
+script_sha256=scripts/notmuch_browser_source_enroll.sh:61a96a587c8e25ddef290a118e95a335ca2f47481dec8925e57f49c6342d0fee
+script_sha256=scripts/notmuch_browser_operator_run.sh:08ad30524ca56004f32a04e3a23c33acf2aef14c1f9cdea8a27abee56607472f
+script_sha256=scripts/notmuch_browser_operator_record.sh:0977588c1ece3b1c9a786587998c72aaf433de39a3ac03b6ea018837704bdf72
+repository_script_syntax=pass
+mail_fstype=xfs
+mail_free_kib=104973792
+database_path=/mail/SearchIndex/notmuch/default
+database_mail_root=/mail/Mailstore
+synchronize_flags=false
+index_decrypt=false
+new_tags_sorted=inbox unread
+current_new_ignore_sorted=betterbird-post-main-archive-maildirpp-20260704-205827 local-maildir provider-inbox-test test-maildir
+source_message_paths[evolution/local-maildir]=48564
+source_symlinks[evolution/local-maildir]=0
+source_message_paths[evolution/betterbird-delta-maildirpp-20260704]=247
+source_symlinks[evolution/betterbird-delta-maildirpp-20260704]=0
+source_message_paths[evolution/provider-live-archive]=0
+source_symlinks[evolution/provider-live-archive]=0
+source_message_paths[evolution/test-maildir]=4
+source_symlinks[evolution/test-maildir]=0
+source_message_paths[mbsync/provider-inbox-test]=148
+source_symlinks[mbsync/provider-inbox-test]=0
+unavailable_legacy_archive=absent
+approved_static_tmp_files=0
+provider_live_message_paths=2625
+provider_live_tmp_files=0
+source_inspection_begin=yes
+source=evolution/local-maildir message_paths=48564 bytes=62420909898 symlinks=0 manifest_sha256=e4e78a9bff9bbdca5b5c8ea4ab4703aa34bcb6cb4069e2ef6834fe935619c6d6
+source=evolution/betterbird-delta-maildirpp-20260704 message_paths=247 bytes=436874381 symlinks=0 manifest_sha256=ec57b539cc6d577ef7162d88ee448ee7db6e1655b5eb583b00cd11a81985c6bb
+source=mbsync/provider-inbox-test message_paths=148 bytes=240550278 symlinks=0 manifest_sha256=d2084a07ea826428d0171a033b5774cd1bf29866ac0f583501fec4a81e400b7a
+source=evolution/test-maildir message_paths=4 bytes=1470 symlinks=0 manifest_sha256=8f66b42eb7b9d6f858254492aaaab7ea66ffb38c71e6ec39999787da3e361014
+source=evolution/provider-live-archive message_paths=0 bytes=0 symlinks=0 manifest_sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+new.ignore=betterbird-post-main-archive-maildirpp-20260704-205827
+new.ignore=local-maildir
+new.ignore=provider-inbox-test
+new.ignore=test-maildir
+free_kib=104973792
+status=inspection_complete
+source_inspection_end=yes
+notmuch_messages=1659
+notmuch_files=2872
+indexed_local_maildir_files=0
+indexed_provider_inbox_test_files=0
+indexed_test_maildir_files=0
+indexed_betterbird_delta_files=405
+indexed_provider_archive_files=0
+indexed_provider_live_files=2788
+installed_sha256=/home/atiq/.local/bin/notmuch-browser:c7d14e0ee792595cd168a131cb05307214ae1129dc449f982fa48d30aa5bfed9
+installed_sha256=/home/atiq/.local/bin/notmuch-browser-control:4b8231a2c886dfb1247d4dfa6b3de043e67d230e4fad1bc202b7452936ca04a8
+installed_sha256=/home/atiq/.local/bin/notmuch-browser-index-control:1ddf93c9c5f9943bcc9b4f744f3e835e6c12f0df83a8a467ac061d2b38f6b007
+installed_sha256=/home/atiq/.local/bin/mbsync-provider-live-control:8892bc03b3c462ae6f56cd029c6beae54f37df785072affe04c1e217dd59d3d2
+installed_sha256=/home/atiq/.local/bin/notmuch-browser-runit-setup:598762b0f98147460cff3e937b69a47b7aa531e9e4e80807c4f75e540fdc0c77
+server=running
+supervisor=user-runit
+run: /home/atiq/.runit/service/notmuch-browser: (pid 3761) 9967s; run: log: (pid 2111) 10002s
+url=http://127.0.0.1:8765/
+binary=/home/atiq/.local/bin/notmuch-browser
+config=/home/atiq/.config/notmuch/default/config
+state_dir=/mail/AppData/notmuch-browser
+log_dir=/mail/Logs/notmuch-browser
+download_tmp=/mail/AppData/notmuch-browser/download-tmp
+download_tmp_files=0
+download_tmp_bytes=0
+mbsync_lock=absent
+refresh_lock=absent
+notmuch_unique_messages=1659
+notmuch_indexed_files=2872
+new.ignore=betterbird-post-main-archive-maildirpp-20260704-205827
+new.ignore=local-maildir
+new.ignore=provider-inbox-test
+new.ignore=test-maildir
+loop=running
+supervisor=user-runit
+run: /home/atiq/.runit/service/notmuch-browser-index: (pid 3812) 9966s; run: log: (pid 2110) 10002s
+control=/home/atiq/.local/bin/notmuch-browser-control
+state_dir=/mail/AppData/notmuch-browser
+log_dir=/mail/Logs/notmuch-browser
+log=/mail/Logs/notmuch-browser/notmuch-browser-index-loop.log
+interval_seconds=60
+lock_recheck_seconds=15
+mbsync_lock=absent
+refresh_lock=absent
+browser_server=running
+notmuch_unique_messages=1659
+notmuch_indexed_files=2872
+== provider-live auto-sync status ==
+loop=running
+pid=2310
+paused=no
+interval_seconds=60
+interval_human=1m
+interval_source=persistent
+sync_timeout_seconds=3600
+sync_lock=absent
+last_exit=0 2026-07-26 22:27:32+0600
+channel=provider-live-group
+log_usage:
+356K	/mail/Logs/mbsync-live
+latest_logs:
+total 352
+-rw-rw-r-- 1 atiq atiq  43844 Jul 26 22:27 20260726-provider-live-auto.log
+-rw-rw-r-- 1 atiq atiq 133055 Jul 25 23:16 20260725-provider-live-auto.log
+-rw-rw-r-- 1 atiq atiq   5041 Jul 24 23:45 20260724-provider-live-auto.log
+-rw-rw-r-- 1 atiq atiq    831 Jul 23 08:17 20260723-provider-live-auto.log.gz
+-rw-rw-r-- 1 atiq atiq    504 Jul 22 07:27 20260722-provider-live-auto.log.gz
+-rw-rw-r-- 1 atiq atiq    768 Jul 21 07:47 20260721-provider-live-auto.log.gz
+-rw-rw-r-- 1 atiq atiq    629 Jul 20 02:20 20260720-provider-live-auto.log.gz
+status=user_runit_validation_passed
+run: /home/atiq/.runit/service/notmuch-browser: (pid 3761) 9968s; run: log: (pid 2111) 10003s
+run: /home/atiq/.runit/service/notmuch-browser-index: (pid 3812) 9967s; run: log: (pid 2110) 10003s
+server=running
+supervisor=user-runit
+run: /home/atiq/.runit/service/notmuch-browser: (pid 3761) 9968s; run: log: (pid 2111) 10003s
+url=http://127.0.0.1:8765/
+binary=/home/atiq/.local/bin/notmuch-browser
+config=/home/atiq/.config/notmuch/default/config
+state_dir=/mail/AppData/notmuch-browser
+log_dir=/mail/Logs/notmuch-browser
+download_tmp=/mail/AppData/notmuch-browser/download-tmp
+download_tmp_files=0
+download_tmp_bytes=0
+mbsync_lock=absent
+refresh_lock=absent
+notmuch_unique_messages=1659
+notmuch_indexed_files=2872
+new.ignore=betterbird-post-main-archive-maildirpp-20260704-205827
+new.ignore=local-maildir
+new.ignore=provider-inbox-test
+new.ignore=test-maildir
+loop=running
+supervisor=user-runit
+run: /home/atiq/.runit/service/notmuch-browser-index: (pid 3812) 9967s; run: log: (pid 2110) 10003s
+control=/home/atiq/.local/bin/notmuch-browser-control
+state_dir=/mail/AppData/notmuch-browser
+log_dir=/mail/Logs/notmuch-browser
+log=/mail/Logs/notmuch-browser/notmuch-browser-index-loop.log
+interval_seconds=60
+lock_recheck_seconds=15
+mbsync_lock=absent
+refresh_lock=absent
+browser_server=running
+notmuch_unique_messages=1659
+notmuch_indexed_files=2872
+browser_listener=127.0.0.1:8765
+candidate_port_8876=free
+health_ok=true
+health_read_only=true
+health_mail_mutation=false
+health_messages=1659
+health_files=2872
+lock_state=/mail/AppData/notmuch-browser/index-refresh.lock:absent
+lock_state=/mail/AppData/isync/provider-live-loop/lock:absent
+source_acknowledgement_executed=no
+notmuch_new_executed=no
+service_lifecycle_action_executed=no
+mail_or_index_mutation_executed=no
+gate_finished=2026-07-26T22:28:01,794028226+06:00
+status=gate_01_read_only_preflight_pass
+operator_batch_exit=0
+operator_run_finished=2026-07-26T22:28:01,798454511+06:00

@@ -24,4 +24,10 @@ cookies, or private keys.
 
 ## Gate Index
 
-No operator gate has been run for this rollout yet.
+| Gate | Result | Exact batch | Complete log | Record | Summary |
+|---|---|---|---|---|---|
+| 01 read-only preflight | success | `batches/01-read-only-preflight.sh` (`01a17773...`) | `logs/01-read-only-preflight.log` (`0b3a25a3...`) | `records/01-read-only-preflight.env` | Commit/upstream/cleanliness, scripts, XFS/free space, safe notmuch configuration, exact static source inventories/manifests, current indexed scope, installed runtime, user-runit services, localhost health, locks, and zero static temp files passed. No acknowledgement, indexing, lifecycle action, or mail/index mutation ran. |
+
+Gate 01's 176-line raw log and exact batch passed automated credential-shape
+scanning plus manual review for email addresses, Message-IDs, capability tokens,
+cookies, credentials, private keys, headers, and message content.

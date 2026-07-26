@@ -8,7 +8,8 @@
 - [x] Add guarded current-source inspection, acknowledgement, backup, sequential indexing, tags, path-parity proof, automatic rollback, and explicit rollback tooling.
 - [x] Extend the stable operator runner with result manifests and add privacy-reviewed exact batch/log/result promotion for durable Git evidence.
 - [x] Update the fresh-VM helper, provider archive scope, and beginner HTML/TXT guides so all available approved sources are indexed and only the unavailable post-main archive stays ignored.
-- [ ] Run, review, record, commit, and push each multi-source antiX operator gate, beginning with the prepared read-only preflight.
+- [x] Run and privacy-review multi-source Gate 01: the exact source inventories, current ignored/indexed baseline, XFS capacity, installed services, localhost health, locks, and zero static temp passed without mutation.
+- [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with the exact-source acknowledgement.
 - [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.

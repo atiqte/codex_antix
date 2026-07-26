@@ -10,6 +10,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Extended the operator runner with immutable result manifests and added privacy-reviewed exact batch/log/result promotion under `docs/validation/notmuch-browser-multisource/`.
 - Updated fresh-VM setup, provider-live archive scope policy, and matching beginner HTML/TXT guides so every available approved source is indexed and only the unavailable post-main archive remains ignored.
 - Passed reproducible generation, Go unit/vet/race, all 73 Python tests, shell syntax, `git diff --check`, the 87,110-byte asset budget, and a stripped 8,147,209-byte browser build with SHA256 `a87276c5...`.
+- Passed and preserved multi-source Gate 01: exact source inventories/manifests, XFS/capacity, current notmuch scope, installed services, localhost health, locks, and temp checks all passed without acknowledgement, indexing, lifecycle, or mail/index mutation; the exact batch and complete privacy-reviewed log are committed.
 
 ## 2026-07-25
 
