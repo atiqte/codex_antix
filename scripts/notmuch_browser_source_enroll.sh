@@ -391,6 +391,7 @@ create_backup() {
     find . -type f ! -name inventory.sha256 -print |
       LC_ALL=C sort |
       while IFS= read -r file; do sha256sum "$file"; done > inventory.sha256
+    sha256sum -c --status inventory.sha256
   )
   printf '%s\n' "$backup" > "$BACKUP_POINTER"
   chmod 600 "$BACKUP_POINTER"
