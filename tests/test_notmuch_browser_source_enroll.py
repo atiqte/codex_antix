@@ -86,6 +86,7 @@ class SourceEnrollmentTests(unittest.TestCase):
                 "NOTMUCH_ENROLL_EXPECTED_TEST": "1",
                 "NOTMUCH_ENROLL_EXPECTED_PROVIDER_ARCHIVE": "0",
                 "NOTMUCH_ENROLL_MIN_FREE_KIB": "100",
+                "NOTMUCH_ENROLL_RESTORE_WAIT_ATTEMPTS": "1",
                 "MOCK_MAILSTORE": str(self.mailstore),
                 "MOCK_DB": str(self.db),
                 "MOCK_CONFIG_STATE": str(self.mock_state),
@@ -131,7 +132,14 @@ class SourceEnrollmentTests(unittest.TestCase):
                     case '{name}' in
                       mbsync-control) printf '%s\\n' loop=running paused=no;;
                       index-control) printf '%s\\n' loop=running;;
-                      browser-control) printf '%s\\n' server=running;;
+                      browser-control)
+                        if [ "${{MOCK_BROWSER_RESTORE_STUCK:-0}}" = 1 ] &&
+                          grep -Fqx 'browser-control:start' "$MOCK_CONTROL_LOG"; then
+                          printf '%s\\n' server=stopped
+                        else
+                          printf '%s\\n' server=running
+                        fi
+                        ;;
                     esac
                     ;;
                   refresh-index)
@@ -293,6 +301,23 @@ class SourceEnrollmentTests(unittest.TestCase):
         self.assertIn("browser-control:start", controls)
         self.assertIn("index-control:start", controls)
         self.assertIn("mbsync-control:resume", controls)
+
+    def test_failed_service_restore_rolls_back_database(self) -> None:
+        self.assertEqual(0, self.run_helper("acknowledge-current").returncode)
+        env = self.env.copy()
+        env["MOCK_BROWSER_RESTORE_STUCK"] = "1"
+        result = self.run_helper("enroll", env=env)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("service state did not recover", result.stdout)
+        self.assertEqual(
+            "baseline-db\n", (self.db / "database").read_text(encoding="utf-8")
+        )
+        failed = list(
+            self.backups.glob(
+                "source-enrollment-*/notmuch-database.failed-enrollment"
+            )
+        )
+        self.assertEqual(1, len(failed))
 
 
 if __name__ == "__main__":

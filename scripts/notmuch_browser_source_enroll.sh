@@ -26,6 +26,7 @@ EXPECTED_PROVIDER_TEST=${NOTMUCH_ENROLL_EXPECTED_PROVIDER_TEST:-148}
 EXPECTED_TEST=${NOTMUCH_ENROLL_EXPECTED_TEST:-4}
 EXPECTED_PROVIDER_ARCHIVE=${NOTMUCH_ENROLL_EXPECTED_PROVIDER_ARCHIVE:-0}
 MIN_FREE_KIB=${NOTMUCH_ENROLL_MIN_FREE_KIB:-83886080}
+RESTORE_WAIT_ATTEMPTS=${NOTMUCH_ENROLL_RESTORE_WAIT_ATTEMPTS:-20}
 
 ACK_MARKER="$STATE_DIR/current-sources-acknowledged.env"
 BACKUP_POINTER="$STATE_DIR/current-backup"
@@ -120,6 +121,9 @@ check_source_inventory() {
 }
 
 check_platform() {
+  case "$RESTORE_WAIT_ATTEMPTS" in
+    ''|*[!0-9]*|0) die "service restore wait attempts must be a positive integer" ;;
+  esac
   [ "$(findmnt -n -o FSTYPE --target "$MAIL_ROOT" 2>/dev/null || true)" = xfs ] ||
     die "$MAIL_ROOT is not an XFS mount"
   available=$(df -Pk "$MAIL_ROOT" | awk 'NR == 2 { print $4 }')
@@ -231,6 +235,41 @@ restore_service_state() {
     "$MBSYNC_CONTROL" start >/dev/null 2>&1 || true
   [ "${MBSYNC_WAS_PAUSED:-yes}" != no ] || [ ! -x "$MBSYNC_CONTROL" ] ||
     "$MBSYNC_CONTROL" resume >/dev/null 2>&1 || true
+}
+
+service_state_matches_capture() {
+  if [ "${BROWSER_WAS_RUNNING:-no}" = yes ]; then
+    [ -x "$BROWSER_CONTROL" ] || return 1
+    status=$("$BROWSER_CONTROL" status 2>&1 || true)
+    printf '%s\n' "$status" | grep -Fqx 'server=running' || return 1
+  fi
+  if [ "${INDEX_WAS_RUNNING:-no}" = yes ]; then
+    [ -x "$INDEX_CONTROL" ] || return 1
+    status=$("$INDEX_CONTROL" status 2>&1 || true)
+    printf '%s\n' "$status" |
+      grep -Eq 'loop=(running|alive)|loop_status=running' || return 1
+  fi
+  if [ "${MBSYNC_WAS_RUNNING:-no}" = yes ]; then
+    [ -x "$MBSYNC_CONTROL" ] || return 1
+    status=$("$MBSYNC_CONTROL" status 2>&1 || true)
+    printf '%s\n' "$status" |
+      grep -Eq 'loop=(running|alive)|loop_status=running' || return 1
+  fi
+  if [ "${MBSYNC_WAS_PAUSED:-yes}" = no ]; then
+    [ -x "$MBSYNC_CONTROL" ] || return 1
+    status=$("$MBSYNC_CONTROL" status 2>&1 || true)
+    printf '%s\n' "$status" | grep -Eq 'paused=(no|false)' || return 1
+  fi
+}
+
+wait_for_restored_service_state() {
+  attempts=0
+  while [ "$attempts" -lt "$RESTORE_WAIT_ATTEMPTS" ]; do
+    service_state_matches_capture && return 0
+    attempts=$((attempts + 1))
+    sleep 1
+  done
+  return 1
 }
 
 set_ignore() {
@@ -409,9 +448,11 @@ enroll_sources() {
   [ "$(notmuch --config="$CONFIG" config get new.tags | paste -sd' ' -)" = "unread inbox" ] ||
     die "new.tags were not restored"
 
+  restore_service_state
+  wait_for_restored_service_state ||
+    die "background service state did not recover after enrollment"
   ENROLL_COMPLETE=yes
   trap - EXIT HUP INT TERM
-  restore_service_state
   say "status=source_enrollment_complete"
   say "backup=$backup"
   say "evidence=$evidence"

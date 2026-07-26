@@ -11,8 +11,8 @@
 - [x] Run and privacy-review multi-source Gate 01: the exact source inventories, current ignored/indexed baseline, XFS capacity, installed services, localhost health, locks, and zero static temp passed without mutation.
 - [x] Run Gate 02 and create the exact private source acknowledgement marker; preserve its primary success and the discovered svlogd/service PID labeling defect as partial evidence.
 - [x] Run the corrected read-only acknowledgement and service-identity audit before source enrollment.
-- [ ] Run a read-only enrollment backup-size, capacity, destination, and command-path preflight.
-- [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with the corrected acknowledgement/identity audit.
+- [x] Run a read-only enrollment backup-size, capacity, destination, and command-path preflight; Gate 04 passed with 104,973,672 KiB free and a conservative 1,158,676 KiB requirement without production writes.
+- [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with a final read-only audit of the hardened service-restoration contract before enrollment.
 - [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
