@@ -12,6 +12,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Passed reproducible generation, Go unit/vet/race, all 73 Python tests, shell syntax, `git diff --check`, the 87,110-byte asset budget, and a stripped 8,147,209-byte browser build with SHA256 `a87276c5...`.
 - Passed and preserved multi-source Gate 01: exact source inventories/manifests, XFS/capacity, current notmuch scope, installed services, localhost health, locks, and temp checks all passed without acknowledgement, indexing, lifecycle, or mail/index mutation; the exact batch and complete privacy-reviewed log are committed.
 - Created and verified the private exact-source acknowledgement marker in Gate 02 while preserving config, ignore scope, health, locks, and services. Recorded the gate as partial because its PID parser captured svlogd rather than browser/index service PIDs; a corrected read-only audit is required before enrollment.
+- Passed Gate 03's corrected read-only audit with exact marker/source/config state, correctly separated browser/index and svlogd identities, runsv parent proof, provider health, loopback binding, and no mutation.
 
 ## 2026-07-25
 

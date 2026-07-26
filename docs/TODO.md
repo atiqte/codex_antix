@@ -10,7 +10,8 @@
 - [x] Update the fresh-VM helper, provider archive scope, and beginner HTML/TXT guides so all available approved sources are indexed and only the unavailable post-main archive stays ignored.
 - [x] Run and privacy-review multi-source Gate 01: the exact source inventories, current ignored/indexed baseline, XFS capacity, installed services, localhost health, locks, and zero static temp passed without mutation.
 - [x] Run Gate 02 and create the exact private source acknowledgement marker; preserve its primary success and the discovered svlogd/service PID labeling defect as partial evidence.
-- [ ] Run the corrected read-only acknowledgement and service-identity audit before source enrollment.
+- [x] Run the corrected read-only acknowledgement and service-identity audit before source enrollment.
+- [ ] Run a read-only enrollment backup-size, capacity, destination, and command-path preflight.
 - [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with the corrected acknowledgement/identity audit.
 - [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
