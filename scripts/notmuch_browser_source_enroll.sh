@@ -11,6 +11,8 @@ BACKUP_ROOT=${NOTMUCH_ENROLL_BACKUP_ROOT:-"$MAIL_ROOT/Backups/notmuch-browser"}
 MBSYNC_CONTROL=${NOTMUCH_ENROLL_MBSYNC_CONTROL:-"$HOME/.local/bin/mbsync-provider-live-control"}
 BROWSER_CONTROL=${NOTMUCH_ENROLL_BROWSER_CONTROL:-"$HOME/.local/bin/notmuch-browser-control"}
 INDEX_CONTROL=${NOTMUCH_ENROLL_INDEX_CONTROL:-"$HOME/.local/bin/notmuch-browser-index-control"}
+MBSYNC_LOCK_DIR=${NOTMUCH_ENROLL_MBSYNC_LOCK_DIR:-"$MAIL_ROOT/AppData/isync/provider-live-loop/lock"}
+REFRESH_LOCK_DIR=${NOTMUCH_ENROLL_REFRESH_LOCK_DIR:-"$MAIL_ROOT/AppData/notmuch-browser/index-refresh.lock"}
 
 LOCAL_REL=evolution/local-maildir
 DELTA_REL=evolution/betterbird-delta-maildirpp-20260704
@@ -27,6 +29,7 @@ EXPECTED_TEST=${NOTMUCH_ENROLL_EXPECTED_TEST:-4}
 EXPECTED_PROVIDER_ARCHIVE=${NOTMUCH_ENROLL_EXPECTED_PROVIDER_ARCHIVE:-0}
 MIN_FREE_KIB=${NOTMUCH_ENROLL_MIN_FREE_KIB:-83886080}
 RESTORE_WAIT_ATTEMPTS=${NOTMUCH_ENROLL_RESTORE_WAIT_ATTEMPTS:-20}
+QUIESCE_WAIT_ATTEMPTS=${NOTMUCH_ENROLL_QUIESCE_WAIT_ATTEMPTS:-120}
 
 ACK_MARKER="$STATE_DIR/current-sources-acknowledged.env"
 BACKUP_POINTER="$STATE_DIR/current-backup"
@@ -123,6 +126,9 @@ check_source_inventory() {
 check_platform() {
   case "$RESTORE_WAIT_ATTEMPTS" in
     ''|*[!0-9]*|0) die "service restore wait attempts must be a positive integer" ;;
+  esac
+  case "$QUIESCE_WAIT_ATTEMPTS" in
+    ''|*[!0-9]*|0) die "quiesce wait attempts must be a positive integer" ;;
   esac
   [ "$(findmnt -n -o FSTYPE --target "$MAIL_ROOT" 2>/dev/null || true)" = xfs ] ||
     die "$MAIL_ROOT is not an XFS mount"
@@ -272,6 +278,36 @@ wait_for_restored_service_state() {
   return 1
 }
 
+wait_for_quiescent_locks() {
+  attempts=0
+  while [ "$attempts" -lt "$QUIESCE_WAIT_ATTEMPTS" ]; do
+    if [ ! -e "$MBSYNC_LOCK_DIR" ] && [ ! -e "$REFRESH_LOCK_DIR" ]; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 1
+  done
+  return 1
+}
+
+run_prebackup_refresh() {
+  stamp=$1
+  log="$LOG_DIR/prebackup-refresh-$stamp.log"
+  say "prebackup_refresh_log=$log"
+  if "$BROWSER_CONTROL" refresh-index > "$log" 2>&1; then
+    rc=0
+  else
+    rc=$?
+  fi
+  chmod 600 "$log"
+  say "prebackup_refresh_exit=$rc"
+  say "prebackup_refresh_log_bytes=$(wc -c < "$log" | tr -d ' ')"
+  say "prebackup_refresh_log_sha256=$(sha256sum "$log" | awk '{print $1}')"
+  [ "$rc" -eq 0 ] || return "$rc"
+  grep -Eq '^status=refresh[_-]index[_-]complete$|^status=refresh-complete$' "$log" ||
+    return 1
+}
+
 set_ignore() {
   notmuch --config="$CONFIG" config set new.ignore "$@"
 }
@@ -283,15 +319,15 @@ run_notmuch_new() {
   say "notmuch_new_stage=$label"
   say "notmuch_new_log=$log"
   if notmuch --config="$CONFIG" new > "$log" 2>&1; then
-    chmod 600 "$log"
-    sed -n '1,120p' "$log"
-    return 0
+    rc=0
   else
     rc=$?
-    chmod 600 "$log"
-    sed -n '1,120p' "$log"
-    return "$rc"
   fi
+  chmod 600 "$log"
+  say "notmuch_new_exit=$rc"
+  say "notmuch_new_log_bytes=$(wc -c < "$log" | tr -d ' ')"
+  say "notmuch_new_log_sha256=$(sha256sum "$log" | awk '{print $1}')"
+  return "$rc"
 }
 
 tag_source_unique_messages() {
@@ -407,12 +443,17 @@ enroll_sources() {
 
   [ ! -x "$MBSYNC_CONTROL" ] || "$MBSYNC_CONTROL" pause
   [ ! -x "$INDEX_CONTROL" ] || "$INDEX_CONTROL" stop
+  wait_for_quiescent_locks ||
+    die "mbsync or index refresh lock did not quiesce"
+  stamp=$(date +%Y%m%d-%H%M%S)
   if [ -x "$BROWSER_CONTROL" ]; then
-    "$BROWSER_CONTROL" refresh-index
+    run_prebackup_refresh "$stamp" ||
+      die "pre-backup index refresh did not complete"
   fi
+  wait_for_quiescent_locks ||
+    die "index refresh lock remained after pre-backup refresh"
   [ ! -x "$BROWSER_CONTROL" ] || "$BROWSER_CONTROL" stop
 
-  stamp=$(date +%Y%m%d-%H%M%S)
   backup=$(create_backup "$stamp")
   evidence="$backup/enrollment-evidence"
   install -d -m 700 "$evidence"

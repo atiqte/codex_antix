@@ -87,6 +87,13 @@ class SourceEnrollmentTests(unittest.TestCase):
                 "NOTMUCH_ENROLL_EXPECTED_PROVIDER_ARCHIVE": "0",
                 "NOTMUCH_ENROLL_MIN_FREE_KIB": "100",
                 "NOTMUCH_ENROLL_RESTORE_WAIT_ATTEMPTS": "1",
+                "NOTMUCH_ENROLL_QUIESCE_WAIT_ATTEMPTS": "1",
+                "NOTMUCH_ENROLL_MBSYNC_LOCK_DIR": str(
+                    self.state / "mbsync.lock"
+                ),
+                "NOTMUCH_ENROLL_REFRESH_LOCK_DIR": str(
+                    self.state / "refresh.lock"
+                ),
                 "MOCK_MAILSTORE": str(self.mailstore),
                 "MOCK_DB": str(self.db),
                 "MOCK_CONFIG_STATE": str(self.mock_state),
@@ -143,6 +150,7 @@ class SourceEnrollmentTests(unittest.TestCase):
                     esac
                     ;;
                   refresh-index)
+                    printf '%s\\n' 'private-refresh-detail-that-must-not-reach-operator-output'
                     if [ "${{MOCK_FAIL_REFRESH:-0}}" = 1 ]; then
                       printf '%s\\n' simulated-refresh-failure
                       exit 8
@@ -256,6 +264,8 @@ class SourceEnrollmentTests(unittest.TestCase):
         result = self.run_helper("enroll")
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn("status=source_enrollment_complete", result.stdout)
+        self.assertNotIn("private-refresh-detail", result.stdout)
+        self.assertNotIn("Processed mock stage", result.stdout)
         self.assertEqual(
             ["betterbird-post-main-archive-maildirpp-20260704-205827"],
             (self.mock_state / "ignore").read_text(encoding="utf-8").splitlines(),
@@ -296,6 +306,18 @@ class SourceEnrollmentTests(unittest.TestCase):
         env["MOCK_FAIL_REFRESH"] = "1"
         result = self.run_helper("enroll", env=env)
         self.assertNotEqual(0, result.returncode)
+        self.assertEqual([], list(self.backups.glob("source-enrollment-*")))
+        controls = self.control_log.read_text(encoding="utf-8")
+        self.assertIn("browser-control:start", controls)
+        self.assertIn("index-control:start", controls)
+        self.assertIn("mbsync-control:resume", controls)
+
+    def test_active_sync_lock_blocks_before_backup_and_restores_services(self) -> None:
+        self.assertEqual(0, self.run_helper("acknowledge-current").returncode)
+        (self.state / "mbsync.lock").mkdir()
+        result = self.run_helper("enroll")
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("lock did not quiesce", result.stdout)
         self.assertEqual([], list(self.backups.glob("source-enrollment-*")))
         controls = self.control_log.read_text(encoding="utf-8")
         self.assertIn("browser-control:start", controls)
