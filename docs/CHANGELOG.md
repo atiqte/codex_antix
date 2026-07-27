@@ -8,6 +8,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Kept search-result senders unchanged and preserved the browser's read-only route contract without adding dependencies.
 - Passed deterministic templ/Tailwind generation, Go unit/vet/race, all 75 Python tests, shell syntax checks, the 88,348-byte asset budget, and an 8,188,169-byte stripped build with SHA256 `b37b3b6331...`.
 - Passed and privacy-recorded Gate 13: exact address-link candidate `b37b3b63...` remains isolated on 8876 with real-message mailto/copy parity, all six source/date/security contracts, and unchanged production.
+- Recorded the owner's Gate 13 antiX GUI PASS, then refined only address copy controls from 22px to a noticeable 18px/11px treatment with intact hover, focus, and copied feedback; the complete suite produced exact local binary `c53c95e2...`.
 
 ## 2026-07-26
 

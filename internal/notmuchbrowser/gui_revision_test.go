@@ -388,6 +388,47 @@ func TestDesktopSidebarStaysViewportPinnedContract(t *testing.T) {
 	}
 }
 
+func TestMessageAddressCopyButtonCompactNoticeableContract(t *testing.T) {
+	css, err := os.ReadFile("styles/app.tailwind.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(css)
+	start := strings.Index(source, ".message-address-entry .mini-copy-button {")
+	if start < 0 {
+		t.Fatal("address-specific copy-button rule is missing")
+	}
+	end := strings.Index(source[start:], "}")
+	if end < 0 {
+		t.Fatal("address-specific copy-button rule is unterminated")
+	}
+	rule := source[start : start+end]
+	for _, want := range []string{
+		"width: 18px;",
+		"height: 18px;",
+		"min-height: 18px;",
+		"flex-basis: 18px;",
+		"border-color: var(--line);",
+		"background: var(--surface-muted);",
+		"color: var(--sapphire-dark);",
+	} {
+		if !strings.Contains(rule, want) {
+			t.Fatalf("compact noticeable address copy-button contract is missing %q", want)
+		}
+	}
+	for _, want := range []string{
+		".message-address-entry .mini-copy-button:hover,",
+		".message-address-entry .mini-copy-button .icon {",
+		"width: 11px;",
+		".message-address-entry .mini-copy-button.copied {",
+		"background: var(--green-bg);",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("address copy-button interaction contract is missing %q", want)
+		}
+	}
+}
+
 func TestHTMXHardeningAndHistoryContract(t *testing.T) {
 	out := executeTemplateForTest(t, "page", pageView{
 		Query:      "tag:inbox",

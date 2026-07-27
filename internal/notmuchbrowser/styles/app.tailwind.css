@@ -1013,7 +1013,33 @@
   }
 
   .message-address-entry .mini-copy-button {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    flex-basis: 18px;
     margin-left: 2px;
+    border-color: var(--line);
+    border-radius: 3px;
+    background: var(--surface-muted);
+    color: var(--sapphire-dark);
+  }
+
+  .message-address-entry .mini-copy-button:hover,
+  .message-address-entry .mini-copy-button:focus-visible {
+    border-color: var(--sapphire);
+    background: var(--surface);
+  }
+
+  .message-address-entry .mini-copy-button .icon {
+    width: 11px;
+    height: 11px;
+    flex-basis: 11px;
+  }
+
+  .message-address-entry .mini-copy-button.copied {
+    border-color: #66a783;
+    background: var(--green-bg);
+    color: var(--green);
   }
 
   .message-address-separator {
