@@ -37,6 +37,8 @@
 - [x] Obtain Windows SSH-tunnel GUI acceptance for the newest retained candidate, including copied-feedback noticeability, the compact controls, mail composer, clipboard, wrapping, and previously accepted browser behavior.
 - [x] Run, review, record, commit, and push the remaining isolated multi-source browser build/runtime validation gates before production replacement.
 - [x] Obtain Windows SSH-tunnel GUI acceptance for the newest retained candidate: source selection, single-message/newest-first results, non-overlapping date/sender layout, fixed full-message sidebar at top/middle/bottom scroll positions, address links/copy controls, date boundaries, and the existing full browser feature set.
+- [x] Run and preserve Gate 16 production replacement attempt: it failed safely before backup or mutation because its cross-platform acceptance grep expected wording not present contiguously in project state.
+- [ ] Run Gate 17 corrected guarded production replacement, changing only the acceptance-marker check and pinning Gate 16's committed failure evidence.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
 - [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` and all available approved sources are indexed while the drifted current-VM tree is never copied.

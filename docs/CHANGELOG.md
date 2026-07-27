@@ -14,6 +14,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Passed and privacy-recorded Gate 15: it preserved/stopped only accepted Gate 14, reproduced exact strong-feedback candidate `7f4099ed...`, verified served CSS/JavaScript plus real-message 2,200ms markup, retained it on isolated port 8876, and left production unchanged.
 - Recorded the owner's `antiX Gate 15 strong copied feedback GUI: PASS` and reconfirmed the retained candidate's exact process, binary, sole 8876 listener, and read-only health.
 - Recorded Windows 11 SSH-tunnel GUI PASS for Gate 15 at `127.0.0.1:8876`, completing cross-platform acceptance while preserving the separate unchanged production service.
+- Preserved failed Gate 16 production-replacement evidence: an over-specific project-state wording check blocked before any backup, service stop, installation, pointer, or production change.
 
 ## 2026-07-26
 
