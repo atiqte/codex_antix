@@ -2,6 +2,11 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-28
+
+- Passed and privacy-recorded corrected Gate 17: created a verified rollback backup, atomically installed exact accepted multi-source browser `7f4099ed...` on production port 8765, repeated every source/date/address/security/read-only contract, and did not invoke rollback.
+- Verified the subsequent antiX reboot: per-user runit automatically restored exact production and the index loop, mbsync remained healthy, rollback evidence stayed valid, and the unsupervised 8876 fallback stopped normally while its files remained preserved.
+
 ## 2026-07-27
 
 - Added safe per-address `mailto:` links and adjacent raw-address copy controls for opened-message From, To, Cc, and optional Bcc fields, with wrapping layouts and escaped plain-text fallback for malformed headers.
