@@ -3,6 +3,7 @@ package notmuchbrowser
 import (
 	"bytes"
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -211,6 +212,29 @@ func TestAnnotatedGUILayoutHeaderContract(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("mobile navigation contract missing %q: %s", want, out)
 		}
+	}
+}
+
+func TestResultTableDateAndSenderResponsiveLayoutContract(t *testing.T) {
+	css, err := os.ReadFile("styles/app.tailwind.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(css)
+	for _, want := range []string{
+		"width: 218px;",
+		"font-variant-numeric: tabular-nums;",
+		".result-table thead {",
+		".result-table tbody tr {",
+		".result-table .sender {",
+		"white-space: normal;",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("responsive result layout is missing %q", want)
+		}
+	}
+	if strings.Contains(source, "width: 122px;") {
+		t.Fatal("obsolete overlapping date-column width remains")
 	}
 }
 

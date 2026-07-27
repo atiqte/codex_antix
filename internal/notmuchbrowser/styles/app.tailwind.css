@@ -674,7 +674,7 @@
 
   .result-table th:nth-child(1),
   .result-table td:nth-child(1) {
-    width: 122px;
+    width: 218px;
   }
 
   .result-table th:nth-child(2),
@@ -773,6 +773,14 @@
   .date,
   .file-count {
     white-space: nowrap;
+  }
+
+  .date {
+    overflow: hidden;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.35;
+    text-overflow: clip;
   }
 
   .result-inline-meta {
@@ -1498,6 +1506,63 @@
     justify-content: flex-end;
     gap: 2px 7px;
     font-size: 10px;
+  }
+
+  .result-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .result-table,
+  .result-table tbody,
+  .result-table tbody tr,
+  .result-table tbody td {
+    display: block;
+    width: 100%;
+  }
+
+  .result-table tbody tr {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .result-table tbody td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .result-table tbody td:nth-child(3) {
+    margin-top: 5px;
+  }
+
+  .result-table tbody tr.selected {
+    box-shadow: inset 3px 0 var(--sapphire);
+  }
+
+  .result-table tbody tr.selected td:first-child {
+    box-shadow: none;
+  }
+
+  .result-table .date {
+    width: 100%;
+    overflow: visible;
+    font-size: 11px;
+  }
+
+  .result-table .sender {
+    width: 100%;
+    margin-top: 2px;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .reader-header {

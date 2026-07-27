@@ -19,8 +19,9 @@
 - [x] Retry the clean-build and isolated port-8876 validation with the `awk` quoting corrected; Gate 09 passed build/runtime/five-source checks and exposed that scoped default `*` searches omit the four indexed, untagged test-maildir messages.
 - [x] Make a scoped default search use its source path term directly instead of wrapping notmuch's special `*`, add regression coverage, and pass the complete reproducible local build/test gate.
 - [x] Retry isolated validation with the corrected `26967a5d...` candidate and Gate 09's committed failure evidence pinned; Gate 10 passed and retained the candidate on localhost 8876.
+- [x] Reproduce the Gate 10 antiX GUI date/sender overlap at desktop, narrow, and mobile widths; implement a protected desktop date column plus stacked narrow result cards, then pass tests/build and post-fix visual renders.
 - [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with an isolated multi-source browser build/runtime validation before production replacement.
-- [ ] After automated isolated validation, obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, date boundaries, and the existing full browser feature set.
+- [ ] Rebuild and retain the responsive-layout candidate, then obtain antiX and Windows GUI acceptance for source selection, single-message/newest-first results, non-overlapping date/sender layout, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
 - [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` and all available approved sources are indexed while the drifted current-VM tree is never copied.
