@@ -1037,9 +1037,11 @@
   }
 
   .message-address-entry .mini-copy-button.copied {
-    border-color: #66a783;
-    background: var(--green-bg);
-    color: var(--green);
+    border-color: #18864f;
+    background: #c8f3d8;
+    color: #075d34;
+    box-shadow: 0 0 0 2px #18864f40;
+    transform: scale(1.12);
   }
 
   .message-address-separator {

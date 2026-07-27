@@ -10,6 +10,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Passed and privacy-recorded Gate 13: exact address-link candidate `b37b3b63...` remains isolated on 8876 with real-message mailto/copy parity, all six source/date/security contracts, and unchanged production.
 - Recorded the owner's Gate 13 antiX GUI PASS, then refined only address copy controls from 22px to a noticeable 18px/11px treatment with intact hover, focus, and copied feedback; the complete suite produced exact local binary `c53c95e2...`.
 - Passed and privacy-recorded Gate 14: it preserved/stopped only accepted Gate 13, reproduced exact compact-control candidate `c53c95e2...`, retained it on isolated port 8876, and left production unchanged.
+- Recorded the owner's Gate 14 compact-size and hover/focus PASS, then made only the address copied state conspicuous for 2.2 seconds with a brighter green fill, dark ring/icon, and slight pulse; the complete suite produced exact local binary `7f4099ed...`.
 
 ## 2026-07-26
 

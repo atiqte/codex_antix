@@ -29,7 +29,10 @@
 - [x] Obtain antiX GUI acceptance for Gate 13 address links, raw-address copying, multiple-recipient wrapping, and the previously accepted result/sidebar behavior.
 - [x] Make only the per-address copy controls smaller but noticeable at 18px with an 11px icon, visible resting treatment, hover/focus state, and copied feedback; preserve all other copy-button sizes.
 - [x] Run, review, privacy-record, commit, and push Gate 14: identity-stop only the accepted Gate 13 process, preserve its evidence/files, clean-build the compact-copy candidate on localhost 8876, and repeat all automated contracts.
-- [ ] Obtain antiX and Windows SSH-tunnel GUI acceptance for the newest retained candidate, including the compact address copy controls, mail composer, clipboard, wrapping, and previously accepted browser behavior.
+- [x] Obtain antiX Gate 14 acceptance for the compact address-copy size and hover/focus behavior; record the owner's follow-up that the copied feedback needs more contrast.
+- [x] Strengthen only address-copy success feedback with a 2.2-second bright-green fill, dark border/icon, visible ring, and slight pulse while leaving other copy controls unchanged.
+- [ ] Run, review, privacy-record, commit, and push Gate 15: identity-stop only the accepted Gate 14 process, preserve its evidence/files, clean-build the stronger-feedback candidate on localhost 8876, and repeat all automated contracts.
+- [ ] Obtain antiX and Windows SSH-tunnel GUI acceptance for the newest retained candidate, including copied-feedback noticeability, the compact controls, mail composer, clipboard, wrapping, and previously accepted browser behavior.
 - [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with an isolated multi-source browser build/runtime validation before production replacement.
 - [ ] Obtain Windows SSH-tunnel GUI acceptance for the newest retained candidate: source selection, single-message/newest-first results, non-overlapping date/sender layout, fixed full-message sidebar at top/middle/bottom scroll positions, address links/copy controls, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.

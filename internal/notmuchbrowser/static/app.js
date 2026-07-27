@@ -186,6 +186,8 @@
       area.remove();
     }
     button.classList.add("copied");
-    setTimeout(() => button.classList.remove("copied"), 1200);
+    const requestedDuration = Number(button.dataset.copyFeedbackMs) || 1200;
+    const feedbackDuration = Math.min(5000, Math.max(1200, requestedDuration));
+    setTimeout(() => button.classList.remove("copied"), feedbackDuration);
   }
 })();

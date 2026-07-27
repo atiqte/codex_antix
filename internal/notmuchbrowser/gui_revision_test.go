@@ -147,6 +147,7 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 		`data-copy-text="c@example.test"`,
 		`data-copy-text="d@example.test"`,
 		`data-copy-text="hidden@example.test"`,
+		`data-copy-feedback-ms="2200"`,
 		`data-copy-text="Quarterly &amp; Special"`,
 		`data-copy-text="Message-ID: abc@example.test"`,
 		`unparseable date preserved`,
@@ -157,6 +158,9 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 	}
 	if got := strings.Count(out, `href="mailto:`); got != 5 {
 		t.Fatalf("reader mailto link count=%d, want 5: %s", got, out)
+	}
+	if got := strings.Count(out, `data-copy-feedback-ms="2200"`); got != 5 {
+		t.Fatalf("address feedback-duration count=%d, want 5: %s", got, out)
 	}
 	subjectEnd := strings.Index(out, `Quarterly &amp; Special</h1>`)
 	subjectCopy := strings.Index(out, `data-copy-text="Quarterly &amp; Special"`)
@@ -421,7 +425,11 @@ func TestMessageAddressCopyButtonCompactNoticeableContract(t *testing.T) {
 		".message-address-entry .mini-copy-button .icon {",
 		"width: 11px;",
 		".message-address-entry .mini-copy-button.copied {",
-		"background: var(--green-bg);",
+		"border-color: #18864f;",
+		"background: #c8f3d8;",
+		"color: #075d34;",
+		"box-shadow: 0 0 0 2px #18864f40;",
+		"transform: scale(1.12);",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("address copy-button interaction contract is missing %q", want)

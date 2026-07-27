@@ -16,7 +16,7 @@ templ messageAddressListComponent(raw string) {
 			for index, address := range addressList.Addresses {
 				<span class="message-address-entry">
 					<a class="message-address-link" href={ templ.URL(address.Mailto) } title={ "Compose email to " + address.Address }>{ address.Display }</a>
-					<button class="mini-copy-button" type="button" data-copy-text={ address.Address } aria-label={ "Copy email address " + address.Address } title={ "Copy email address " + address.Address }>@iconComponent("copy")</button>
+					<button class="mini-copy-button" type="button" data-copy-text={ address.Address } data-copy-feedback-ms="2200" aria-label={ "Copy email address " + address.Address } title={ "Copy email address " + address.Address }>@iconComponent("copy")</button>
 					if index < len(addressList.Addresses) - 1 {
 						<span class="message-address-separator" aria-hidden="true">,</span>
 					}
