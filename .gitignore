@@ -42,6 +42,7 @@ build/
 # Go build outputs
 /notmuch-browser
 /notmuch-browser.exe
+/notmuch-browser-sidebar-diagnostic
 notmuch-browser-chi-src-*.tar.gz
 notmuch-browser-attachment-src-*.tar.gz
 notmuch-browser-horizontal-src-*.tar.gz

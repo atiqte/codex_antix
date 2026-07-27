@@ -131,9 +131,11 @@
   }
 
   .app-sidebar {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 30;
     display: flex;
+    align-self: start;
     min-width: 0;
     height: 100dvh;
     flex-direction: column;

@@ -238,6 +238,41 @@ func TestResultTableDateAndSenderResponsiveLayoutContract(t *testing.T) {
 	}
 }
 
+func TestDesktopSidebarStaysViewportPinnedContract(t *testing.T) {
+	css, err := os.ReadFile("styles/app.tailwind.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(css)
+	sidebarStart := strings.Index(source, ".app-sidebar {")
+	if sidebarStart < 0 {
+		t.Fatal("desktop sidebar rule is missing")
+	}
+	sidebarEnd := strings.Index(source[sidebarStart:], "}")
+	if sidebarEnd < 0 {
+		t.Fatal("desktop sidebar rule is unterminated")
+	}
+	sidebarRule := source[sidebarStart : sidebarStart+sidebarEnd]
+	for _, want := range []string{
+		"position: sticky;",
+		"top: 0;",
+		"align-self: start;",
+		"height: 100dvh;",
+	} {
+		if !strings.Contains(sidebarRule, want) {
+			t.Fatalf("viewport-pinned sidebar contract is missing %q", want)
+		}
+	}
+	if strings.Contains(sidebarRule, "position: relative;") {
+		t.Fatal("obsolete document-scrolling sidebar position remains")
+	}
+	for _, want := range []string{"position: fixed;", "inset: 0 auto 0 0;"} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("mobile off-canvas sidebar contract is missing %q", want)
+		}
+	}
+}
+
 func TestHTMXHardeningAndHistoryContract(t *testing.T) {
 	out := executeTemplateForTest(t, "page", pageView{
 		Query:      "tag:inbox",
