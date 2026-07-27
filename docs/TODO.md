@@ -40,8 +40,9 @@
 - [x] Run and preserve Gate 16 production replacement attempt: it failed safely before backup or mutation because its cross-platform acceptance grep expected wording not present contiguously in project state.
 - [x] Run Gate 17 corrected guarded production replacement, changing only the acceptance-marker check and pinning Gate 16's committed failure evidence.
 - [x] Verify the post-Gate17 reboot state: exact installed production auto-restarted under per-user runit on 8765, the index loop and mbsync recovered, rollback inventory remained valid, and the isolated unsupervised 8876 fallback stopped normally while its files stayed preserved.
-- [ ] Obtain final antiX and Windows SSH-tunnel GUI acceptance for the installed Gate 17 production browser on port 8765.
-- [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
+- [x] Obtain final antiX and Windows SSH-tunnel GUI acceptance for the installed Gate 17 production browser on port 8765.
+- [x] Complete guarded current-VM enrollment and production browser rollout.
+- [ ] Merge the accepted branch to `main`.
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
 - [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` and all available approved sources are indexed while the drifted current-VM tree is never copied.
 - [x] Make the provider-live archive scope controller compatible with the approved indexed historical archive and cover the changed policy with focused tests.

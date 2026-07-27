@@ -6,6 +6,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 - Passed and privacy-recorded corrected Gate 17: created a verified rollback backup, atomically installed exact accepted multi-source browser `7f4099ed...` on production port 8765, repeated every source/date/address/security/read-only contract, and did not invoke rollback.
 - Verified the subsequent antiX reboot: per-user runit automatically restored exact production and the index loop, mbsync remained healthy, rollback evidence stayed valid, and the unsupervised 8876 fallback stopped normally while its files remained preserved.
+- Recorded owner-confirmed antiX and Windows SSH-tunnel production GUI PASS on port 8765 and reconfirmed the exact installed binary, sole loopback listener, healthy runit services, read-only health, clear locks, and empty temporary-download state.
 
 ## 2026-07-27
 
