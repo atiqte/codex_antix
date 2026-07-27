@@ -12,6 +12,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 - Passed and privacy-recorded Gate 14: it preserved/stopped only accepted Gate 13, reproduced exact compact-control candidate `c53c95e2...`, retained it on isolated port 8876, and left production unchanged.
 - Recorded the owner's Gate 14 compact-size and hover/focus PASS, then made only the address copied state conspicuous for 2.2 seconds with a brighter green fill, dark ring/icon, and slight pulse; the complete suite produced exact local binary `7f4099ed...`.
 - Passed and privacy-recorded Gate 15: it preserved/stopped only accepted Gate 14, reproduced exact strong-feedback candidate `7f4099ed...`, verified served CSS/JavaScript plus real-message 2,200ms markup, retained it on isolated port 8876, and left production unchanged.
+- Recorded the owner's `antiX Gate 15 strong copied feedback GUI: PASS` and reconfirmed the retained candidate's exact process, binary, sole 8876 listener, and read-only health.
 
 ## 2026-07-26
 

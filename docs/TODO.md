@@ -33,7 +33,8 @@
 - [x] Strengthen only address-copy success feedback with a 2.2-second bright-green fill, dark border/icon, visible ring, and slight pulse while leaving other copy controls unchanged.
 - [x] Run, review, and privacy-record Gate 15: identity-stop only the accepted Gate 14 process, preserve its evidence/files, clean-build the stronger-feedback candidate on localhost 8876, and repeat all automated contracts.
 - [x] Commit and push the exact Gate 15 batch, complete privacy-reviewed log, record, project state, ledger, and index.
-- [ ] Obtain antiX and Windows SSH-tunnel GUI acceptance for the newest retained candidate, including copied-feedback noticeability, the compact controls, mail composer, clipboard, wrapping, and previously accepted browser behavior.
+- [x] Obtain antiX GUI acceptance for the newest retained candidate, including copied-feedback noticeability, the compact controls, mail composer, clipboard, wrapping, and previously accepted browser behavior.
+- [ ] Obtain Windows SSH-tunnel GUI acceptance for the newest retained candidate, including copied-feedback noticeability, the compact controls, mail composer, clipboard, wrapping, and previously accepted browser behavior.
 - [ ] Run, review, record, commit, and push each remaining multi-source antiX operator gate, continuing with an isolated multi-source browser build/runtime validation before production replacement.
 - [ ] Obtain Windows SSH-tunnel GUI acceptance for the newest retained candidate: source selection, single-message/newest-first results, non-overlapping date/sender layout, fixed full-message sidebar at top/middle/bottom scroll positions, address links/copy controls, date boundaries, and the existing full browser feature set.
 - [ ] Complete guarded current-VM enrollment and production browser rollout, then merge the accepted branch to `main`.
