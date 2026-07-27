@@ -10,6 +10,24 @@ templ messagePageBodyComponent(view messageView) {
 	</div>
 }
 
+templ messageAddressListComponent(raw string) {
+	if addressList := messageAddressList(raw); addressList.Parsed {
+		<span class="message-address-list">
+			for index, address := range addressList.Addresses {
+				<span class="message-address-entry">
+					<a class="message-address-link" href={ templ.URL(address.Mailto) } title={ "Compose email to " + address.Address }>{ address.Display }</a>
+					<button class="mini-copy-button" type="button" data-copy-text={ address.Address } aria-label={ "Copy email address " + address.Address } title={ "Copy email address " + address.Address }>@iconComponent("copy")</button>
+					if index < len(addressList.Addresses) - 1 {
+						<span class="message-address-separator" aria-hidden="true">,</span>
+					}
+				</span>
+			}
+		</span>
+	} else {
+		{ addressList.Fallback }
+	}
+}
+
 templ messageFragmentComponent(view messageView) {
 	if view.Error != "" {
 		<div class="notice bad" role="alert">{ view.Error }</div>
@@ -47,10 +65,13 @@ templ messageFragmentComponent(view messageView) {
 					</div>
 				</div>
 				<dl class="message-fields">
-					<dt>From</dt><dd>{ view.Detail.Summary.From }</dd>
-					<dt>To</dt><dd>{ view.Detail.Summary.To }</dd>
+					<dt>From</dt><dd>@messageAddressListComponent(view.Detail.Summary.From)</dd>
+					<dt>To</dt><dd>@messageAddressListComponent(view.Detail.Summary.To)</dd>
 					if view.Detail.Summary.Cc != "" {
-						<dt>Cc</dt><dd>{ view.Detail.Summary.Cc }</dd>
+						<dt>Cc</dt><dd>@messageAddressListComponent(view.Detail.Summary.Cc)</dd>
+					}
+					if view.Detail.Summary.Bcc != "" {
+						<dt>Bcc</dt><dd>@messageAddressListComponent(view.Detail.Summary.Bcc)</dd>
 					}
 					<dt>Date</dt><dd>{ formatReaderDate(view.Detail.Summary.Date) }</dd>
 					<dt>Message-ID</dt><dd class="message-id-line"><span class="path">{ view.Detail.Summary.ID }</span><button class="mini-copy-button" type="button" data-copy-text={ "Message-ID: " + view.Detail.Summary.ID } aria-label="Copy Message-ID" title="Copy Message-ID">@iconComponent("copy")</button></dd>

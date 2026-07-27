@@ -991,6 +991,35 @@
     overflow-wrap: anywhere;
   }
 
+  .message-address-list {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 3px 5px;
+  }
+
+  .message-address-entry {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+  }
+
+  .message-address-link {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .message-address-entry .mini-copy-button {
+    margin-left: 2px;
+  }
+
+  .message-address-separator {
+    color: var(--muted);
+  }
+
   .duplicate-bar,
   .image-permission-bar {
     display: flex;

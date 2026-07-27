@@ -128,6 +128,7 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 			From:    "A User <a@example.test>",
 			To:      "B User <b@example.test>",
 			Cc:      "C User <c@example.test>, D User <d@example.test>",
+			Bcc:     "Hidden User <hidden@example.test>",
 			Date:    "unparseable date preserved",
 		},
 		PlainBody: "body",
@@ -135,7 +136,17 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 	}}
 	out := executeTemplateForTest(t, "messageFragment", view)
 	for _, want := range []string{
-		`<dt>Cc</dt><dd>C User &lt;c@example.test&gt;, D User &lt;d@example.test&gt;</dd>`,
+		`href="mailto:a@example.test"`,
+		`href="mailto:b@example.test"`,
+		`href="mailto:c@example.test"`,
+		`href="mailto:d@example.test"`,
+		`<dt>Bcc</dt>`,
+		`href="mailto:hidden@example.test"`,
+		`data-copy-text="a@example.test"`,
+		`data-copy-text="b@example.test"`,
+		`data-copy-text="c@example.test"`,
+		`data-copy-text="d@example.test"`,
+		`data-copy-text="hidden@example.test"`,
 		`data-copy-text="Quarterly &amp; Special"`,
 		`data-copy-text="Message-ID: abc@example.test"`,
 		`unparseable date preserved`,
@@ -143,6 +154,9 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("annotated reader output missing %q: %s", want, out)
 		}
+	}
+	if got := strings.Count(out, `href="mailto:`); got != 5 {
+		t.Fatalf("reader mailto link count=%d, want 5: %s", got, out)
 	}
 	subjectEnd := strings.Index(out, `Quarterly &amp; Special</h1>`)
 	subjectCopy := strings.Index(out, `data-copy-text="Quarterly &amp; Special"`)
@@ -156,9 +170,110 @@ func TestAnnotatedGUIReaderMetadataAndCopyControls(t *testing.T) {
 	}
 
 	view.Detail.Summary.Cc = ""
+	view.Detail.Summary.Bcc = ""
 	out = executeTemplateForTest(t, "messageFragment", view)
-	if strings.Contains(out, "<dt>Cc</dt>") {
-		t.Fatalf("empty Cc row was rendered: %s", out)
+	if strings.Contains(out, "<dt>Cc</dt>") || strings.Contains(out, "<dt>Bcc</dt>") {
+		t.Fatalf("empty Cc or Bcc row was rendered: %s", out)
+	}
+}
+
+func TestAnnotatedGUIMessageAddressParsingAndSafeFallback(t *testing.T) {
+	tests := []struct {
+		name         string
+		raw          string
+		wantParsed   bool
+		wantDisplays []string
+		wantEmails   []string
+	}{
+		{
+			name:         "bare",
+			raw:          "person@example.test",
+			wantParsed:   true,
+			wantDisplays: []string{"person@example.test"},
+			wantEmails:   []string{"person@example.test"},
+		},
+		{
+			name:         "multiple quoted and encoded names",
+			raw:          `"Family, Ada" <ada@example.test>, =?UTF-8?Q?Ren=C3=A9?= <rene@example.test>`,
+			wantParsed:   true,
+			wantDisplays: []string{"Family, Ada <ada@example.test>", "René <rene@example.test>"},
+			wantEmails:   []string{"ada@example.test", "rene@example.test"},
+		},
+		{
+			name:         "group",
+			raw:          "Friends: first@example.test, Second <second@example.test>;",
+			wantParsed:   true,
+			wantDisplays: []string{"first@example.test", "Second <second@example.test>"},
+			wantEmails:   []string{"first@example.test", "second@example.test"},
+		},
+		{name: "empty group", raw: "undisclosed-recipients:;", wantParsed: false},
+		{name: "malformed", raw: "Broken <broken@example.test", wantParsed: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := messageAddressList(tt.raw)
+			if got.Parsed != tt.wantParsed {
+				t.Fatalf("Parsed=%t, want %t: %#v", got.Parsed, tt.wantParsed, got)
+			}
+			if len(got.Addresses) != len(tt.wantEmails) {
+				t.Fatalf("address count=%d, want %d: %#v", len(got.Addresses), len(tt.wantEmails), got)
+			}
+			for index := range tt.wantEmails {
+				if got.Addresses[index].Display != tt.wantDisplays[index] || got.Addresses[index].Address != tt.wantEmails[index] {
+					t.Fatalf("address[%d]=%#v, want display=%q email=%q", index, got.Addresses[index], tt.wantDisplays[index], tt.wantEmails[index])
+				}
+				if got.Addresses[index].Mailto != "mailto:"+tt.wantEmails[index] {
+					t.Fatalf("mailto[%d]=%q", index, got.Addresses[index].Mailto)
+				}
+			}
+		})
+	}
+}
+
+func TestAnnotatedGUIMessageAddressMailtoCannotInjectQuery(t *testing.T) {
+	got := messageAddressList(`"victim?subject=Injected"@example.test`)
+	if !got.Parsed || len(got.Addresses) != 1 {
+		t.Fatalf("expected quoted address to parse: %#v", got)
+	}
+	if strings.Contains(got.Addresses[0].Mailto, "?subject=") || !strings.Contains(got.Addresses[0].Mailto, "%3F") {
+		t.Fatalf("mailto query delimiter was not encoded: %q", got.Addresses[0].Mailto)
+	}
+
+	got = messageAddressList("safe@example.test\r\nBcc: attacker@example.test")
+	if got.Parsed {
+		t.Fatalf("control-character address field was linked: %#v", got)
+	}
+
+	out := executeTemplateForTest(t, "messageFragment", messageView{Detail: MessageDetail{
+		Summary:   MessageSummary{ID: "id@example.test", Subject: "Subject", From: "Broken <broken@example.test", To: "valid@example.test"},
+		PlainBody: "body",
+		BodyKind:  "plain",
+	}})
+	if !strings.Contains(out, `Broken &lt;broken@example.test`) || strings.Contains(out, `mailto:broken@example.test`) {
+		t.Fatalf("malformed From header did not remain escaped plain text: %s", out)
+	}
+	if !strings.Contains(out, `href="mailto:valid@example.test"`) {
+		t.Fatalf("valid To header lost its mailto link: %s", out)
+	}
+}
+
+func TestAnnotatedGUISearchSenderRemainsPlainText(t *testing.T) {
+	out := executeTemplateForTest(t, "results", pageView{SearchPage: SearchPage{
+		Query:  "*",
+		Limit:  50,
+		Counts: Counts{Messages: 1, Files: 1},
+		Results: []MessageSummary{{
+			ID:      "id@example.test",
+			Subject: "Subject",
+			From:    "Sender <sender@example.test>",
+		}},
+	}})
+	if !strings.Contains(out, `Sender &lt;sender@example.test&gt;`) {
+		t.Fatalf("search sender text is missing: %s", out)
+	}
+	if strings.Contains(out, `mailto:sender@example.test`) {
+		t.Fatalf("search sender unexpectedly became a mailto link: %s", out)
 	}
 }
 

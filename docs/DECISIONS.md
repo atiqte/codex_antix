@@ -4,6 +4,13 @@ This file records meaningful project decisions. Add a new entry when the project
 
 ## Decision Log
 
+### 2026-07-27: Link and Copy Individual Addresses Only in the Message Reader
+
+- Status: accepted
+- Context: The owner wants a very small GUI enhancement after Gate 12 so addresses in From, To, Cc, and Bcc can open the default mail composer and be copied easily, without making the dense search-result list more interactive.
+- Decision: In an opened message only, parse each complete address field with Go's standard RFC mail parser, render every valid individual `Name <address>` entry as a `mailto:` link, and place the existing compact copy control beside it to copy only the raw address. Add Bcc extraction and show that row only when notmuch exposes a nonempty value. Build mailto targets without subject/body/query parameters, encode reserved delimiters, and fall back to the whole escaped original field when parsing fails. Keep result-list senders as plain text and add no dependency, route, or browser-side mail-sending behavior.
+- Consequence: Clicking delegates composition to the antiX or Windows default mail handler, while copying is explicit for every recipient in a multi-address field. Malformed or placeholder-only address fields cannot produce partial or injected links, and browser routes remain read-only.
+
 ### 2026-07-26: Use Explicit Approved Sources, Unique Messages, and Newest-First Search
 
 - Status: accepted

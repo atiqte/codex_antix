@@ -89,7 +89,7 @@ func TestParseSummaries(t *testing.T) {
 	if got.ID != "abc@example.test" {
 		t.Fatalf("unexpected id: %q", got.ID)
 	}
-	if got.Subject != "Quarterly update" || got.From != "A User <a@example.test>" || got.Cc != "C User <c@example.test>" {
+	if got.Subject != "Quarterly update" || got.From != "A User <a@example.test>" || got.Cc != "C User <c@example.test>" || got.Bcc != "Hidden User <hidden@example.test>" {
 		t.Fatalf("unexpected headers: %#v", got)
 	}
 	if got.FileCount != 2 {
@@ -298,7 +298,7 @@ func TestStaticAssetServedLocally(t *testing.T) {
 	if !strings.Contains(css, "tailwindcss") || !strings.Contains(css, ".app-sidebar") {
 		t.Fatalf("static CSS did not look like compiled local Tailwind output")
 	}
-	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".search-subbar{", "grid-template-columns:minmax(0,1fr) auto", ".result-toolbar-slot{min-width:0}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".result-subject-line .subject,.result-id-line .path,.reader-heading-title h1,.message-id-line .path{overflow-wrap:anywhere;min-width:0;display:inline}", "--font-subject:\"Inter Variable\", Inter, \"Segoe UI\", system-ui, sans-serif", "--font-message-mono:\"AporeticSansMonoNerdFont\", \"Aporetic Sans Mono Nerd Font\", \"Cascadia Mono\", \"Liberation Mono\", monospace", "font-family:var(--font-subject)", "font-family:var(--font-message-mono)", ".reader-tools-row{", ".display-mode-switch{", "grid-template-columns:repeat(2,minmax(68px,1fr))", ".display-mode-switch .is-active{", "align-items:baseline", "text-align:right", "white-space:nowrap", "@media (max-width:860px)", ".search-subbar{grid-template-columns:minmax(0,1fr);align-items:stretch}"} {
+	for _, want := range []string{"--result-pane-height:35%", "grid-template-rows:minmax(160px, var(--result-pane-height)) 7px minmax(260px, 1fr)", "cursor:row-resize", ".app-mobilebar{display:none}", ".search-subbar{", "grid-template-columns:minmax(0,1fr) auto", ".result-toolbar-slot{min-width:0}", ".result-pagination{", "grid-template-columns:repeat(2,30px)", ".mini-copy-button{width:22px", ".message-address-list{flex-wrap:wrap", ".message-address-entry{align-items:center", ".message-address-link{overflow-wrap:anywhere", ".result-subject-line .subject,.result-id-line .path,.reader-heading-title h1,.message-id-line .path{overflow-wrap:anywhere;min-width:0;display:inline}", "--font-subject:\"Inter Variable\", Inter, \"Segoe UI\", system-ui, sans-serif", "--font-message-mono:\"AporeticSansMonoNerdFont\", \"Aporetic Sans Mono Nerd Font\", \"Cascadia Mono\", \"Liberation Mono\", monospace", "font-family:var(--font-subject)", "font-family:var(--font-message-mono)", ".reader-tools-row{", ".display-mode-switch{", "grid-template-columns:repeat(2,minmax(68px,1fr))", ".display-mode-switch .is-active{", "align-items:baseline", "text-align:right", "white-space:nowrap", "@media (max-width:860px)", ".search-subbar{grid-template-columns:minmax(0,1fr);align-items:stretch}"} {
 		if !strings.Contains(css, want) {
 			t.Fatalf("compiled CSS missing GUI rule %q", want)
 		}
@@ -505,6 +505,7 @@ const sampleNotmuchJSON = `[
           "From": "A User <a@example.test>",
           "To": "B User <b@example.test>",
           "Cc": "C User <c@example.test>",
+          "Bcc": "Hidden User <hidden@example.test>",
           "Date": "Mon, 06 Jul 2026 10:00:00 +0600"
         },
         "body": [

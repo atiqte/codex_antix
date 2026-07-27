@@ -41,6 +41,18 @@ type statusView struct {
 	TempFileBytes int64
 }
 
+type messageAddressView struct {
+	Display string
+	Address string
+	Mailto  string
+}
+
+type messageAddressListView struct {
+	Addresses []messageAddressView
+	Fallback  string
+	Parsed    bool
+}
+
 func (s *Server) renderPage(ctx context.Context, w http.ResponseWriter, status int, title string, view pageView) {
 	view.Title = title
 	writeComponent(ctx, w, status, pageComponent(view))
@@ -212,6 +224,49 @@ func messageViewURL(id string, duplicate int, mode imageMode, display displayMod
 		values.Set("display", string(displayOriginal))
 	}
 	return "/message?" + values.Encode()
+}
+
+func messageAddressList(raw string) messageAddressListView {
+	raw = strings.TrimSpace(raw)
+	view := messageAddressListView{Fallback: raw}
+	if raw == "" {
+		return view
+	}
+
+	parsed, err := mail.ParseAddressList(raw)
+	if err != nil || len(parsed) == 0 {
+		return view
+	}
+	view.Addresses = make([]messageAddressView, 0, len(parsed))
+	for _, address := range parsed {
+		if address == nil {
+			return messageAddressListView{Fallback: raw}
+		}
+		email := strings.TrimSpace(address.Address)
+		if email == "" || containsControlCharacter(email) {
+			return messageAddressListView{Fallback: raw}
+		}
+		display := email
+		if name := strings.TrimSpace(address.Name); name != "" {
+			display = name + " <" + email + ">"
+		}
+		view.Addresses = append(view.Addresses, messageAddressView{
+			Display: display,
+			Address: email,
+			Mailto:  (&url.URL{Scheme: "mailto", Opaque: url.PathEscape(email)}).String(),
+		})
+	}
+	view.Parsed = true
+	return view
+}
+
+func containsControlCharacter(value string) bool {
+	for _, character := range value {
+		if character < 0x20 || character == 0x7f {
+			return true
+		}
+	}
+	return false
 }
 
 func selectedDup(current int, expected int) bool {

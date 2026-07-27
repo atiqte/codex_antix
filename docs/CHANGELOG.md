@@ -2,6 +2,12 @@
 
 This file records meaningful repository changes. Keep entries concise and newest first.
 
+## 2026-07-27
+
+- Added safe per-address `mailto:` links and adjacent raw-address copy controls for opened-message From, To, Cc, and optional Bcc fields, with wrapping layouts and escaped plain-text fallback for malformed headers.
+- Kept search-result senders unchanged and preserved the browser's read-only route contract without adding dependencies.
+- Passed deterministic templ/Tailwind generation, Go unit/vet/race, all 75 Python tests, shell syntax checks, the 88,348-byte asset budget, and an 8,188,169-byte stripped build with SHA256 `b37b3b6331...`.
+
 ## 2026-07-26
 
 - Added an approved-source GUI catalog for live mail, provider-inbox-test, local-maildir, the existing Betterbird delta, provider-live-archive, and test-maildir, including safe nonempty Maildir subfolder discovery and selectable empty sources.
