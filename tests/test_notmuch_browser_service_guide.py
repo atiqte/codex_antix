@@ -102,6 +102,7 @@ class NotmuchBrowserServiceGuideTests(unittest.TestCase):
             "notmuch_browser_fresh_vm_setup.sh",
             "notmuch-browser-antix-v1.0.0",
             "notmuch-browser-recovery-v1",
+            "6858d5050a1cfe958d43ed0dc838e4c4b4a2c495afa709ffce796327599ef9d2",
             "guided-install",
             "validate --post-reboot",
             "git pull --ff-only",

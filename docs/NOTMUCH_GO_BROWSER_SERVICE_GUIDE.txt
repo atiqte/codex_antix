@@ -93,13 +93,17 @@ provider-live comes from the production pull; provider-live-archive
 starts as an empty Maildir; and test-maildir contains four
 deterministic example.test fixtures. The recovery set contains no
 credentials, provider-live snapshot, notmuch database, or logs.
-Replace only the recovery-root path below.
+Replace only the recovery-root path below. The exact validated
+recovery-set.env SHA256 is 6858d5050a1cfe958d43ed0dc838e4c4b4a2c495afa709ffce796327599ef9d2.
 
 ```sh
 set -eu
 RECOVERY_ROOT=/REPLACE/WITH/notmuch-browser-recovery-v1
 test -f "$RECOVERY_ROOT/recovery-set.env"
 chmod 600 "$RECOVERY_ROOT/recovery-set.env"
+printf '%s  %s\n' \
+  6858d5050a1cfe958d43ed0dc838e4c4b4a2c495afa709ffce796327599ef9d2 \
+  "$RECOVERY_ROOT/recovery-set.env" | sha256sum -c -
 ```
 
 ===============================================================================

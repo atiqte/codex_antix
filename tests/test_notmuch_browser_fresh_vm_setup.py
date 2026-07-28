@@ -368,7 +368,7 @@ class FreshVMSetupTests(unittest.TestCase):
         self.assertIn("test_maildir_indexed_files=0", marker)
         self.assertIn("approved_source_path_parity=pass", result.stdout)
 
-    def test_guided_install_blocks_until_recovery_set_is_release_pinned(self) -> None:
+    def test_guided_install_blocks_if_release_reintroduces_pending_recovery_pin(self) -> None:
         recovery = self.root / "recovery"
         recovery.mkdir()
         (recovery / "recovery-set.env").write_text(
@@ -380,6 +380,9 @@ class FreshVMSetupTests(unittest.TestCase):
         )
         env = self.env.copy()
         env["NOTMUCH_FRESH_RECOVERY_HELPER"] = str(recovery_helper)
+        env[
+            "NOTMUCH_FRESH_EXPECTED_RECOVERY_SET_SHA256"
+        ] = "PENDING_CANONICAL_RECOVERY_SET"
         result = self.run_helper(
             "guided-install",
             "--release",

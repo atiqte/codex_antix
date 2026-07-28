@@ -7,6 +7,9 @@ from textwrap import dedent
 
 
 RELEASE_TAG = "notmuch-browser-antix-v1.0.0"
+RECOVERY_SET_SHA256 = (
+    "6858d5050a1cfe958d43ed0dc838e4c4b4a2c495afa709ffce796327599ef9d2"
+)
 RELEASE_STATUS = (
     "Release-candidate preparation: the stable tag is published only after the "
     "blank-VM antiX and Windows pilot passes."
@@ -100,7 +103,7 @@ SECTIONS = [
     {
         "title": "4. Attach the private validated recovery set",
         "body": clean(
-            """
+            f"""
             Git never contains private mail. Attach or copy the external
             notmuch-browser-recovery-v1 folder to the VM. It contains the pristine
             48,720-message, 62,430,783,277-byte historical package and the
@@ -113,17 +116,21 @@ SECTIONS = [
             starts as an empty Maildir; and test-maildir contains four
             deterministic example.test fixtures. The recovery set contains no
             credentials, provider-live snapshot, notmuch database, or logs.
-            Replace only the recovery-root path below.
+            Replace only the recovery-root path below. The exact validated
+            recovery-set.env SHA256 is {RECOVERY_SET_SHA256}.
             """
         ),
         "label": "Copy recovery verification",
         "language": "sh",
         "code": clean(
-            r"""
+            f"""
             set -eu
             RECOVERY_ROOT=/REPLACE/WITH/notmuch-browser-recovery-v1
             test -f "$RECOVERY_ROOT/recovery-set.env"
             chmod 600 "$RECOVERY_ROOT/recovery-set.env"
+            printf '%s  %s\\n' \\
+              {RECOVERY_SET_SHA256} \\
+              "$RECOVERY_ROOT/recovery-set.env" | sha256sum -c -
             """
         ),
     },
