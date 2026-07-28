@@ -4,6 +4,7 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-28
 
+- Published annotated release-candidate tag `notmuch-browser-antix-v1.0.0-rc1` at exact tested recovery-pin commit `ef915e00...`; the stable tag and `main` merge remain blocked on the separate-transport and disposable-VM pilot gates.
 - Passed and privacy-recorded Fresh-VM Recovery Gate 01: verified the historical and delta sources, created a private XFS-reflink canonical recovery set, twice verified both archives, preserved exact production, and finalized/pinned `recovery-set.env` SHA256 `6858d505...`.
 - Replaced the draft fresh-VM path with a release-pinned, one-command `guided-install` workflow after the separate XFS disk gate, including exact Go/Bun downloads, secure mbsync/notmuch prompts, canonical recovery restore, exact six-source index parity, deterministic GUI fixtures, per-user runit enablement, and rollback-protected tagged updates.
 - Added private recovery-kit tooling for the pristine 48,720-message historical package plus the canonical 247-message Betterbird delta, with tamper/stat-drift checks and an intentionally fail-closed recovery SHA until the logged canonical set is built and reviewed.

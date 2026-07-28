@@ -50,7 +50,7 @@
 - [x] Harden the XFS prerequisite guide so every formatting command requires an explicit device replacement, root/mounted-target guards, and typed confirmation rather than a reusable `/dev/sdb` example.
 - [x] Run, independently review, privacy-record, and pin the logged canonical recovery set: 21-part historical package, one-part delta, private modes, zero symlinks/residue, exact `recovery-set.env` SHA256 `6858d505...`, and unchanged production all passed.
 - [ ] Copy the canonical recovery set to separate transport media and run full verification there before attaching it to the disposable VM.
-- [ ] Publish a release-candidate tag only after the recovery pin is committed; do not publish `notmuch-browser-antix-v1.0.0` yet.
+- [x] Publish release-candidate tag `notmuch-browser-antix-v1.0.0-rc1` at tested recovery-pin commit `ef915e00...`; do not publish `notmuch-browser-antix-v1.0.0` yet.
 - [ ] Pilot the complete guide on a disposable blank antiX runit VM and record exact restore, 48,720-path index parity, browser GUI, Windows tunnel, automatic new-mail indexing, reboot, and Git update results.
 - [x] Commit and push the combined migration plus updated project memory using the approved end-of-session workflow.
 - [x] Fold the unfinished standalone universal-Readable rollout into the owner-approved templ/HTMX/Tailwind/chi and per-user runit migration; do not install the old staged binary or continue its standalone harness-transfer path.

@@ -12,3 +12,5 @@ modes, capacity, and health status.
 The complete 135-line log and exact batch passed automated credential-shape
 scanning and manual review for addresses, Message-IDs, headers, subjects,
 capability tokens, cookies, credentials, private keys, and message content.
+Annotated release-candidate tag `notmuch-browser-antix-v1.0.0-rc1` resolves to
+the exact tested pin/evidence commit `ef915e00e3802d5bebd4fb7d74b383b7083a685d`.
