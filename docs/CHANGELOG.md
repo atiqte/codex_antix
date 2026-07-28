@@ -4,6 +4,10 @@ This file records meaningful repository changes. Keep entries concise and newest
 
 ## 2026-07-28
 
+- Replaced the draft fresh-VM path with a release-pinned, one-command `guided-install` workflow after the separate XFS disk gate, including exact Go/Bun downloads, secure mbsync/notmuch prompts, canonical recovery restore, exact six-source index parity, deterministic GUI fixtures, per-user runit enablement, and rollback-protected tagged updates.
+- Added private recovery-kit tooling for the pristine 48,720-message historical package plus the canonical 247-message Betterbird delta, with tamper/stat-drift checks and an intentionally fail-closed recovery SHA until the logged canonical set is built and reviewed.
+- Made partial Go, Bun, and split-archive restores safely rerunnable through verified staging and setup-owned manifest/destination markers; made browser install/update rollback restore the matching install marker as well as application files.
+- Regenerated matching 12-section HTML/TXT beginner guides, hardened the XFS formatting guide with explicit devices and typed confirmations, and passed reproducible generation, Go unit/vet/race, all 86 Python tests, shell/diff gates, and the exact accepted `7f4099ed...` browser build. Stable tagging and `main` merge remain blocked on the canonical recovery gate and disposable antiX/Windows pilot.
 - Passed and privacy-recorded corrected Gate 17: created a verified rollback backup, atomically installed exact accepted multi-source browser `7f4099ed...` on production port 8765, repeated every source/date/address/security/read-only contract, and did not invoke rollback.
 - Verified the subsequent antiX reboot: per-user runit automatically restored exact production and the index loop, mbsync remained healthy, rollback evidence stayed valid, and the unsupervised 8876 fallback stopped normally while its files remained preserved.
 - Recorded owner-confirmed antiX and Windows SSH-tunnel production GUI PASS on port 8765 and reconfirmed the exact installed binary, sole loopback listener, healthy runit services, read-only health, clear locks, and empty temporary-download state.

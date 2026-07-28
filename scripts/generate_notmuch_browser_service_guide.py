@@ -877,22 +877,22 @@ def render_html() -> str:
 
 
 # The original audited reconstruction content above is retained as historical
-# source context. Fresh installs now use the beginner-first v2 content module.
+# source context. Fresh installs now use the release-pinned one-command module.
 # Load it by path so this generator also works when imported directly by tests.
 import importlib.util
 
 
-_V2_PATH = ROOT / "scripts" / "notmuch_browser_service_guide_v2.py"
-_V2_SPEC = importlib.util.spec_from_file_location(
-    "notmuch_browser_service_guide_v2", _V2_PATH
+_V3_PATH = ROOT / "scripts" / "notmuch_browser_service_guide_v3.py"
+_V3_SPEC = importlib.util.spec_from_file_location(
+    "notmuch_browser_service_guide_v3", _V3_PATH
 )
-if _V2_SPEC is None or _V2_SPEC.loader is None:  # pragma: no cover
-    raise RuntimeError(f"cannot load guide content: {_V2_PATH}")
-_V2 = importlib.util.module_from_spec(_V2_SPEC)
-_V2_SPEC.loader.exec_module(_V2)
-SECTIONS = _V2.SECTIONS
-render_text = _V2.render_text
-render_html = _V2.render_html
+if _V3_SPEC is None or _V3_SPEC.loader is None:  # pragma: no cover
+    raise RuntimeError(f"cannot load guide content: {_V3_PATH}")
+_V3 = importlib.util.module_from_spec(_V3_SPEC)
+_V3_SPEC.loader.exec_module(_V3)
+SECTIONS = _V3.SECTIONS
+render_text = _V3.render_text
+render_html = _V3.render_html
 
 
 def main() -> None:

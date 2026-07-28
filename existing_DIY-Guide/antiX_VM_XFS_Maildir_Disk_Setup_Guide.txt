@@ -1,7 +1,7 @@
 antiX VM XFS Maildir Data Disk Setup Guide
 ==========================================
 Correct XFS formatting and mounting procedure for a second VMware VMDK dedicated to Betterbird Maildir, Logseq, search indexes, and backups.
-Generated: 2026-06-14 16:32 UTC
+Safety revised: 2026-07-28
 
 Purpose and target layout
 -------------------------
@@ -31,7 +31,11 @@ The second disk must be used for /mail only. Do not store the live Betterbird pr
 
 Critical safety warning
 -----------------------
-The commands in this guide intentionally create a new partition table and filesystem on /dev/sdb. They destroy existing content on /dev/sdb. They must never be run against /dev/sda or /dev/sda1.
+The destructive command blocks use /dev/REPLACE_MAIL_DISK and
+/dev/REPLACE_MAIL_PARTITION on purpose. They do nothing useful until you replace
+those placeholders with the disk you independently proved is empty. The
+commands destroy existing content on the selected target. They must never be
+run against the system/root disk or partition.
 
 Before running destructive commands, confirm that:
 
@@ -40,7 +44,10 @@ Before running destructive commands, confirm that:
 3. /dev/sdb is the blank second disk.
 4. /dev/sdb has no existing partition, filesystem, or mounted data.
 
-If the disk names differ on another VM, adapt carefully. The method is correct; the disk name must be verified every time.
+The /dev/sdb names below describe the original VM only. They are examples, not
+copy-ready target names. On every new VM, replace /dev/REPLACE_MAIL_DISK and
+/dev/REPLACE_MAIL_PARTITION with the independently verified empty disk and its
+new partition. If you cannot prove both identities, stop without formatting.
 
 Step 1 — Identify disks
 -----------------------
@@ -80,8 +87,13 @@ Step 3 — Verify the second disk is empty
 Run:
 
 lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
-sudo fdisk -l /dev/sdb
-sudo wipefs -n /dev/sdb
+MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b "$MAIL_DISK"
+ROOT_SOURCE=$(findmnt -n -o SOURCE /)
+case "$ROOT_SOURCE" in "$MAIL_DISK"|"$MAIL_DISK"*) echo "REFUSING ROOT DISK"; exit 1;; esac
+test -z "$(lsblk -n -o MOUNTPOINT "$MAIL_DISK" | sed '/^[[:space:]]*$/d')"
+sudo fdisk -l "$MAIL_DISK"
+sudo wipefs -n "$MAIL_DISK"
 
 Expected safe condition:
 
@@ -96,9 +108,17 @@ Step 4 — Create a GPT partition table and one XFS partition
 -----------------------------------------------------------
 Run:
 
-sudo parted -s /dev/sdb -- mklabel gpt
-sudo parted -s -a optimal /dev/sdb -- mkpart MAILDATA xfs 1MiB 100%
-sudo partprobe /dev/sdb
+MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b "$MAIL_DISK"
+ROOT_SOURCE=$(findmnt -n -o SOURCE /)
+case "$ROOT_SOURCE" in "$MAIL_DISK"|"$MAIL_DISK"*) echo "REFUSING ROOT DISK"; exit 1;; esac
+test -z "$(lsblk -n -o MOUNTPOINT "$MAIL_DISK" | sed '/^[[:space:]]*$/d')"
+printf 'Type FORMAT-EMPTY-MAIL-DISK to partition %s: ' "$MAIL_DISK"
+read -r CONFIRM
+test "$CONFIRM" = FORMAT-EMPTY-MAIL-DISK
+sudo parted -s "$MAIL_DISK" -- mklabel gpt
+sudo parted -s -a optimal "$MAIL_DISK" -- mkpart MAILDATA xfs 1MiB 100%
+sudo partprobe "$MAIL_DISK"
 sudo udevadm settle
 
 Explanation:
@@ -108,8 +128,8 @@ mklabel gpt                  = creates a modern GPT partition table.
 mkpart MAILDATA xfs 1MiB 100% = creates one partition from 1 MiB to the end of disk.
 partprobe + udevadm settle   = asks Linux to re-read the partition table cleanly.
 
-Step 5 — Confirm /dev/sdb1 exists
----------------------------------
+Step 5 — Confirm the new partition exists
+-----------------------------------------
 Run:
 
 lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
@@ -121,11 +141,18 @@ sdb     205G disk
 
 At this point /dev/sdb1 exists but is not formatted yet.
 
-Step 6 — Format /dev/sdb1 as XFS
---------------------------------
+Step 6 — Format the verified new partition as XFS
+-------------------------------------------------
 Run:
 
-sudo mkfs.xfs -f -L MAILDATA /dev/sdb1
+MAIL_PART=/dev/REPLACE_MAIL_PARTITION
+test -b "$MAIL_PART"
+test -z "$(lsblk -n -o MOUNTPOINT "$MAIL_PART" | sed '/^[[:space:]]*$/d')"
+test -z "$(sudo blkid -o value -s TYPE "$MAIL_PART" 2>/dev/null || true)"
+printf 'Type CREATE-XFS-MAILDATA to format %s: ' "$MAIL_PART"
+read -r CONFIRM
+test "$CONFIRM" = CREATE-XFS-MAILDATA
+sudo mkfs.xfs -L MAILDATA "$MAIL_PART"
 
 Expected output includes XFS metadata similar to:
 
@@ -137,9 +164,8 @@ log      =internal log
 
 Explanation:
 
--f              = force format the target partition.
 -L MAILDATA     = assigns the filesystem label MAILDATA.
-/dev/sdb1       = target partition. This must be the new second-disk partition, not the OS disk.
+MAIL_PART       = target partition. This must be the independently verified new second-disk partition, not the OS disk.
 
 The XFS output showing crc=1, finobt=1, ftype=1, reflink=1, and bigtime=1 indicates a modern XFS filesystem. No reformat is needed if your output matches this pattern.
 
@@ -148,8 +174,14 @@ Step 7 — Confirm the new XFS UUID
 Run:
 
 lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
-sudo blkid /dev/sdb1
-sudo blkid -s UUID -o value /dev/sdb1
+MAIL_PART=/dev/REPLACE_MAIL_PARTITION
+test -b "$MAIL_PART"
+test "$(sudo blkid -s TYPE -o value "$MAIL_PART")" = xfs
+test "$(sudo blkid -s LABEL -o value "$MAIL_PART")" = MAILDATA
+sudo blkid "$MAIL_PART"
+MAIL_UUID=$(sudo blkid -s UUID -o value "$MAIL_PART")
+test -n "$MAIL_UUID"
+printf 'Verified MAILDATA UUID: %s\n' "$MAIL_UUID"
 
 Example actual result from this VM:
 
@@ -169,21 +201,26 @@ sudo mkdir -p /mail
 
 At this moment /mail is only an empty directory on the root filesystem. After mounting, it becomes the entry point to the XFS data partition.
 
-Step 9 — Back up and edit /etc/fstab
-------------------------------------
-Back up fstab first:
+Step 9 — Back up and update /etc/fstab
+--------------------------------------
+Generate the exact line from the verified partition, show it, require a typed
+confirmation, back up fstab, and append it only when /mail has no existing
+fstab entry:
 
-sudo cp /etc/fstab /etc/fstab.bak.$(date +%F-%H%M)
-
-Open fstab:
-
-sudo nano /etc/fstab
-
-Add this line at the bottom:
-
-UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0
-
-Use your real UUID if different.
+MAIL_PART=/dev/REPLACE_MAIL_PARTITION
+test -b "$MAIL_PART"
+test "$(sudo blkid -s TYPE -o value "$MAIL_PART")" = xfs
+test "$(sudo blkid -s LABEL -o value "$MAIL_PART")" = MAILDATA
+MAIL_UUID=$(sudo blkid -s UUID -o value "$MAIL_PART")
+test -n "$MAIL_UUID"
+! awk '$2 == "/mail" { found=1 } END { exit(found ? 0 : 1) }' /etc/fstab
+FSTAB_LINE="UUID=$MAIL_UUID /mail xfs rw,noatime,nodiratime,nodiscard,inode64 0 0"
+printf '%s\n' "$FSTAB_LINE"
+printf 'Type ADD-MAIL-FSTAB to append this exact line: '
+read -r CONFIRM
+test "$CONFIRM" = ADD-MAIL-FSTAB
+sudo cp /etc/fstab "/etc/fstab.bak.$(date +%F-%H%M%S)"
+printf '%s\n' "$FSTAB_LINE" | sudo tee -a /etc/fstab
 
 Explanation of mount options:
 
@@ -233,7 +270,7 @@ Step 11 — Verify fstab line
 ---------------------------
 Run:
 
-grep -nE 'mail|MAILDATA|sdb1' /etc/fstab
+grep -nE '[[:space:]]/mail[[:space:]]' /etc/fstab
 
 Expected output from this VM:
 
@@ -290,7 +327,9 @@ Step 14 — Confirm block discard/TRIM support
 --------------------------------------------
 Run:
 
-cat /sys/block/sdb/queue/discard_max_bytes
+MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b "$MAIL_DISK"
+lsblk -n -o NAME,DISC-MAX "$MAIL_DISK"
 
 Result from this VM:
 
@@ -471,13 +510,15 @@ Step 20 — Final verification checklist
 --------------------------------------
 Run this final diagnostic group:
 
-grep -nE 'mail|MAILDATA|sdb1' /etc/fstab
+grep -nE '[[:space:]]/mail[[:space:]]' /etc/fstab
 findmnt /mail
 df -hT /mail
 ls -ld /mail
 lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
 xfs_info /mail
-cat /sys/block/sdb/queue/discard_max_bytes
+MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b "$MAIL_DISK"
+lsblk -n -o NAME,DISC-MAX "$MAIL_DISK"
 
 Correct final state for this VM:
 
@@ -496,7 +537,9 @@ If all checks pass, the XFS Maildir data disk is ready.
 Troubleshooting
 ---------------
 Problem: sudo mount -a shows an error.
-Action: Check /etc/fstab for wrong UUID, wrong filesystem type, missing spaces, or hidden quotes. Run sudo blkid /dev/sdb1 and compare UUID.
+Action: Check /etc/fstab for wrong UUID, wrong filesystem type, missing spaces,
+or hidden quotes. Set MAIL_PART to the verified new partition, run
+sudo blkid "$MAIL_PART", and compare UUID.
 
 Problem: /mail is still owned by root after reboot.
 Action: Run sudo chown -R "$USER:$USER" /mail and chmod 700 /mail while /mail is mounted. Then verify with findmnt /mail and ls -ld /mail.
@@ -505,7 +548,9 @@ Problem: touch /mail/test fails.
 Action: Confirm /mail is mounted and owned by your user. Run findmnt /mail and ls -ld /mail.
 
 Problem: fstrim does not work.
-Action: If cat /sys/block/sdb/queue/discard_max_bytes returns 0, TRIM is not exposed by VMware for this disk path. Ignore it. Do not use the discard mount option.
+Action: If lsblk reports DISC-MAX as 0B for the verified mail disk, TRIM is not
+exposed by VMware for this disk path. Ignore it. Keep the documented nodiscard
+mount option.
 
 Problem: Betterbird creates profile in /home.
 Action: Reopen Profile Manager and create/select the profile path manually under /mail/Betterbird/Profile/main.

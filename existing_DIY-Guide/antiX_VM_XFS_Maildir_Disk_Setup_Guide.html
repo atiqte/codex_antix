@@ -108,8 +108,8 @@ footer { max-width: 1060px; margin: 0 auto; padding: 0 24px 28px; color: var(--m
 <li><a href="#sec-4">Step 2 — Install required tools</a></li>
 <li><a href="#sec-5">Step 3 — Verify the second disk is empty</a></li>
 <li><a href="#sec-6">Step 4 — Create a GPT partition table and one XFS partition</a></li>
-<li><a href="#sec-7">Step 5 — Confirm /dev/sdb1 exists</a></li>
-<li><a href="#sec-8">Step 6 — Format /dev/sdb1 as XFS</a></li>
+<li><a href="#sec-7">Step 5 — Confirm the new partition exists</a></li>
+<li><a href="#sec-8">Step 6 — Format the verified new partition as XFS</a></li>
 <li><a href="#sec-9">Step 7 — Confirm the new XFS UUID</a></li>
 <li><a href="#sec-10">Step 8 — Create the /mail mount point</a></li>
 <li><a href="#sec-11">Step 9 — Back up and edit /etc/fstab</a></li>
@@ -149,10 +149,10 @@ footer { max-width: 1060px; margin: 0 auto; padding: 0 24px 28px; color: var(--m
 <p>The second disk must be used for /mail only. Do not store the live Betterbird profile on SMB, OneDrive, Google Drive, VMware Shared Folders, or a Windows-hosted network path. Keep the live profile on the XFS VMDK.</p>
 </section><section id="sec-2">
 <h2>Critical safety warning</h2>
-<p>The commands in this guide intentionally create a new partition table and filesystem on /dev/sdb. They destroy existing content on /dev/sdb. They must never be run against /dev/sda or /dev/sda1.</p>
+<p>The destructive command blocks use /dev/REPLACE_MAIL_DISK and /dev/REPLACE_MAIL_PARTITION on purpose. They do nothing useful until you replace those placeholders with the disk you independently proved is empty. The commands destroy existing content on the selected target. They must never be run against the system/root disk or partition.</p>
 <p>Before running destructive commands, confirm that:</p>
 <p>1. /dev/sda is the 50G antiX system disk.<br>2. /dev/sda1 is ext4 and mounted at /.<br>3. /dev/sdb is the blank second disk.<br>4. /dev/sdb has no existing partition, filesystem, or mounted data.</p>
-<p>If the disk names differ on another VM, adapt carefully. The method is correct; the disk name must be verified every time.</p>
+<p>The /dev/sdb names below describe the original VM only. They are examples, not copy-ready target names. On every new VM, replace /dev/REPLACE_MAIL_DISK and /dev/REPLACE_MAIL_PARTITION with the independently verified empty disk and its new partition. If you cannot prove both identities, stop without formatting.</p>
 </section><section id="sec-3">
 <h2>Step 1 — Identify disks</h2>
 <p>Run:</p>
@@ -178,17 +178,30 @@ sr0    1024M rom                                                          VMware
 <h2>Step 3 — Verify the second disk is empty</h2>
 <p>Run:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
-sudo fdisk -l /dev/sdb
-sudo wipefs -n /dev/sdb</code></pre></div>
+MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b &quot;$MAIL_DISK&quot;
+ROOT_SOURCE=$(findmnt -n -o SOURCE /)
+case &quot;$ROOT_SOURCE&quot; in &quot;$MAIL_DISK&quot;|&quot;$MAIL_DISK&quot;*) echo &quot;REFUSING ROOT DISK&quot;; exit 1;; esac
+test -z &quot;$(lsblk -n -o MOUNTPOINT &quot;$MAIL_DISK&quot; | sed &#x27;/^[[:space:]]*$/d&#x27;)&quot;
+sudo fdisk -l &quot;$MAIL_DISK&quot;
+sudo wipefs -n &quot;$MAIL_DISK&quot;</code></pre></div>
 <p>Expected safe condition:</p>
 <p>1. /dev/sdb appears as a 205G disk.<br>2. No /dev/sdb1 exists yet.<br>3. fdisk shows disk size but no partition table details.<br>4. wipefs -n prints nothing.</p>
 <p>Important: wipefs -n is a dry-run inspection. It does not erase data.</p>
 </section><section id="sec-6">
 <h2>Step 4 — Create a GPT partition table and one XFS partition</h2>
 <p>Run:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo parted -s /dev/sdb -- mklabel gpt
-sudo parted -s -a optimal /dev/sdb -- mkpart MAILDATA xfs 1MiB 100%
-sudo partprobe /dev/sdb
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b &quot;$MAIL_DISK&quot;
+ROOT_SOURCE=$(findmnt -n -o SOURCE /)
+case &quot;$ROOT_SOURCE&quot; in &quot;$MAIL_DISK&quot;|&quot;$MAIL_DISK&quot;*) echo &quot;REFUSING ROOT DISK&quot;; exit 1;; esac
+test -z &quot;$(lsblk -n -o MOUNTPOINT &quot;$MAIL_DISK&quot; | sed &#x27;/^[[:space:]]*$/d&#x27;)&quot;
+printf &#x27;Type FORMAT-EMPTY-MAIL-DISK to partition %s: &#x27; &quot;$MAIL_DISK&quot;
+read -r CONFIRM
+test &quot;$CONFIRM&quot; = FORMAT-EMPTY-MAIL-DISK
+sudo parted -s &quot;$MAIL_DISK&quot; -- mklabel gpt
+sudo parted -s -a optimal &quot;$MAIL_DISK&quot; -- mkpart MAILDATA xfs 1MiB 100%
+sudo partprobe &quot;$MAIL_DISK&quot;
 sudo udevadm settle</code></pre></div>
 <p>Explanation:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>mklabel gpt                  = creates a modern GPT partition table.
@@ -196,7 +209,7 @@ sudo udevadm settle</code></pre></div>
 mkpart MAILDATA xfs 1MiB 100% = creates one partition from 1 MiB to the end of disk.
 partprobe + udevadm settle   = asks Linux to re-read the partition table cleanly.</code></pre></div>
 </section><section id="sec-7">
-<h2>Step 5 — Confirm /dev/sdb1 exists</h2>
+<h2>Step 5 — Confirm the new partition exists</h2>
 <p>Run:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL</code></pre></div>
 <p>Expected result:</p>
@@ -204,9 +217,16 @@ partprobe + udevadm settle   = asks Linux to re-read the partition table cleanly
 └─sdb1  205G part</code></pre></div>
 <p>At this point /dev/sdb1 exists but is not formatted yet.</p>
 </section><section id="sec-8">
-<h2>Step 6 — Format /dev/sdb1 as XFS</h2>
+<h2>Step 6 — Format the verified new partition as XFS</h2>
 <p>Run:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkfs.xfs -f -L MAILDATA /dev/sdb1</code></pre></div>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>MAIL_PART=/dev/REPLACE_MAIL_PARTITION
+test -b &quot;$MAIL_PART&quot;
+test -z &quot;$(lsblk -n -o MOUNTPOINT &quot;$MAIL_PART&quot; | sed &#x27;/^[[:space:]]*$/d&#x27;)&quot;
+test -z &quot;$(sudo blkid -o value -s TYPE &quot;$MAIL_PART&quot; 2&gt;/dev/null || true)&quot;
+printf &#x27;Type CREATE-XFS-MAILDATA to format %s: &#x27; &quot;$MAIL_PART&quot;
+read -r CONFIRM
+test &quot;$CONFIRM&quot; = CREATE-XFS-MAILDATA
+sudo mkfs.xfs -L MAILDATA &quot;$MAIL_PART&quot;</code></pre></div>
 <p>Expected output includes XFS metadata similar to:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>meta-data=/dev/sdb1              isize=512    agcount=4
 crc=1        finobt=1     sparse=1
@@ -214,16 +234,21 @@ reflink=1    bigtime=1
 naming   =version 2              ftype=1
 log      =internal log</code></pre></div>
 <p>Explanation:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>-f              = force format the target partition.
--L MAILDATA     = assigns the filesystem label MAILDATA.
-/dev/sdb1       = target partition. This must be the new second-disk partition, not the OS disk.</code></pre></div>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>-L MAILDATA     = assigns the filesystem label MAILDATA.
+MAIL_PART       = target partition. This must be the independently verified new second-disk partition, not the OS disk.</code></pre></div>
 <p>The XFS output showing crc=1, finobt=1, ftype=1, reflink=1, and bigtime=1 indicates a modern XFS filesystem. No reformat is needed if your output matches this pattern.</p>
 </section><section id="sec-9">
 <h2>Step 7 — Confirm the new XFS UUID</h2>
 <p>Run:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
-sudo blkid /dev/sdb1
-sudo blkid -s UUID -o value /dev/sdb1</code></pre></div>
+MAIL_PART=/dev/REPLACE_MAIL_PARTITION
+test -b &quot;$MAIL_PART&quot;
+test &quot;$(sudo blkid -s TYPE -o value &quot;$MAIL_PART&quot;)&quot; = xfs
+test &quot;$(sudo blkid -s LABEL -o value &quot;$MAIL_PART&quot;)&quot; = MAILDATA
+sudo blkid &quot;$MAIL_PART&quot;
+MAIL_UUID=$(sudo blkid -s UUID -o value &quot;$MAIL_PART&quot;)
+test -n &quot;$MAIL_UUID&quot;
+printf &#x27;Verified MAILDATA UUID: %s\n&#x27; &quot;$MAIL_UUID&quot;</code></pre></div>
 <p>Example actual result from this VM:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/dev/sdb1: LABEL=&quot;MAILDATA&quot; UUID=&quot;4241803d-55c2-4dfb-8a70-b44e01b56bb3&quot; BLOCK_SIZE=&quot;512&quot; TYPE=&quot;xfs&quot; PARTLABEL=&quot;MAILDATA&quot; PARTUUID=&quot;539c8f62-c208-47c5-9a61-a6e1abf2f7b0&quot;</code></pre></div>
 <p>Clean UUID:</p>
@@ -235,14 +260,22 @@ sudo blkid -s UUID -o value /dev/sdb1</code></pre></div>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo mkdir -p /mail</code></pre></div>
 <p>At this moment /mail is only an empty directory on the root filesystem. After mounting, it becomes the entry point to the XFS data partition.</p>
 </section><section id="sec-11">
-<h2>Step 9 — Back up and edit /etc/fstab</h2>
-<p>Back up fstab first:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo cp /etc/fstab /etc/fstab.bak.$(date +%F-%H%M)</code></pre></div>
-<p>Open fstab:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>sudo nano /etc/fstab</code></pre></div>
-<p>Add this line at the bottom:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0</code></pre></div>
-<p>Use your real UUID if different.</p>
+<h2>Step 9 — Back up and update /etc/fstab</h2>
+<p>Generate the exact line from the verified partition, show it, require a typed confirmation, back up fstab, and append it only when /mail has no existing fstab entry:</p>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>MAIL_PART=/dev/REPLACE_MAIL_PARTITION
+test -b &quot;$MAIL_PART&quot;
+test &quot;$(sudo blkid -s TYPE -o value &quot;$MAIL_PART&quot;)&quot; = xfs
+test &quot;$(sudo blkid -s LABEL -o value &quot;$MAIL_PART&quot;)&quot; = MAILDATA
+MAIL_UUID=$(sudo blkid -s UUID -o value &quot;$MAIL_PART&quot;)
+test -n &quot;$MAIL_UUID&quot;
+! awk &#x27;$2 == &quot;/mail&quot; { found=1 } END { exit(found ? 0 : 1) }&#x27; /etc/fstab
+FSTAB_LINE=&quot;UUID=$MAIL_UUID /mail xfs rw,noatime,nodiratime,nodiscard,inode64 0 0&quot;
+printf &#x27;%s\n&#x27; &quot;$FSTAB_LINE&quot;
+printf &#x27;Type ADD-MAIL-FSTAB to append this exact line: &#x27;
+read -r CONFIRM
+test &quot;$CONFIRM&quot; = ADD-MAIL-FSTAB
+sudo cp /etc/fstab &quot;/etc/fstab.bak.$(date +%F-%H%M%S)&quot;
+printf &#x27;%s\n&#x27; &quot;$FSTAB_LINE&quot; | sudo tee -a /etc/fstab</code></pre></div>
 <p>Explanation of mount options:</p>
 <p>rw          = mount read/write.<br>noatime     = do not update access time on every file read; reduces metadata writes.<br>nodiratime  = do not update directory access time; slightly reduces metadata writes.<br>nodiscard   = do not run online discard/TRIM on every delete; better for latency.<br>inode64     = allow inode placement above 32-bit block boundaries; suitable for modern XFS.<br>0 0         = do not use traditional fsck pass ordering for this XFS mount.</p>
 <p>Do not use 0 2 for this XFS partition. Use 0 0.</p>
@@ -268,7 +301,7 @@ findmnt /mail</code></pre></div>
 </section><section id="sec-13">
 <h2>Step 11 — Verify fstab line</h2>
 <p>Run:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>grep -nE &#x27;mail|MAILDATA|sdb1&#x27; /etc/fstab</code></pre></div>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>grep -nE &#x27;[[:space:]]/mail[[:space:]]&#x27; /etc/fstab</code></pre></div>
 <p>Expected output from this VM:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>4:UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail  xfs  rw,noatime,nodiratime,nodiscard,inode64  0  0</code></pre></div>
 <p>This is correct because it uses UUID, not /dev/sdb1.</p>
@@ -300,7 +333,9 @@ ls -lah /mail/.write-test</code></pre></div>
 </section><section id="sec-16">
 <h2>Step 14 — Confirm block discard/TRIM support</h2>
 <p>Run:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>cat /sys/block/sdb/queue/discard_max_bytes</code></pre></div>
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b &quot;$MAIL_DISK&quot;
+lsblk -n -o NAME,DISC-MAX &quot;$MAIL_DISK&quot;</code></pre></div>
 <p>Result from this VM:</p>
 <p>0</p>
 <p>Interpretation:</p>
@@ -409,13 +444,15 @@ chmod -R 700 /mail/Backups</code></pre></div>
 </section><section id="sec-22">
 <h2>Step 20 — Final verification checklist</h2>
 <p>Run this final diagnostic group:</p>
-<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>grep -nE &#x27;mail|MAILDATA|sdb1&#x27; /etc/fstab
+<div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>grep -nE &#x27;[[:space:]]/mail[[:space:]]&#x27; /etc/fstab
 findmnt /mail
 df -hT /mail
 ls -ld /mail
 lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT,MODEL
 xfs_info /mail
-cat /sys/block/sdb/queue/discard_max_bytes</code></pre></div>
+MAIL_DISK=/dev/REPLACE_MAIL_DISK
+test -b &quot;$MAIL_DISK&quot;
+lsblk -n -o NAME,DISC-MAX &quot;$MAIL_DISK&quot;</code></pre></div>
 <p>Correct final state for this VM:</p>
 <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>/etc/fstab contains UUID=4241803d-55c2-4dfb-8a70-b44e01b56bb3 /mail xfs rw,noatime,nodiratime,nodiscard,inode64 0 0
 /mail mounted automatically
@@ -429,10 +466,10 @@ discard_max_bytes = 0, so no useful fstrim at present</code></pre></div>
 <p>If all checks pass, the XFS Maildir data disk is ready.</p>
 </section><section id="sec-23">
 <h2>Troubleshooting</h2>
-<p>Problem: sudo mount -a shows an error.<br>Action: Check /etc/fstab for wrong UUID, wrong filesystem type, missing spaces, or hidden quotes. Run sudo blkid /dev/sdb1 and compare UUID.</p>
+<p>Problem: sudo mount -a shows an error.<br>Action: Check /etc/fstab for wrong UUID, wrong filesystem type, missing spaces, or hidden quotes. Set MAIL_PART to the verified new partition, run sudo blkid &quot;$MAIL_PART&quot;, and compare UUID.</p>
 <p>Problem: /mail is still owned by root after reboot.<br>Action: Run sudo chown -R &quot;$USER:$USER&quot; /mail and chmod 700 /mail while /mail is mounted. Then verify with findmnt /mail and ls -ld /mail.</p>
 <p>Problem: touch /mail/test fails.<br>Action: Confirm /mail is mounted and owned by your user. Run findmnt /mail and ls -ld /mail.</p>
-<p>Problem: fstrim does not work.<br>Action: If cat /sys/block/sdb/queue/discard_max_bytes returns 0, TRIM is not exposed by VMware for this disk path. Ignore it. Do not use the discard mount option.</p>
+<p>Problem: fstrim does not work.<br>Action: If lsblk reports DISC-MAX as 0B for the verified mail disk, TRIM is not exposed by VMware for this disk path. Ignore it. Keep the documented nodiscard mount option.</p>
 <p>Problem: Betterbird creates profile in /home.<br>Action: Reopen Profile Manager and create/select the profile path manually under /mail/Betterbird/Profile/main.</p>
 <p>Problem: Millions of emails are slow.<br>Action: Do not place all messages in one folder. Use year/month archive folders, keep Betterbird closed during bulk copy/backups, and use Recoll or Notmuch as external search support.</p>
 </section><section id="sec-24">

@@ -46,6 +46,10 @@
 - [x] Implement the beginner-first fresh antiX VM assistant and matching HTML/TXT guide for GitHub clone/update, XFS `/mail`, toolchains, live mbsync, exact archive restore, full historical indexing, complete browser installation, user runit, SSH tunnel, reboot proof, and automatic incremental indexing.
 - [x] Change the approved fresh-VM notmuch scope so verified `local-maildir` and all available approved sources are indexed while the drifted current-VM tree is never copied.
 - [x] Make the provider-live archive scope controller compatible with the approved indexed historical archive and cover the changed policy with focused tests.
+- [x] Implement the release-candidate one-command reconstruction path: exact-tag re-execution, canonical recovery-kit tooling, secure interactive prompts, exact Go/Bun verification, resumable restore/index stages, deterministic GUI fixtures, six-source parity, rollback-protected installation/update, full/post-reboot validation, new-mail proof, support report, and matching beginner HTML/TXT guides.
+- [x] Harden the XFS prerequisite guide so every formatting command requires an explicit device replacement, root/mounted-target guards, and typed confirmation rather than a reusable `/dev/sdb` example.
+- [ ] Run the logged canonical recovery-set gate, record the finalized `recovery-set.env` SHA256, pin it in the installer, and verify a copy on separate transport media before the disposable-VM pilot.
+- [ ] Publish a release-candidate tag only after the recovery pin is committed; do not publish `notmuch-browser-antix-v1.0.0` yet.
 - [ ] Pilot the complete guide on a disposable blank antiX runit VM and record exact restore, 48,720-path index parity, browser GUI, Windows tunnel, automatic new-mail indexing, reboot, and Git update results.
 - [x] Commit and push the combined migration plus updated project memory using the approved end-of-session workflow.
 - [x] Fold the unfinished standalone universal-Readable rollout into the owner-approved templ/HTMX/Tailwind/chi and per-user runit migration; do not install the old staged binary or continue its standalone harness-transfer path.
